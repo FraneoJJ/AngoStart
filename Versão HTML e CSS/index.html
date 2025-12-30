@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AngoStart</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/secoes.css">
+    <link rel="stylesheet" href="css/design.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"> -->
+
+    <script src="script/efeitos.js" defer></script>
+</head>
+<body>
+        <!-- Header/Navbar -->
+    <header class="navbar sticky">
+        <nav class="nav-container">
+            <a href="#"><img src="assets/logo.png" alt="logotipo"></a>
+            
+            <!-- Desktop Navigation -->
+            <div class="nav-desktop">
+                <a href="#">Sobre</a>          
+                <a href="#">Funcionalidades</a>
+                <a href="#">Planos</a>         
+                <a href="#">Mentores</a>       
+                <a href="#">Marketplace</a>    
+                
+                <div class="nav-buttons">
+                    <button class="btn btn-ghost" onclick="showLogin()">Entrar</button>
+                    <button class="btn btn-primary" onclick="showRegister()">Criar Conta</button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+
+        <!-- Mobile Menu -->
+        <div class="mobile-menu" id="mobileMenu">
+            <div class="mobile-menu-content">
+                <a href="#" onclick="closeMobileMenu()">Sobre</a>          
+                <a href="#" onclick="closeMobileMenu()">Funcionalidades</a>
+                <a href="#" onclick="closeMobileMenu()">Planos</a>         
+                <a href="#" onclick="closeMobileMenu()">Mentores</a>       
+                <a href="#" onclick="closeMobileMenu()">Marketplace</a> 
+                <button class="btn btn-ghost" onclick="showLogin(); closeMobileMenu();">Entrar</button>
+                <button class="btn btn-primary" onclick="showRegister(); closeMobileMenu();">Criar Conta</button>
+            </div>
+        </div>
+    </header>
+    <!-- Camadas de efeitos visuais
+    <div class="grid-overlay"></div>
+    <div class="connection-dots"></div> -->
+    <section id="section1">
+
+        <div class="inform">
+            <div class="badge">
+                    <span class="badge-dot"></span>
+                    <span>Plataforma para empreendedores angolanos</span>
+                </div>
+
+            <h1>Transfrome Ideias em <b>Negócios Reais</b> </h1>
+            <p>A plataforma que ajuda empreendedores angolanos a valiar ideias, encontrar mentores e conectra-se a investidores.</p>
+
+            <div>
+                <button class="btn1"><a href="#">Criar Conta -></a></button>
+                <button class="btn2"><a href="#">Saber mais</a></button>
+            </div>
+
+            <div class="spans">
+                <div>
+                    <span class="numero_ideias_avaliadas">500+</span>
+                    <p>Ideias Vallidadas</p>
+                </div>
+                <div>
+                    <span class="numero_mentores_ativos">150+</span>
+                    <p>Mentores Ativos</p>
+                </div>
+                <div>
+                    <span class="numero_investimento_conectado">2000KZ+</span>
+                    <p>Investimentos Conectados</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="como-funciona" class="section bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Como Funciona</h2>
+                <p class="section-subtitle">
+                    Três passos simples para transformar sua ideia em um negócio de sucesso
+                </p>
+            </div>
+
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="step-number">01</div>
+                    <h3 class="step-title">Validar Ideia com IA</h3>
+                    <p class="step-description">
+                        Receba uma análise completa da sua ideia de negócio com pontuação de viabilidade, riscos e recomendações.
+                    </p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="step-number">02</div>
+                    <h3 class="step-title">Receber Mentoria Especializada</h3>
+                    <p class="step-description">
+                        Conecte-se com mentores experientes que irão guiá-lo no desenvolvimento do seu negócio.
+                    </p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="step-number">03</div>
+                    <h3 class="step-title">Conectar-se a Investidores</h3>
+                    <p class="step-description">
+                        Apresente seu negócio validado a investidores interessados em projetos angolanos promissores.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Funcionalidades -->
+    <section id="funcionalidades" class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Funcionalidades da Plataforma</h2>
+                <p class="section-subtitle">
+                    Tudo que você precisa para transformar sua ideia em um negócio de sucesso
+                </p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h4 class="feature-title">Validação de ideias com IA</h4>
+                    <p class="feature-description">
+                        Análise inteligente que avalia viabilidade, mercado e potencial de crescimento do seu negócio.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h4 class="feature-title">Gestão financeira básica</h4>
+                    <p class="feature-description">
+                        Ferramentas para controlar receitas, despesas e projeções financeiras do seu negócio.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h4 class="feature-title">Geração de plano de negócios (PDF)</h4>
+                    <p class="feature-description">
+                        Crie planos de negócio profissionais automaticamente baseados na análise da sua ideia.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <h4 class="feature-title">Marketplace de ideias</h4>
+                    <p class="feature-description">
+                        Explore, compartilhe e descubra ideias inovadoras de outros empreendedores.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <h4 class="feature-title">Mentoria e agendamento</h4>
+                    <p class="feature-description">
+                        Agende sessões com mentores especializados e receba orientação personalizada.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h4 class="feature-title">Matching inteligente com investidores</h4>
+                    <p class="feature-description">
+                        Conecte-se automaticamente com investidores alinhados ao perfil do seu negócio.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Para Quem -->
+    <section id="para-quem" class="section bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Para Quem é a AngoStart?</h2>
+                <p class="section-subtitle">
+                    Uma plataforma completa para todos os participantes do ecossistema de inovação
+                </p>
+            </div>
+
+            <div class="audience-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="openTab('empreendedores')">
+                        <i class="fas fa-lightbulb"></i>
+                        Empreendedores
+                    </button>
+                    <button class="tab-btn" onclick="openTab('investidores')">
+                        <i class="fas fa-chart-line"></i>
+                        Investidores
+                    </button>
+                    <button class="tab-btn" onclick="openTab('mentores')">
+                        <i class="fas fa-user-tie"></i>
+                        Mentores
+                    </button>
+                </div>
+
+                <div id="empreendedores" class="tab-content active">
+                    <div class="tab-content-grid">
+                        <div class="tab-text">
+                            <h3 class="tab-title">Empreendedores</h3>
+                            <p class="tab-subtitle">Transforme sua ideia em realidade</p>
+                            <ul class="feature-list">
+                                <li><i class="fas fa-check-circle"></i> Valide sua ideia com IA em minutos</li>
+                                <li><i class="fas fa-check-circle"></i> Gere planos de negócio profissionais</li>
+                                <li><i class="fas fa-check-circle"></i> Acesso a mentoria especializada</li>
+                                <li><i class="fas fa-check-circle"></i> Conecte-se com investidores</li>
+                                <li><i class="fas fa-check-circle"></i> Ferramentas de gestão financeira</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="showRegister()">
+                                Começar Agora
+                            </button>
+                        </div>
+                        <div class="tab-image">
+                            <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                                 alt="Empreendedor">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="investidores" class="tab-content">
+                    <div class="tab-content-grid">
+                        <div class="tab-text">
+                            <h3 class="tab-title">Investidores</h3>
+                            <p class="tab-subtitle">Descubra oportunidades promissoras</p>
+                            <ul class="feature-list">
+                                <li><i class="fas fa-check-circle"></i> Acesso a ideias validadas por IA</li>
+                                <li><i class="fas fa-check-circle"></i> Filtre projetos por setor e estágio</li>
+                                <li><i class="fas fa-check-circle"></i> Análises detalhadas de cada projeto</li>
+                                <li><i class="fas fa-check-circle"></i> Conecte-se diretamente com empreendedores</li>
+                                <li><i class="fas fa-check-circle"></i> Acompanhe seu portfólio de investimentos</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="showRegister()">
+                                Explorar Oportunidades
+                            </button>
+                        </div>
+                        <div class="tab-image">
+                            <img src="https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w-800&q=80" 
+                                 alt="Investidor">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="mentores" class="tab-content">
+                    <div class="tab-content-grid">
+                        <div class="tab-text">
+                            <h3 class="tab-title">Mentores</h3>
+                            <p class="tab-subtitle">Compartilhe sua experiência</p>
+                            <ul class="feature-list">
+                                <li><i class="fas fa-check-circle"></i> Ajude empreendedores a crescer</li>
+                                <li><i class="fas fa-check-circle"></i> Agende sessões de forma flexível</li>
+                                <li><i class="fas fa-check-circle"></i> Receba por suas mentorias</li>
+                                <li><i class="fas fa-check-circle"></i> Construa sua reputação</li>
+                                <li><i class="fas fa-check-circle"></i> Acesso a relatórios de impacto</li>
+                            </ul>
+                            <button class="btn btn-primary" onclick="showRegister()">
+                                Torne-se Mentor
+                            </button>
+                        </div>
+                        <div class="tab-image">
+                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                                 alt="Mentor">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Análise IA -->
+    <section id="ia" class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Análise de Negócios com IA</h2>
+                <p class="section-subtitle">
+                    Nossa inteligência artificial analisa mais de 50 variáveis para dar uma pontuação precisa da viabilidade do seu negócio.
+                </p>
+            </div>
+
+            <div class="ia-analysis">
+                <div class="ia-features">
+                    <div class="ia-feature">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Análise de mercado e concorrência</span>
+                    </div>
+                    <div class="ia-feature">
+                        <i class="fas fa-calculator"></i>
+                        <span>Avaliação de viabilidade financeira</span>
+                    </div>
+                    <div class="ia-feature">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Identificação de riscos e oportunidades</span>
+                    </div>
+                    <div class="ia-feature">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Recomendações personalizadas</span>
+                    </div>
+                    
+                    <button class="btn btn-secondary btn-lg" onclick="showRegister()">
+                        <i class="fas fa-robot"></i>
+                        Gerar plano de negócio com IA
+                    </button>
+                </div>
+
+                <div class="ia-score-card">
+                    <div class="score-circle">
+                        <div class="score-value">82</div>
+                        <div class="score-label">de 100</div>
+                    </div>
+                    <div class="score-title">Pontuação de Viabilidade</div>
+                    
+                    <div class="ia-details">
+                        <div class="detail-section">
+                            <h4><i class="fas fa-star"></i> Pontos Fortes</h4>
+                            <p>Mercado em crescimento, equipe qualificada</p>
+                        </div>
+                        <div class="detail-section">
+                            <h4><i class="fas fa-exclamation-circle"></i> Riscos</h4>
+                            <p>Alta concorrência, necessidade de capital inicial</p>
+                        </div>
+                        <div class="detail-section">
+                            <h4><i class="fas fa-bullseye"></i> Recomendações</h4>
+                            <p>Foco em diferenciação, buscar mentoria em marketing</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mentores -->
+    <section id="mentores" class="section bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Encontre o Mentor Ideal</h2>
+                <p class="section-subtitle">
+                    Conecte-se com especialistas que irão acelerar o crescimento do seu negócio
+                </p>
+            </div>
+
+            <div class="mentors-grid">
+                <div class="mentor-card">
+                    <div class="mentor-avatar">
+                        <span class="avatar-initials">AS</span>
+                    </div>
+                    <div class="mentor-info">
+                        <h4 class="mentor-name">Ana Silva</h4>
+                        <p class="mentor-specialty">Marketing Digital</p>
+                        <div class="mentor-rating">
+                            <i class="fas fa-star"></i>
+                            <span>4.9 (127 sessões)</span>
+                        </div>
+                        <div class="mentor-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Luanda
+                        </div>
+                        <div class="mentor-status available">
+                            <i class="fas fa-circle"></i>
+                            Disponível
+                        </div>
+                        <button class="btn btn-outline btn-sm">
+                            Ver Perfil
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mentor-card">
+                    <div class="mentor-avatar">
+                        <span class="avatar-initials">CM</span>
+                    </div>
+                    <div class="mentor-info">
+                        <h4 class="mentor-name">Carlos Mendes</h4>
+                        <p class="mentor-specialty">Finanças Empresariais</p>
+                        <div class="mentor-rating">
+                            <i class="fas fa-star"></i>
+                            <span>5.0 (89 sessões)</span>
+                        </div>
+                        <div class="mentor-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Benguela
+                        </div>
+                        <div class="mentor-status available">
+                            <i class="fas fa-circle"></i>
+                            Disponível
+                        </div>
+                        <button class="btn btn-outline btn-sm">
+                            Ver Perfil
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mentor-card">
+                    <div class="mentor-avatar">
+                        <span class="avatar-initials">MC</span>
+                    </div>
+                    <div class="mentor-info">
+                        <h4 class="mentor-name">Maria Costa</h4>
+                        <p class="mentor-specialty">Tecnologia & Inovação</p>
+                        <div class="mentor-rating">
+                            <i class="fas fa-star"></i>
+                            <span>4.8 (156 sessões)</span>
+                        </div>
+                        <div class="mentor-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Luanda
+                        </div>
+                        <div class="mentor-status busy">
+                            <i class="fas fa-circle"></i>
+                            Ocupado
+                        </div>
+                        <button class="btn btn-outline btn-sm">
+                            Ver Perfil
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <button class="btn btn-primary btn-lg" onclick="showRegister()">
+                    <i class="fas fa-search"></i>
+                    Encontrar um mentor
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Investimento -->
+    <section id="investimento" class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">OPORTUNIDADES DE INVESTIMENTO</h2>
+                <p class="section-subtitle">
+                    Descubra negócios promissores validados pela nossa IA
+                </p>
+            </div>
+
+            <div class="investments-grid">
+                <div class="investment-card">
+                    <div class="investment-badge">Agricultura</div>
+                    <h3 class="investment-title">AgriTech Solutions</h3>
+                    <div class="investment-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Score IA</span>
+                            <span class="detail-value score-high">87/100</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Investimento</span>
+                            <span class="detail-value">$50K - $100K</span>
+                        </div>
+                    </div>
+                    <p class="investment-description">
+                        Tecnologia para otimização da produção agrícola com IA.
+                    </p>
+                    <button class="btn btn-outline btn-block">
+                        Ver Detalhes
+                    </button>
+                </div>
+
+                <div class="investment-card featured">
+                    <div class="investment-badge">Educação</div>
+                    <h3 class="investment-title">EduConnect</h3>
+                    <div class="investment-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Score IA</span>
+                            <span class="detail-value score-very-high">92/100</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Investimento</span>
+                            <span class="detail-value">$30K - $75K</span>
+                        </div>
+                    </div>
+                    <p class="investment-description">
+                        Plataforma de educação online para escolas em Angola.
+                    </p>
+                    <button class="btn btn-primary btn-block">
+                        Ver Detalhes
+                    </button>
+                </div>
+
+                <div class="investment-card">
+                    <div class="investment-badge">Saúde</div>
+                    <h3 class="investment-title">HealthPlus</h3>
+                    <div class="investment-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Score IA</span>
+                            <span class="detail-value score-high">85/100</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Investimento</span>
+                            <span class="detail-value">$100K - $200K</span>
+                        </div>
+                    </div>
+                    <p class="investment-description">
+                        Telemedicina e gestão de clínicas para o mercado angolano.
+                    </p>
+                    <button class="btn btn-outline btn-block">
+                        Ver Detalhes
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <button class="btn btn-secondary btn-lg" onclick="showRegister()">
+                    <i class="fas fa-chart-line"></i>
+                    Investir em startups
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Planos -->
+    <section id="planos" class="section bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Planos para Cada Etapa</h2>
+                <p class="section-subtitle">
+                    Escolha o plano ideal para transformar sua ideia em negócio
+                </p>
+            </div>
+
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-title">Free</h3>
+                        <p class="pricing-subtitle">Para começar a validar sua ideia</p>
+                        <div class="pricing-price">
+                            <span class="price">$0</span>
+                            <span class="period">/mês</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Validação básica de 1 ideia/mês</li>
+                        <li><i class="fas fa-check"></i> Análise de IA simplificada</li>
+                        <li><i class="fas fa-check"></i> Acesso ao marketplace</li>
+                        <li><i class="fas fa-check"></i> Comunidade de empreendedores</li>
+                        <li><i class="fas fa-check"></i> Suporte via email</li>
+                    </ul>
+                    <button class="btn btn-outline btn-block" onclick="showRegister()">
+                        Começar Grátis
+                    </button>
+                </div>
+
+                <div class="pricing-card popular">
+                    <div class="popular-badge">Mais Popular</div>
+                    <div class="pricing-header">
+                        <h3 class="pricing-title">Pro</h3>
+                        <p class="pricing-subtitle">Para empreendedores ativos</p>
+                        <div class="pricing-price">
+                            <span class="price">$49</span>
+                            <span class="period">/mês</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Validação ilimitada de ideias</li>
+                        <li><i class="fas fa-check"></i> Análise completa de IA</li>
+                        <li><i class="fas fa-check"></i> Geração de planos de negócio em PDF</li>
+                        <li><i class="fas fa-check"></i> 3 sessões de mentoria/mês</li>
+                        <li><i class="fas fa-check"></i> Gestão financeira básica</li>
+                        <li><i class="fas fa-check"></i> Matching com investidores</li>
+                        <li><i class="fas fa-check"></i> Suporte prioritário</li>
+                    </ul>
+                    <button class="btn btn-primary btn-block" onclick="showRegister()">
+                        Escolher Pro
+                    </button>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-title">Premium</h3>
+                        <p class="pricing-subtitle">Para negócios em crescimento</p>
+                        <div class="pricing-price">
+                            <span class="price">$99</span>
+                            <span class="period">/mês</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Tudo do plano Pro</li>
+                        <li><i class="fas fa-check"></i> Mentoria ilimitada</li>
+                        <li><i class="fas fa-check"></i> Consultoria estratégica trimestral</li>
+                        <li><i class="fas fa-check"></i> Análise de concorrência avançada</li>
+                        <li><i class="fas fa-check"></i> Dashboard executivo personalizado</li>
+                        <li><i class="fas fa-check"></i> Prioridade em matching</li>
+                        <li><i class="fas fa-check"></i> Gerente de conta dedicado</li>
+                        <li><i class="fas fa-check"></i> Suporte 24/7</li>
+                    </ul>
+                    <button class="btn btn-outline btn-block" onclick="showRegister()">
+                        Escolher Premium
+                    </button>
+                </div>
+            </div>
+
+            <div class="pricing-note text-center">
+                <p>✅ Todos os planos incluem 14 dias de teste grátis. Cancele quando quiser.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="depoimentos" class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">O Que Dizem Nossos Empreendedores</h2>
+                <p class="section-subtitle">
+                    Histórias de sucesso de quem transformou ideias em negócios reais
+                </p>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <div class="stars">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="rating-text">★★★★★</div>
+                    </div>
+                    <p class="testimonial-text">
+                        "A AngoStart transformou minha ideia em um negócio real. A análise de IA me ajudou a identificar problemas que eu não tinha percebido, e a mentoria foi fundamental para o meu crescimento."
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">JM</div>
+                        <div class="author-info">
+                            <div class="author-name">João Martins</div>
+                            <div class="author-company">Fundador da TechStart</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <div class="stars">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="rating-text">★★★★★</div>
+                    </div>
+                    <p class="testimonial-text">
+                        "Consegui meu primeiro investimento através da plataforma. O matching inteligente me conectou com investidores alinhados com minha visão. Recomendo muito!"
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">PF</div>
+                        <div class="author-info">
+                            <div class="author-name">Patricia Fernandes</div>
+                            <div class="author-company">CEO da EcoSolutions</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <div class="stars">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="rating-text">★★★★★</div>
+                    </div>
+                    <p class="testimonial-text">
+                        "A geração automática de plano de negócios economizou semanas de trabalho. O documento ficou profissional e me ajudou a estruturar melhor minhas ideias."
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">MS</div>
+                        <div class="author-info">
+                            <div class="author-name">Miguel Santos</div>
+                            <div class="author-company">Empreendedor</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Parceiros -->
+    <section class="section bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Parceiros e Apoiadores</h2>
+                <p class="section-subtitle">
+                    Trabalhamos com as principais instituições de Angola
+                </p>
+            </div>
+
+            <div class="partners-grid">
+                <div class="partner-logo">INAPEM</div>
+                <div class="partner-logo">Banco BIC</div>
+                <div class="partner-logo">Angola Investe</div>
+                <div class="partner-logo">Startup Angola</div>
+                <div class="partner-logo">Luanda Tech Hub</div>
+                <div class="partner-logo">CEIC</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Final -->
+    <section class="cta-section">
+        <div class="cta-background"></div>
+        <div class="container cta-container">
+            <h2 class="cta-title">Comece hoje a construir o seu negócio</h2>
+            <p class="cta-subtitle">
+                Junte-se a centenas de empreendedores angolanos que já transformaram suas ideias em negócios de sucesso com a AngoStart.
+            </p>
+            
+            <div class="cta-buttons">
+                <button class="btn btn-secondary btn-lg" onclick="showRegister()">
+                    Criar Conta Gratuitamente
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                <button class="btn btn-outline btn-lg" onclick="contactExpert()">
+                    Falar com Especialista
+                </button>
+            </div>
+
+            <div class="cta-features">
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>14 dias grátis</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Sem cartão de crédito</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Cancele quando quiser</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <div class="footer-logo">ANCOSTART</div>
+                    <p class="footer-text">
+                        Transformando ideias em negócios reais. A plataforma completa para empreendedores angolanos.
+                    </p>
+                    
+                    <div class="footer-contact">
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>Luanda, Angola</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:contato@angostart.ao">contato@angostart.ao</a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-phone"></i>
+                            <a href="tel:+244900000000">+244 900 000 000</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-column">
+                    <h6 class="footer-heading">Produto</h6>
+                    <ul class="footer-links">
+                        <li><a href="#funcionalidades">Funcionalidades</a></li>
+                        <li><a href="#planos">Planos</a></li>
+                        <li><a href="#mentores">Mentores</a></li>
+                        <li><a href="#investimento">Marketplace</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h6 class="footer-heading">Empresa</h6>
+                    <ul class="footer-links">
+                        <li><a href="#">Sobre Nós</a></li>
+                        <li><a href="#">Contactos</a></li>
+                        <li><a href="#">Carreiras</a></li>
+                        <li><a href="#">Blog</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h6 class="footer-heading">Recursos</h6>
+                    <ul class="footer-links">
+                        <li><a href="#">Central de Ajuda</a></li>
+                        <li><a href="#">Guias</a></li>
+                        <li><a href="#">API</a></li>
+                        <li><a href="#">Status</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h6 class="footer-heading">Legal</h6>
+                    <ul class="footer-links">
+                        <li><a href="#">Termos de Uso</a></li>
+                        <li><a href="#">Política de Privacidade</a></li>
+                        <li><a href="#">Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2026 AngoStart. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Auth Modals -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+            <h3 class="modal-title">Entrar na AngoStart</h3>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+            </form>
+            <div class="auth-links">
+                <a href="#" onclick="showForgotPassword()">Esqueceu a senha?</a>
+                <a href="#" onclick="showRegister()">Criar nova conta</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+            <h3 class="modal-title">Criar Conta</h3>
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="name">Nome Completo</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar Senha</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="userType">Tipo de Usuário</label>
+                    <select id="userType" required>
+                        <option value="">Selecione...</option>
+                        <option value="empreendedor">Empreendedor</option>
+                        <option value="investidor">Investidor</option>
+                        <option value="mentor">Mentor</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary btn-block">Criar Conta</button>
+            </form>
+            <div class="auth-links">
+                <a href="#" onclick="showLogin()">Já tem uma conta? Entrar</a>
+            </div>
+        </div>
+    </div>
+
+   
+</body>
+</html>
