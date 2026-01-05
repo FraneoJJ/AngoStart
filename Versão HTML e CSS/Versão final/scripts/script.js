@@ -296,3 +296,36 @@ window.addEventListener('load', function() {
 window.addEventListener('beforeunload', function() {
   document.body.classList.add('unloading');
 });
+
+
+// ===== SEÇÃO "PARA QUEM É A ANGOSTART?" - SISTEMA DE TABS =====
+function openTab(tabId) {
+  // Remover classe active de todas as tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+    tab.classList.add('hidden');
+  });
+  
+  // Remover classe active de todos os botões
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Adicionar classe active à tab selecionada
+  const selectedTab = document.getElementById(tabId);
+  if (selectedTab) {
+    selectedTab.classList.add('active');
+    selectedTab.classList.remove('hidden');
+    
+    // Efeito de animação de entrada
+    selectedTab.style.opacity = '0';
+    selectedTab.style.transform = 'translateY(10px)';
+    
+    // Trigger reflow para iniciar animação
+    void selectedTab.offsetWidth;
+    
+    selectedTab.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    selectedTab.style.opacity = '1';
+    selectedTab.style.transform = 'translateY(0)';
+  }
+}
