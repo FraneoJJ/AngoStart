@@ -112,6 +112,11 @@ const icons = {
   'check-circle': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
   'dollar-sign': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
   settings: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m0-18c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z"/></svg>',
+  kwanza: `
+    <svg class="kwanza-icon" viewBox="0 0 24 24" width="24" height="24">
+      <text x="12" y="18" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">Kz</text>
+    </svg>
+  `,
 };
 
 // Initialize
@@ -559,6 +564,7 @@ function getMentorDashboard() {
   `;
 }
 
+
 function getAdminDashboard() {
   return `
     <div class="stats-grid">
@@ -605,11 +611,11 @@ function getAdminDashboard() {
         <div class="stat-card-content">
           <div class="stat-info">
             <div class="stat-label">Receita Mensal</div>
-            <div class="stat-value">$28.5K</div>
+            <div class="stat-value">28.500kz</div>
             <div class="stat-change">+12% vs mês anterior</div>
           </div>
           <div class="stat-icon-wrapper stat-icon-info">
-            ${icons['dollar-sign']}
+            ${icons['kwanza']}
           </div>
         </div>
       </div>
