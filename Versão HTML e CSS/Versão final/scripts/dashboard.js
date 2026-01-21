@@ -50,12 +50,11 @@ const navigationConfig = {
     ]},
     { section: 'Análise', items: [
       { id: 'propostas', label: 'Propostas', icon: 'inbox', badge: 5 },
-      { id: 'favoritos', label: 'Favoritos', icon: 'heart' },
       { id: 'analytics', label: 'Analytics', icon: 'bar-chart' },
     ]},
     { section: 'Configurações', items: [
       { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'portfolio', label: 'Portfólio', icon: 'briefcase' },
+      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
     ]},
   ],
   mentor: [
@@ -78,7 +77,7 @@ const navigationConfig = {
       { id: 'dashboard', label: 'Dashboard', icon: 'home' },
       { id: 'usuarios', label: 'Usuários', icon: 'users' },
       { id: 'ideias', label: 'Ideias', icon: 'lightbulb', badge: 8 },
-      { id: 'aprovacoes', label: 'Aprovações', icon: 'check-circle', badge: 3 },
+      
     ]},
     { section: 'Analytics', items: [
       { id: 'relatorios', label: 'Relatórios', icon: 'bar-chart' },
@@ -239,7 +238,39 @@ function loadPageContent(page) {
     // Load content based on user role and page
     if (page === 'dashboard') {
       content = getDashboardContent();
-    } else {
+    } 
+    else if (page === 'usuarios' && user.role === 'admin') {
+      content = getUsersManagementContent();
+    }
+    
+    else if (page === 'ideias' && user.role === 'admin') {
+    content = getSubmitIdeaForm();
+    }
+    else if (page === 'relatorios' && user.role === 'admin') {
+    content = getReportsContent();
+    }
+    else if (page === 'configuracoes' && user.role === 'admin') {
+    content = getConfiguracoesContent() ;
+    }
+    else if (page === 'marketplace' && user.role === 'investidor') {
+    content = getMarketplaceContent();
+    }
+    else if (page === 'meus-investimentos' && user.role === 'investidor') {
+    content = getMyInvestmentsContent();
+    }
+    else if (page === 'propostas' && user.role === 'investidor') {
+    content = getPropostasContent();
+    }
+    else if (page === 'analytics' && user.role === 'investidor') {
+    content = getAnalyticsContent();
+    }
+    else if (page === 'perfil' && user.role === 'investidor') {
+    content = getInvestidorPerfilContent();
+    }
+    else if (page === 'configuracoes' && user.role === 'investidor') {
+    content = getConfiguracoesContent() ;
+    }
+    else {
       content = getGenericPageContent(page);
     }
     
@@ -379,7 +410,7 @@ function getInvestorDashboard() {
         <div class="stat-card-content">
           <div class="stat-info">
             <div class="stat-label">Valor Total Investido</div>
-            <div class="stat-value">$485K</div>
+            <div class="stat-value">485K</div>
             <div class="stat-change">Portfolio total</div>
           </div>
           <div class="stat-icon-wrapper stat-icon-success">
@@ -436,21 +467,21 @@ function getInvestorDashboard() {
             <td>TechEdu Angola</td>
             <td>EdTech</td>
             <td><span class="badge badge-success">92</span></td>
-            <td>$50K - $100K</td>
+            <td>50K - 100K</td>
             <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
           </tr>
           <tr>
             <td>AgriConnect</td>
             <td>AgriTech</td>
             <td><span class="badge badge-success">88</span></td>
-            <td>$30K - $75K</td>
+            <td>30K - 75K</td>
             <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
           </tr>
           <tr>
             <td>HealthPlus</td>
             <td>HealthTech</td>
             <td><span class="badge badge-success">85</span></td>
-            <td>$75K - $150K</td>
+            <td>75K - 150K</td>
             <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
           </tr>
         </tbody>
@@ -655,6 +686,688 @@ function getAdminDashboard() {
           </tr>
         </tbody>
       </table>
+    </div>
+  `;
+}
+
+function getUsersManagementContent() {
+  return `
+    <div class="dashboard-card">
+      <div class="dashboard-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 class="dashboard-card-title">Gerenciamento de Usuários</h3>
+          <p class="dashboard-card-description">Visualize e gerencie todos os usuários cadastrados na plataforma.</p>
+        </div>
+        <button class="btn btn-primary" onclick="alert('Abrir modal de novo usuário')"> + Novo Usuário</button>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Função</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${generateUserTableRows()}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Função auxiliar para não poluir o HTML principal
+function generateUserTableRows() {
+  const mockUsers = [
+    { name: 'João Empreendedor', email: 'empreendedor@angostart.com', role: 'Empreendedor', status: 'Ativo' },
+    { name: 'Maria Investidora', email: 'investidor@angostart.com', role: 'Investidor', status: 'Ativo' },
+    { name: 'Carlos Mentor', email: 'mentor@angostart.com', role: 'Mentor', status: 'Pendente' }
+  ];
+
+  return mockUsers.map(u => `
+    <tr>
+      <td><strong>${u.name}</strong></td>
+      <td>${u.email}</td>
+      <td><span class="badge badge-primary">${u.role}</span></td>
+      <td><span class="badge ${u.status === 'Ativo' ? 'badge-success' : 'badge-warning'}">${u.status}</span></td>
+      <td>
+        <button class="btn" style="padding: 2px 8px; background: #eee;">Editar</button>
+        <button class="btn" style="padding: 2px 8px; background: #ffebee; color: red;">Bloquear</button>
+      </td>
+    </tr>
+  `).join('');
+}
+function getSubmitIdeaForm() {
+  return `
+    <div class="dashboard-card">
+      <div class="dashboard-card-header">
+        <h3 class="dashboard-card-title">Ideias Pendentes de Aprovação</h3>
+        <p class="dashboard-card-description">Ideias aguardando revisão</p>
+      </div>
+      
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Ideia</th>
+            <th>Empreendedor</th>
+            <th>Score IA</th>
+            <th>Data Submissão</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>App de Delivery Local</td>
+            <td>João Silva</td>
+            <td><span class="badge badge-success">87</span></td>
+            <td>20/01/2026</td>
+            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
+          </tr>
+          <tr>
+            <td>Plataforma de Freelancers</td>
+            <td>Ana Mendes</td>
+            <td><span class="badge badge-success">92</span></td>
+            <td>21/01/2026</td>
+            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
+          </tr>
+          <tr>
+            <td>E-commerce de Produtos Locais</td>
+            <td>Carlos Dias</td>
+            <td><span class="badge badge-warning">75</span></td>
+            <td>22/01/2026</td>
+            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function getReportsContent() {
+  return `
+    <div class="reports-container">
+      <div class="dashboard-card" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+        <div>
+          <h3 style="margin: 0;">Análise de Performance</h3>
+          <p style="margin: 0; color: #666; font-size: 0.9rem;">Relatórios detalhados da plataforma</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <label>Mês de Referência:</label>
+          <select id="monthFilter" class="input-field" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd;">
+            <option value="janeiro-2026">Janeiro 2026</option>
+            <option value="dezembro-2025">Dezembro 2025</option>
+            <option value="novembro-2025">Novembro 2025</option>
+          </select>
+          <button class="btn btn-primary" onclick="alert('Relatório exportado em PDF!')" style="padding: 5px 15px;">Exportar PDF</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-content">
+            <div class="stat-info">
+              <div class="stat-label">Ideias no Mês</div>
+              <div class="stat-value" id="totalIdeas">142</div>
+              <div class="stat-change" style="color: #10b981;">↑ 12% vs mês passado</div>
+            </div>
+            <div class="stat-icon-wrapper stat-icon-primary">
+              ${icons.lightbulb}
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card-content">
+            <div class="stat-info">
+              <div class="stat-label">Novos Cadastros</div>
+              <div class="stat-value">87</div>
+              <div class="stat-change">Total este mês</div>
+            </div>
+            <div class="stat-icon-wrapper stat-icon-info">
+              ${icons.user}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+        <div class="dashboard-card">
+          <h3 class="dashboard-card-title">Distribuição de Usuários</h3>
+          <p class="dashboard-card-description">Divisão por tipo de perfil</p>
+          
+          <div style="margin-top: 20px;">
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>Empreendedores</span>
+                <strong>650</strong>
+              </div>
+              <div style="width: 100%; background: #eee; height: 10px; border-radius: 5px;">
+                <div style="width: 65%; background: var(--primary-color, #2563eb); height: 100%; border-radius: 5px;"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>Investidores</span>
+                <strong>120</strong>
+              </div>
+              <div style="width: 100%; background: #eee; height: 10px; border-radius: 5px;">
+                <div style="width: 25%; background: #10b981; height: 100%; border-radius: 5px;"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>Mentores</span>
+                <strong>45</strong>
+              </div>
+              <div style="width: 100%; background: #eee; height: 10px; border-radius: 5px;">
+                <div style="width: 15%; background: #f59e0b; height: 100%; border-radius: 5px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-card">
+          <h3 class="dashboard-card-title">Atividade Recente</h3>
+          <div style="margin-top: 15px;">
+            <ul style="list-style: none; padding: 0;">
+              <li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                <span>Sessões de Mentoria</span>
+                <strong>28</strong>
+              </li>
+              <li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                <span>Investimentos Feitos</span>
+                <strong>14</strong>
+              </li>
+              <li style="padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                <span>Taxa de Aprovação</span>
+                <strong>78%</strong>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function getConfiguracoesContent() {
+  
+  const isDarkMode = document.body.classList.contains('dark-theme');
+
+  return `
+    <div class="dashboard-card" style="max-width: 700px; margin: 0 auto;">
+      <div class="dashboard-card-header">
+        <h3 class="dashboard-card-title">Configurações do Sistema</h3>
+        <p class="dashboard-card-description">Personalize sua experiência na plataforma AngoStart.</p>
+      </div>
+
+      <div style="padding: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee;">
+          <div>
+            <h4 style="margin: 0;">Modo Escuro</h4>
+            <p style="margin: 0; font-size: 0.85rem; color: #666;">Altera a aparência do site para cores escuras.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="darkModeToggle" ${isDarkMode ? 'checked' : ''}>
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee;">
+          <div>
+            <h4 style="margin: 0;">Idioma do Sistema</h4>
+            <p style="margin: 0; font-size: 0.85rem; color: #666;">Escolha o idioma das interfaces.</p>
+          </div>
+          <select id="languageSelect" class="input-field" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+            <option value="pt">Português (AO)</option>
+            <option value="en">English (US)</option>
+            <option value="fr">Français</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee;">
+          <div>
+            <h4 style="margin: 0;">Notificações por Email</h4>
+            <p style="margin: 0; font-size: 0.85rem; color: #666;">Receba alertas de novos investidores e mensagens.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <button class="btn btn-primary" onclick="alert('Configurações salvas com sucesso!')">Salvar Alterações</button>
+        </div>
+      </div>
+    </div>
+
+    
+  `;
+}
+
+function getMarketplaceContent() {
+  const startups = [
+    { id: 1, name: "Kwanza Pay", sector: "Fintech", score: 94, ask: "25k - 50k", desc: "Solução de pagamentos móveis para mercados informais em Luanda.", location: "Luanda" },
+    { id: 2, name: "AgroFácil", sector: "AgriTech", score: 88, ask: "10k - 30k", desc: "Monitoramento de colheitas via satélite para pequenos produtores.", location: "Huambo" },
+    { id: 3, name: "EduAngo", sector: "EdTech", score: 82, ask: "15k - 20k", desc: "Plataforma de cursos técnicos offline para zonas remotas.", location: "Benguela" },
+    { id: 4, name: "Saúde Já", sector: "HealthTech", score: 91, ask: "50k+", desc: "Telemedicina conectando especialistas a postos de saúde provinciais.", location: "Cabinda" }
+  ];
+
+  return `
+    <div class="marketplace-wrapper">
+      <div class="dashboard-card" style="margin-bottom: 25px; padding: 20px;">
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+          <div style="flex: 2; min-width: 250px;">
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Pesquisar Startup</label>
+            <input type="text" placeholder="Ex: Fintech ou nome da empresa..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          </div>
+          <div style="flex: 1; min-width: 150px;">
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Setor</label>
+            <select style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+              <option>Todos os Setores</option>
+              <option>Fintech</option>
+              <option>AgriTech</option>
+              <option>EdTech</option>
+            </select>
+          </div>
+          <div style="flex: 1; min-width: 150px;">
+            <label style="display:block; margin-bottom:5px; font-weight:600;">Score IA Mínimo</label>
+            <select style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+              <option>Qualquer um</option>
+              <option>80+</option>
+              <option>90+</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="height: 42px;">Filtrar</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+        ${startups.map(s => `
+          <div class="dashboard-card" style="display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <div style="width: 50px; height: 50px; background: #eee; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #2563eb;">${s.name.charAt(0)}</div>
+                <div style="text-align: right;">
+                  <span class="badge badge-success" style="font-size: 0.8rem;">Score IA: ${s.score}</span>
+                  <div style="font-size: 0.75rem; color: #666; margin-top: 5px;">${s.location}, Angola</div>
+                </div>
+              </div>
+              
+              <h3 style="margin: 0 0 10px 0;">${s.name}</h3>
+              <span style="display: inline-block; padding: 2px 8px; background: #eef2ff; color: #4338ca; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-bottom: 15px;">${s.sector}</span>
+              <p style="font-size: 0.9rem; color: #666; line-height: 1.5; margin-bottom: 20px;">${s.desc}</p>
+            </div>
+
+            <div style="border-top: 1px solid #eee; padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <span style="display: block; font-size: 0.7rem; color: #999; text-transform: uppercase;">Ticket de Investimento</span>
+                <strong style="color: #10b981;">${s.ask}</strong>
+              </div>
+              <button class="btn btn-primary" style="padding: 8px 15px; font-size: 0.85rem;" onclick="alert('Abrindo detalhes de ${s.name}...')">Ver mais</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+function getMyInvestmentsContent() {
+  const myPortfolio = [
+    { id: 1, startup: "Kwanza Pay", equity: "5%", invested: "$25,000", currentVal: "$45,000", status: "Em Crescimento", roi: "+80%" },
+    { id: 2, startup: "AgroFácil", equity: "10%", invested: "$15,000", currentVal: "$18,500", status: "Estável", roi: "+23%" },
+    { id: 3, startup: "TechEdu Angola", equity: "2%", invested: "$10,000", currentVal: "$9,000", status: "Risco", roi: "-10%" }
+  ];
+
+  return `
+    <div class="portfolio-container">
+      <div class="stats-grid" style="margin-bottom: 25px;">
+        <div class="stat-card">
+          <div class="stat-card-content">
+            <div class="stat-info">
+              <div class="stat-label">Total Alocado</div>
+              <div class="stat-value">$50,000</div>
+              <div class="stat-change">3 Startups ativas</div>
+            </div>
+            <div class="stat-icon-wrapper stat-icon-success">
+              ${icons['dollar-sign']}
+            </div>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-card-content">
+            <div class="stat-info">
+              <div class="stat-label">Valorização Total</div>
+              <div class="stat-value">$72,500</div>
+              <div class="stat-change" style="color: #10b981;">↑ $22,500 (45%)</div>
+            </div>
+            <div class="stat-icon-wrapper stat-icon-primary">
+              ${icons['trending-up']}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="dashboard-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 class="dashboard-card-title">Detalhamento do Portfólio</h3>
+            <p class="dashboard-card-description">Acompanhamento de participação e ROI por startup.</p>
+          </div>
+          <button class="btn" style="background: #f4f7fe; color: #2563eb; font-weight: 600; border: none; padding: 10px 15px; border-radius: 8px;">
+            Baixar Extrato
+          </button>
+        </div>
+
+        <div style="overflow-x: auto; margin-top: 20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Startup</th>
+                <th>Equity (%)</th>
+                <th>Valor Investido</th>
+                <th>Valuation Atual</th>
+                <th>ROI</th>
+                <th>Status</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${myPortfolio.map(item => `
+                <tr>
+                  <td><strong>${item.startup}</strong></td>
+                  <td>${item.equity}</td>
+                  <td>${item.invested}</td>
+                  <td>${item.currentVal}</td>
+                  <td style="color: ${item.roi.startsWith('+') ? '#10b981' : '#ef4444'}; font-weight: 600;">
+                    ${item.roi}
+                  </td>
+                  <td>
+                    <span class="badge ${item.status === 'Risco' ? 'badge-warning' : 'badge-success'}">
+                      ${item.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn" style="padding: 5px 10px; font-size: 0.75rem; background: #eee;" onclick="alert('Abrindo relatórios da ${item.startup}')">
+                      Relatórios
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function getPropostasContent() {
+  return `
+    <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px; height: calc(100vh - 180px); min-height: 500px;">
+      
+      <div class="dashboard-card" style="display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+        <div style="padding: 20px; border-bottom: 1px solid #eee;">
+          <h3 style="margin: 0; font-size: 1.1rem;">Solicitações Recebidas</h3>
+          <p style="margin: 5px 0 0 0; font-size: 0.8rem; color: #666;">Você tem 2 propostas pendentes</p>
+        </div>
+        
+        <div style="overflow-y: auto; flex: 1;">
+          <div class="proposta-item active" style="padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; background: #f8faff; border-left: 4px solid #2563eb;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <strong style="font-size: 0.9rem;">SolarPay Angola</strong>
+              <span style="font-size: 0.7rem; color: #999;">Hoje</span>
+            </div>
+            <p style="margin: 0; font-size: 0.85rem; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Proposta de Equity: 5% por $25k</p>
+            <span class="badge badge-warning" style="font-size: 0.65rem; margin-top: 5px;">Pendente</span>
+          </div>
+
+          <div class="proposta-item" style="padding: 15px; border-bottom: 1px solid #eee; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <strong style="font-size: 0.9rem;">AgroFácil</strong>
+              <span style="font-size: 0.7rem; color: #999;">Ontem</span>
+            </div>
+            <p style="margin: 0; font-size: 0.85rem; color: #444;">Solicitação de Mentoria e Aporte</p>
+            <span class="badge badge-success" style="font-size: 0.65rem; margin-top: 5px;">Em conversa</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-card" style="display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+        
+        <div style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">S</div>
+            <div>
+              <h4 style="margin: 0;">SolarPay Angola</h4>
+              <span style="font-size: 0.75rem; color: #10b981;">Score IA: 92/100</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn" style="background: #fee2e2; color: #ef4444; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 600;" onclick="alert('Proposta Recusada')">Recusar</button>
+            <button class="btn btn-primary" style="padding: 8px 15px; border-radius: 6px;" onclick="alert('Proposta Aceite! Iniciando Due Diligence...')">Aceitar Proposta</button>
+          </div>
+        </div>
+
+        <div style="flex: 1; padding: 20px; background: #f9fafb; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;">
+          <div style="align-self: flex-start; background: white; padding: 12px; border-radius: 12px; border-bottom-left-radius: 2px; max-width: 70%; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <p style="margin: 0; font-size: 0.9rem;">Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando 25.000 USD para expansão em Benguela em troca de 5% de equity.</p>
+            <span style="font-size: 0.7rem; color: #999; margin-top: 5px; display: block;">10:30 AM</span>
+          </div>
+
+          <div style="align-self: flex-end; background: #2563eb; color: white; padding: 12px; border-radius: 12px; border-bottom-right-radius: 2px; max-width: 70%;">
+            <p style="margin: 0; font-size: 0.9rem;">Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos agendar uma call amanhã?</p>
+            <span style="font-size: 0.7rem; color: #e0e7ff; margin-top: 5px; display: block;">10:45 AM</span>
+          </div>
+        </div>
+
+        <div style="padding: 15px; border-top: 1px solid #eee; background: white; display: flex; gap: 10px;">
+          <input type="text" placeholder="Escreva sua mensagem ou contraproposta..." style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; outline: none;">
+          <button class="btn btn-primary" style="padding: 0 20px;">Enviar</button>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .proposta-item:hover { background: #f4f7fe; }
+      .badge-warning { background: #fef3c7; color: #92400e; }
+      .badge-success { background: #dcfce7; color: #166534; }
+    </style>
+  `;
+}
+function getAnalyticsContent() {
+  return `
+    <div class="analytics-container">
+      <div class="dashboard-card" style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="margin: 0;">Análise de Mercado & Performance</h3>
+          <p style="margin: 5px 0 0 0; color: #666; font-size: 0.85rem;">Dados baseados em tendências reais do ecossistema AngoStart.</p>
+        </div>
+        <select class="input-field" style="padding: 8px 15px; border-radius: 8px; border: 1px solid #ddd;">
+          <option>Últimos 12 meses</option>
+          <option>Últimos 6 meses</option>
+          <option>Este Ano (2026)</option>
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px;">
+        
+        <div class="dashboard-card">
+          <h4 class="dashboard-card-title">Crescimento Médio do Portfólio</h4>
+          <p class="dashboard-card-description">Evolução do valuation das suas startups investidas.</p>
+          
+          <div style="height: 200px; margin-top: 30px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 10px; border-bottom: 2px solid #eee; border-left: 2px solid #eee;">
+            <div style="width: 10%; background: #e0e7ff; height: 30%; border-radius: 4px 4px 0 0;" title="Jan"></div>
+            <div style="width: 10%; background: #e0e7ff; height: 45%; border-radius: 4px 4px 0 0;" title="Fev"></div>
+            <div style="width: 10%; background: #e0e7ff; height: 40%; border-radius: 4px 4px 0 0;" title="Mar"></div>
+            <div style="width: 10%; background: #2563eb; height: 65%; border-radius: 4px 4px 0 0;" title="Abr"></div>
+            <div style="width: 10%; background: #2563eb; height: 85%; border-radius: 4px 4px 0 0;" title="Mai"></div>
+            <div style="width: 10%; background: #10b981; height: 95%; border-radius: 4px 4px 0 0;" title="Jun"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.75rem; color: #999;">
+            <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
+          </div>
+        </div>
+
+        <div class="dashboard-card">
+          <h4 class="dashboard-card-title">Setores em Alta (Angola)</h4>
+          <div style="margin-top: 15px;">
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px;">
+                <span>Fintech</span>
+                <span style="color: #10b981; font-weight: bold;">+42%</span>
+              </div>
+              <div style="width: 100%; background: #eee; height: 8px; border-radius: 4px;">
+                <div style="width: 90%; background: #10b981; height: 100%; border-radius: 4px;"></div>
+              </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px;">
+                <span>AgriTech</span>
+                <span style="color: #10b981; font-weight: bold;">+28%</span>
+              </div>
+              <div style="width: 100%; background: #eee; height: 8px; border-radius: 4px;">
+                <div style="width: 65%; background: #2563eb; height: 100%; border-radius: 4px;"></div>
+              </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px;">
+                <span>EdTech</span>
+                <span style="color: #f59e0b; font-weight: bold;">+12%</span>
+              </div>
+              <div style="width: 100%; background: #eee; height: 8px; border-radius: 4px;">
+                <div style="width: 40%; background: #f59e0b; height: 100%; border-radius: 4px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h3 class="dashboard-card-title">Análise Comparativa de Risco (Score IA)</h3>
+        <div style="overflow-x: auto; margin-top: 20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Startup</th>
+                <th>Setor</th>
+                <th>Tração Mensal</th>
+                <th>Score IA Atual</th>
+                <th>Projeção 6m</th>
+                <th>Nível de Risco</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>SolarPay</strong></td>
+                <td>Energia</td>
+                <td><span style="color: #10b981;">↑ 15%</span></td>
+                <td><span class="badge badge-success">92</span></td>
+                <td>95.5</td>
+                <td style="color: #10b981;">Baixo</td>
+              </tr>
+              <tr>
+                <td><strong>Kwanza Pay</strong></td>
+                <td>Fintech</td>
+                <td><span style="color: #10b981;">↑ 8%</span></td>
+                <td><span class="badge badge-success">88</span></td>
+                <td>91.2</td>
+                <td style="color: #10b981;">Baixo</td>
+              </tr>
+              <tr>
+                <td><strong>AgroFácil</strong></td>
+                <td>AgriTech</td>
+                <td><span style="color: #ef4444;">↓ 2%</span></td>
+                <td><span class="badge badge-warning">75</span></td>
+                <td>78.0</td>
+                <td style="color: #f59e0b;">Médio</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getInvestidorPerfilContent() {
+  return `
+    <div style="max-width: 900px; margin: 0 auto;">
+      <div class="dashboard-card" style="padding: 0; overflow: hidden; margin-bottom: 25px;">
+        <div style="height: 120px; background: linear-gradient;"></div>
+        <div style="padding: 0 30px 30px 30px; margin-top: -50px; display: flex; align-items: flex-end; gap: 20px;">
+          <div style="width: 120px; height: 120px; border-radius: 50%; border: 5px solid #fff; background: #eee; overflow: hidden;">
+            <img src="../img/Jovem empresário africano feliz _ Foto Grátis.jpg" alt="Foto de Perfil">
+          </div>
+          <div style="flex: 1; padding-bottom: 10px;">
+            <h2 style="margin: 0; color: var(--text-main);">Maria Investidora</h2>
+            <p style="margin: 5px 0 0 0; color: #666;">Investidora Anjo • Luanda, Angola</p>
+          </div>
+          <div style="padding-bottom: 10px;">
+            <button class="btn btn-primary" onclick="alert('Funcionalidade de edição aberta!')">Editar Perfil</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
+        
+        <div style="display: flex; flex-direction: column; gap: 25px;">
+          <div class="dashboard-card">
+            <h4 style="margin-top: 0;">Status de Verificação</h4>
+            <div style="display: flex; align-items: center; gap: 10px; color: #10b981; font-weight: 600;">
+              <span style="font-size: 1.2rem;">✔</span> Conta Verificada
+            </div>
+            <p style="font-size: 0.8rem; color: #999; margin-top: 10px;">Identidade e fundos validados pela AngoStart.</p>
+          </div>
+
+          <div class="dashboard-card">
+            <h4 style="margin-top: 0;">Tese de Investimento</h4>
+            <ul style="padding-left: 20px; font-size: 0.9rem; color: #444; line-height: 1.6;">
+              <li>Foco em Fintech e EdTech</li>
+              <li>Tickets de 10k a 50k</li>
+              <li>Busca por impacto social</li>
+              <li>Zonas: Luanda e Huambo</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="dashboard-card">
+          <h3 class="dashboard-card-title">Biografia Profissional</h3>
+          <p style="line-height: 1.6; color: #444;">
+            Especialista em finanças com mais de 15 anos de experiência no setor bancário angolano. 
+            Atualmente focada em apoiar empreendedores locais que resolvem problemas de inclusão financeira 
+            e digitalização de processos tradicionais.
+          </p>
+
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+          <h3 class="dashboard-card-title">Informações de Contato</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+            <div>
+              <label style="font-size: 0.8rem; color: #999; display: block;">E-mail</label>
+              <strong>maria.invest@exemplo.ao</strong>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #999; display: block;">Telefone</label>
+              <strong>+244 9XX XXX XXX</strong>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #999; display: block;">LinkedIn</label>
+              <a href="#" style="color: #2563eb; text-decoration: none;">linkedin.com/in/maria-inv</a>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #999; display: block;">Website</label>
+              <strong>www.meufundo.ao</strong>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
