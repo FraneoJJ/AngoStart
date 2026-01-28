@@ -24,7 +24,7 @@ form.addEventListener('submit', function(e) {
   const password = passwordInput.value;
   
   // Hide previous errors
-  errorAlert.classList.add('hidden');
+  errorAlert.classNameList.add('hidden');
   
   // Validate
   if (!email || !password) {
@@ -62,7 +62,7 @@ form.addEventListener('submit', function(e) {
 
 function showError(message) {
   errorMessage.textContent = message;
-  errorAlert.classList.remove('hidden');
+  errorAlert.classNameList.remove('hidden');
   
   // Scroll to error
   errorAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

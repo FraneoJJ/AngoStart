@@ -1,0 +1,35 @@
+ango-start-react/
+├── public/
+│   ├── index.html
+│   └── favicon.ico
+├── src/
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   └── MobileMenu.jsx
+│   │   ├── sections/
+│   │   │   ├── Hero.jsx
+│   │   │   ├── HowItWorks.jsx
+│   │   │   ├── Features.jsx
+│   │   │   ├── ParaQuem.jsx
+│   │   │   ├── IaAnalysis.jsx
+│   │   │   ├── Mentores.jsx
+│   │   │   ├── Investimentos.jsx
+│   │   │   ├── Planos.jsx
+│   │   │   ├── Depoimentos.jsx
+│   │   │   ├── Parceiros.jsx
+│   │   │   └── CTA.jsx
+│   │   └── ui/
+│   │       ├── Button.jsx
+│   │       └── Card.jsx
+│   ├── hooks/
+│   │   ├── useScrollEffect.js
+│   │   ├── useIntersectionObserver.js
+│   │   └── useCounterAnimation.js
+│   ├── utils/
+│   │   └── animations.js
+│   ├── App.jsx
+│   ├── index.js
+│   └── styles.css
+└── package.json

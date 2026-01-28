@@ -113,7 +113,7 @@ const icons = {
   'dollar-sign': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
   settings: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m0-18c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z"/></svg>',
   kwanza: `
-    <svg class="kwanza-icon" viewBox="0 0 24 24" width="24" height="24">
+    <svg className="kwanza-icon" viewBox="0 0 24 24" width="24" height="24">
       <text x="12" y="18" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">Kz</text>
     </svg>
   `,
@@ -154,13 +154,13 @@ function buildNavigation() {
   
   nav.forEach(section => {
     html += `
-      <div class="nav-section">
-        <div class="nav-section-title">${section.section}</div>
+      <div className="nav-section">
+        <div className="nav-section-title">${section.section}</div>
         ${section.items.map(item => `
-          <a href="#" class="nav-item${item.id === currentPage ? ' active' : ''}" data-page="${item.id}">
-            <span class="nav-icon">${icons[item.icon] || icons.home}</span>
-            <span class="nav-label">${item.label}</span>
-            ${item.badge ? `<span class="nav-badge">${item.badge}</span>` : ''}
+          <a href="#" className="nav-item${item.id === currentPage ? ' active' : ''}" data-page="${item.id}">
+            <span className="nav-icon">${icons[item.icon] || icons.home}</span>
+            <span className="nav-label">${item.label}</span>
+            ${item.badge ? `<span className="nav-badge">${item.badge}</span>` : ''}
           </a>
         `).join('')}
       </div>
@@ -189,9 +189,9 @@ function loadPage(page) {
   
   // Update active nav item
   document.querySelectorAll('.nav-item').forEach(item => {
-    item.classList.remove('active');
+    item.classNameList.remove('active');
     if (item.getAttribute('data-page') === page) {
-      item.classList.add('active');
+      item.classNameList.add('active');
     }
   });
   
@@ -235,7 +235,7 @@ function getPageTitle(page) {
 
 function loadPageContent(page) {
   // Show loading
-  pageContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  pageContent.innerHTML = '<div className="loading"><div className="spinner"></div></div>';
   
   // Simulate loading delay
   setTimeout(() => {
@@ -266,67 +266,67 @@ function getDashboardContent() {
 
 function getEntrepreneurDashboard() {
   return `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Ideias Submetidas</div>
-            <div class="stat-value">3</div>
-            <div class="stat-change">+1 este mês</div>
+    <div className="stats-grid">
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Ideias Submetidas</div>
+            <div className="stat-value">3</div>
+            <div className="stat-change">+1 este mês</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-primary">
+          <div className="stat-icon-wrapper stat-icon-primary">
             ${icons.lightbulb}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Score Médio IA</div>
-            <div class="stat-value">89.5</div>
-            <div class="stat-change">+5.2 pontos</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Score Médio IA</div>
+            <div className="stat-value">89.5</div>
+            <div className="stat-change">+5.2 pontos</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-success">
+          <div className="stat-icon-wrapper stat-icon-success">
             ${icons['trending-up']}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Interesses Recebidos</div>
-            <div class="stat-value">35</div>
-            <div class="stat-change">+12 esta semana</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Interesses Recebidos</div>
+            <div className="stat-value">35</div>
+            <div className="stat-change">+12 esta semana</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-secondary">
+          <div className="stat-icon-wrapper stat-icon-secondary">
             ${icons.users}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Sessões de Mentoria</div>
-            <div class="stat-value">8</div>
-            <div class="stat-change">2 agendadas</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Sessões de Mentoria</div>
+            <div className="stat-value">8</div>
+            <div className="stat-change">2 agendadas</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-info">
+          <div className="stat-icon-wrapper stat-icon-info">
             ${icons.clock}
           </div>
         </div>
       </div>
     </div>
     
-    <div class="dashboard-card">
-      <div class="dashboard-card-header">
-        <h3 class="dashboard-card-title">Minhas Ideias</h3>
-        <p class="dashboard-card-description">Acompanhe o status das suas ideias submetidas</p>
+    <div className="dashboard-card">
+      <div className="dashboard-card-header">
+        <h3 className="dashboard-card-title">Minhas Ideias</h3>
+        <p className="dashboard-card-description">Acompanhe o status das suas ideias submetidas</p>
       </div>
       
-      <table class="data-table">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Ideia</th>
@@ -339,21 +339,21 @@ function getEntrepreneurDashboard() {
         <tbody>
           <tr>
             <td>App de Delivery para Mercados Locais</td>
-            <td><span class="badge badge-success">Aprovada</span></td>
+            <td><span className="badge badge-success">Aprovada</span></td>
             <td>87</td>
             <td>12</td>
             <td>15/12/2024</td>
           </tr>
           <tr>
             <td>Plataforma de Educação Online</td>
-            <td><span class="badge badge-warning">Em Análise</span></td>
+            <td><span className="badge badge-warning">Em Análise</span></td>
             <td>-</td>
             <td>0</td>
             <td>20/12/2024</td>
           </tr>
           <tr>
             <td>Sistema de Gestão para PMEs</td>
-            <td><span class="badge badge-primary">Publicada</span></td>
+            <td><span className="badge badge-primary">Publicada</span></td>
             <td>92</td>
             <td>23</td>
             <td>10/12/2024</td>
@@ -366,67 +366,67 @@ function getEntrepreneurDashboard() {
 
 function getInvestorDashboard() {
   return `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Investimentos Ativos</div>
-            <div class="stat-value">8</div>
-            <div class="stat-change">+2 este trimestre</div>
+    <div className="stats-grid">
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Investimentos Ativos</div>
+            <div className="stat-value">8</div>
+            <div className="stat-change">+2 este trimestre</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-primary">
+          <div className="stat-icon-wrapper stat-icon-primary">
             ${icons.briefcase}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Valor Total Investido</div>
-            <div class="stat-value">$485K</div>
-            <div class="stat-change">Portfolio total</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Valor Total Investido</div>
+            <div className="stat-value">$485K</div>
+            <div className="stat-change">Portfolio total</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-success">
+          <div className="stat-icon-wrapper stat-icon-success">
             ${icons['dollar-sign']}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Propostas Pendentes</div>
-            <div class="stat-value">12</div>
-            <div class="stat-change">+5 esta semana</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Propostas Pendentes</div>
+            <div className="stat-value">12</div>
+            <div className="stat-change">+5 esta semana</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-secondary">
+          <div className="stat-icon-wrapper stat-icon-secondary">
             ${icons.inbox}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">ROI Médio</div>
-            <div class="stat-value">18.5%</div>
-            <div class="stat-change">+2.3% este ano</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">ROI Médio</div>
+            <div className="stat-value">18.5%</div>
+            <div className="stat-change">+2.3% este ano</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-info">
+          <div className="stat-icon-wrapper stat-icon-info">
             ${icons['trending-up']}
           </div>
         </div>
       </div>
     </div>
     
-    <div class="dashboard-card">
-      <div class="dashboard-card-header">
-        <h3 class="dashboard-card-title">Oportunidades em Destaque</h3>
-        <p class="dashboard-card-description">Ideias com maior pontuação IA</p>
+    <div className="dashboard-card">
+      <div className="dashboard-card-header">
+        <h3 className="dashboard-card-title">Oportunidades em Destaque</h3>
+        <p className="dashboard-card-description">Ideias com maior pontuação IA</p>
       </div>
       
-      <table class="data-table">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Startup</th>
@@ -440,23 +440,23 @@ function getInvestorDashboard() {
           <tr>
             <td>TechEdu Angola</td>
             <td>EdTech</td>
-            <td><span class="badge badge-success">92</span></td>
+            <td><span className="badge badge-success">92</span></td>
             <td>$50K - $100K</td>
-            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
+            <td><button className="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
           </tr>
           <tr>
             <td>AgriConnect</td>
             <td>AgriTech</td>
-            <td><span class="badge badge-success">88</span></td>
+            <td><span className="badge badge-success">88</span></td>
             <td>$30K - $75K</td>
-            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
+            <td><button className="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
           </tr>
           <tr>
             <td>HealthPlus</td>
             <td>HealthTech</td>
-            <td><span class="badge badge-success">85</span></td>
+            <td><span className="badge badge-success">85</span></td>
             <td>$75K - $150K</td>
-            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
+            <td><button className="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Ver Detalhes</button></td>
           </tr>
         </tbody>
       </table>
@@ -466,67 +466,67 @@ function getInvestorDashboard() {
 
 function getMentorDashboard() {
   return `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Mentorados Ativos</div>
-            <div class="stat-value">12</div>
-            <div class="stat-change">+3 este mês</div>
+    <div className="stats-grid">
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Mentorados Ativos</div>
+            <div className="stat-value">12</div>
+            <div className="stat-change">+3 este mês</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-primary">
+          <div className="stat-icon-wrapper stat-icon-primary">
             ${icons.users}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Sessões este Mês</div>
-            <div class="stat-value">24</div>
-            <div class="stat-change">4 agendadas</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Sessões este Mês</div>
+            <div className="stat-value">24</div>
+            <div className="stat-change">4 agendadas</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-success">
+          <div className="stat-icon-wrapper stat-icon-success">
             ${icons.calendar}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Horas de Mentoria</div>
-            <div class="stat-value">86</div>
-            <div class="stat-change">Total acumulado</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Horas de Mentoria</div>
+            <div className="stat-value">86</div>
+            <div className="stat-change">Total acumulado</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-secondary">
+          <div className="stat-icon-wrapper stat-icon-secondary">
             ${icons.clock}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Avaliação Média</div>
-            <div class="stat-value">4.9</div>
-            <div class="stat-change">De 5.0 estrelas</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Avaliação Média</div>
+            <div className="stat-value">4.9</div>
+            <div className="stat-change">De 5.0 estrelas</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-info">
+          <div className="stat-icon-wrapper stat-icon-info">
             ${icons.award}
           </div>
         </div>
       </div>
     </div>
     
-    <div class="dashboard-card">
-      <div class="dashboard-card-header">
-        <h3 class="dashboard-card-title">Próximas Sessões</h3>
-        <p class="dashboard-card-description">Suas sessões de mentoria agendadas</p>
+    <div className="dashboard-card">
+      <div className="dashboard-card-header">
+        <h3 className="dashboard-card-title">Próximas Sessões</h3>
+        <p className="dashboard-card-description">Suas sessões de mentoria agendadas</p>
       </div>
       
-      <table class="data-table">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Mentorado</th>
@@ -542,21 +542,21 @@ function getMentorDashboard() {
             <td>Estratégia de Go-to-Market</td>
             <td>25/01/2026 14:00</td>
             <td>1h</td>
-            <td><span class="badge badge-success">Confirmada</span></td>
+            <td><span className="badge badge-success">Confirmada</span></td>
           </tr>
           <tr>
             <td>Carlos Mendes</td>
             <td>Modelo de Negócio</td>
             <td>26/01/2026 10:00</td>
             <td>1h30</td>
-            <td><span class="badge badge-success">Confirmada</span></td>
+            <td><span className="badge badge-success">Confirmada</span></td>
           </tr>
           <tr>
             <td>Maria Costa</td>
             <td>Pitch para Investidores</td>
             <td>27/01/2026 16:00</td>
             <td>1h</td>
-            <td><span class="badge badge-warning">Pendente</span></td>
+            <td><span className="badge badge-warning">Pendente</span></td>
           </tr>
         </tbody>
       </table>
@@ -567,67 +567,67 @@ function getMentorDashboard() {
 
 function getAdminDashboard() {
   return `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Usuários Totais</div>
-            <div class="stat-value">1,247</div>
-            <div class="stat-change">+87 este mês</div>
+    <div className="stats-grid">
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Usuários Totais</div>
+            <div className="stat-value">1,247</div>
+            <div className="stat-change">+87 este mês</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-primary">
+          <div className="stat-icon-wrapper stat-icon-primary">
             ${icons.users}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Ideias Submetidas</div>
-            <div class="stat-value">543</div>
-            <div class="stat-change">+42 esta semana</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Ideias Submetidas</div>
+            <div className="stat-value">543</div>
+            <div className="stat-change">+42 esta semana</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-success">
+          <div className="stat-icon-wrapper stat-icon-success">
             ${icons.lightbulb}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Aprovações Pendentes</div>
-            <div class="stat-value">8</div>
-            <div class="stat-change">Requerem atenção</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Aprovações Pendentes</div>
+            <div className="stat-value">8</div>
+            <div className="stat-change">Requerem atenção</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-secondary">
+          <div className="stat-icon-wrapper stat-icon-secondary">
             ${icons['check-circle']}
           </div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-card-content">
-          <div class="stat-info">
-            <div class="stat-label">Receita Mensal</div>
-            <div class="stat-value">28.500kz</div>
-            <div class="stat-change">+12% vs mês anterior</div>
+      <div className="stat-card">
+        <div className="stat-card-content">
+          <div className="stat-info">
+            <div className="stat-label">Receita Mensal</div>
+            <div className="stat-value">28.500kz</div>
+            <div className="stat-change">+12% vs mês anterior</div>
           </div>
-          <div class="stat-icon-wrapper stat-icon-info">
+          <div className="stat-icon-wrapper stat-icon-info">
             ${icons['kwanza']}
           </div>
         </div>
       </div>
     </div>
     
-    <div class="dashboard-card">
-      <div class="dashboard-card-header">
-        <h3 class="dashboard-card-title">Ideias Pendentes de Aprovação</h3>
-        <p class="dashboard-card-description">Ideias aguardando revisão</p>
+    <div className="dashboard-card">
+      <div className="dashboard-card-header">
+        <h3 className="dashboard-card-title">Ideias Pendentes de Aprovação</h3>
+        <p className="dashboard-card-description">Ideias aguardando revisão</p>
       </div>
       
-      <table class="data-table">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Ideia</th>
@@ -641,23 +641,23 @@ function getAdminDashboard() {
           <tr>
             <td>App de Delivery Local</td>
             <td>João Silva</td>
-            <td><span class="badge badge-success">87</span></td>
+            <td><span className="badge badge-success">87</span></td>
             <td>20/01/2026</td>
-            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
+            <td><button className="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
           </tr>
           <tr>
             <td>Plataforma de Freelancers</td>
             <td>Ana Mendes</td>
-            <td><span class="badge badge-success">92</span></td>
+            <td><span className="badge badge-success">92</span></td>
             <td>21/01/2026</td>
-            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
+            <td><button className="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
           </tr>
           <tr>
             <td>E-commerce de Produtos Locais</td>
             <td>Carlos Dias</td>
-            <td><span class="badge badge-warning">75</span></td>
+            <td><span className="badge badge-warning">75</span></td>
             <td>22/01/2026</td>
-            <td><button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
+            <td><button className="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Revisar</button></td>
           </tr>
         </tbody>
       </table>
@@ -667,15 +667,15 @@ function getAdminDashboard() {
 
 function getGenericPageContent(page) {
   return `
-    <div class="empty-state">
-      <div class="empty-state-icon">
+    <div className="empty-state">
+      <div className="empty-state-icon">
         ${icons[page] || icons.home}
       </div>
-      <h3 class="empty-state-title">${getPageTitle(page)}</h3>
-      <p class="empty-state-description">
+      <h3 className="empty-state-title">${getPageTitle(page)}</h3>
+      <p className="empty-state-description">
         Esta página está em desenvolvimento. O conteúdo será adicionado em breve.
       </p>
-      <button class="btn btn-primary" onclick="loadPage('dashboard')">
+      <button className="btn btn-primary" onclick="loadPage('dashboard')">
         Voltar ao Dashboard
       </button>
     </div>
@@ -683,8 +683,8 @@ function getGenericPageContent(page) {
 }
 
 function toggleSidebar() {
-  sidebar.classList.toggle('active');
-  sidebarOverlay.classList.toggle('active');
+  sidebar.classNameList.toggle('active');
+  sidebarOverlay.classNameList.toggle('active');
 }
 
 function handleLogout() {

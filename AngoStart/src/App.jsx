@@ -8,6 +8,7 @@ function App() {
     <>
       <div>
         <h1>AngoStart</h1>
+        <p>Seja bem-vindo ao AngoStart!</p>
       </div>
     </>
   )

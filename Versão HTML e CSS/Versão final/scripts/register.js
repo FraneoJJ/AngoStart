@@ -23,17 +23,17 @@ const roleInputs = document.querySelectorAll('input[name="role"]');
 
 // Continue to step 2
 continueBtn.addEventListener('click', function() {
-  stepRole.classList.add('hidden');
-  stepDetails.classList.remove('hidden');
+  stepRole.classNameList.add('hidden');
+  stepDetails.classNameList.remove('hidden');
 });
 
 // Back to step 1
 backBtn.addEventListener('click', function() {
-  stepDetails.classList.add('hidden');
-  stepRole.classList.remove('hidden');
+  stepDetails.classNameList.add('hidden');
+  stepRole.classNameList.remove('hidden');
   
   // Clear error
-  errorAlert.classList.add('hidden');
+  errorAlert.classNameList.add('hidden');
 });
 
 // Form submission
@@ -54,7 +54,7 @@ form.addEventListener('submit', function(e) {
   });
   
   // Hide previous errors
-  errorAlert.classList.add('hidden');
+  errorAlert.classNameList.add('hidden');
   
   // Validation
   if (!name || !email || !password || !confirmPassword) {
@@ -103,7 +103,7 @@ form.addEventListener('submit', function(e) {
 
 function showError(message) {
   errorMessage.textContent = message;
-  errorAlert.classList.remove('hidden');
+  errorAlert.classNameList.remove('hidden');
   
   // Scroll to error
   errorAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

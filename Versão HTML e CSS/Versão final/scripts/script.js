@@ -8,9 +8,9 @@ const navbar = document.getElementById('navbar');
 
 window.addEventListener('scroll', function() {
   if (window.scrollY > 20) {
-    navbar.classList.add('scrolled');
+    navbar.classNameList.add('scrolled');
   } else {
-    navbar.classList.remove('scrolled');
+    navbar.classNameList.remove('scrolled');
   }
 });
 
@@ -21,18 +21,18 @@ const menuIcon = mobileMenuBtn.querySelector('.menu-icon');
 const closeIcon = mobileMenuBtn.querySelector('.close-icon');
 
 mobileMenuBtn.addEventListener('click', function() {
-  const isOpen = !mobileMenu.classList.contains('hidden');
+  const isOpen = !mobileMenu.classNameList.contains('hidden');
   
   if (isOpen) {
     // Close menu
-    mobileMenu.classList.add('hidden');
-    menuIcon.classList.remove('hidden');
-    closeIcon.classList.add('hidden');
+    mobileMenu.classNameList.add('hidden');
+    menuIcon.classNameList.remove('hidden');
+    closeIcon.classNameList.add('hidden');
   } else {
     // Open menu
-    mobileMenu.classList.remove('hidden');
-    menuIcon.classList.add('hidden');
-    closeIcon.classList.remove('hidden');
+    mobileMenu.classNameList.remove('hidden');
+    menuIcon.classNameList.add('hidden');
+    closeIcon.classNameList.remove('hidden');
   }
 });
 
@@ -40,9 +40,9 @@ mobileMenuBtn.addEventListener('click', function() {
 const mobileLinks = document.querySelectorAll('.mobile-link');
 mobileLinks.forEach(function(link) {
   link.addEventListener('click', function() {
-    mobileMenu.classList.add('hidden');
-    menuIcon.classList.remove('hidden');
-    closeIcon.classList.add('hidden');
+    mobileMenu.classNameList.add('hidden');
+    menuIcon.classNameList.remove('hidden');
+    closeIcon.classNameList.add('hidden');
   });
 });
 
@@ -82,7 +82,7 @@ const observerOptions = {
 const observer = new IntersectionObserver(function(entries) {
   entries.forEach(function(entry) {
     if (entry.isIntersecting) {
-      entry.target.classList.add('animate-in');
+      entry.target.classNameList.add('animate-in');
       observer.unobserve(entry.target);
     }
   });
@@ -220,7 +220,7 @@ function createTypingEffect(element, text, speed) {
 //   setTimeout(() => createTypingEffect(gradientText, originalText, 100), 1000);
 // }
 
-// ===== ADD ANIMATION CLASSES TO CSS =====
+// ===== ADD ANIMATION classNameES TO CSS =====
 const style = document.createElement('style');
 style.textContent = `
   .animate-in {
@@ -263,10 +263,10 @@ window.addEventListener('scroll', debouncedScroll);
 // ===== ACCESSIBILITY: KEYBOARD NAVIGATION =====
 document.addEventListener('keydown', function(e) {
   // Close mobile menu on ESC key
-  if (e.key === 'Escape' && !mobileMenu.classList.contains('hidden')) {
-    mobileMenu.classList.add('hidden');
-    menuIcon.classList.remove('hidden');
-    closeIcon.classList.add('hidden');
+  if (e.key === 'Escape' && !mobileMenu.classNameList.contains('hidden')) {
+    mobileMenu.classNameList.add('hidden');
+    menuIcon.classNameList.remove('hidden');
+    closeIcon.classNameList.add('hidden');
   }
 });
 
@@ -279,14 +279,14 @@ console.log('%cPara funcionalidades completas, use a versão React + Supabase', 
 window.addEventListener('load', function() {
   console.log('✅ Página carregada com sucesso!');
   
-  // Remove loading class if exists
-  document.body.classList.remove('loading');
+  // Remove loading className if exists
+  document.body.classNameList.remove('loading');
   
   // Trigger any initial animations
   setTimeout(function() {
     const hero = document.getElementById('hero');
     if (hero) {
-      hero.classList.add('loaded');
+      hero.classNameList.add('loaded');
     }
   }, 100);
 });
@@ -294,28 +294,28 @@ window.addEventListener('load', function() {
 // ===== PREVENT ORPHAN ANIMATIONS =====
 // Ensure all animations complete even if user navigates quickly
 window.addEventListener('beforeunload', function() {
-  document.body.classList.add('unloading');
+  document.body.classNameList.add('unloading');
 });
 
 
 // ===== SEÇÃO "PARA QUEM É A ANGOSTART?" - SISTEMA DE TABS =====
 function openTab(tabId) {
-  // Remover classe active de todas as tabs
+  // Remover classNamee active de todas as tabs
   document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.remove('active');
-    tab.classList.add('hidden');
+    tab.classNameList.remove('active');
+    tab.classNameList.add('hidden');
   });
   
-  // Remover classe active de todos os botões
+  // Remover classNamee active de todos os botões
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
+    btn.classNameList.remove('active');
   });
   
-  // Adicionar classe active à tab selecionada
+  // Adicionar classNamee active à tab selecionada
   const selectedTab = document.getElementById(tabId);
   if (selectedTab) {
-    selectedTab.classList.add('active');
-    selectedTab.classList.remove('hidden');
+    selectedTab.classNameList.add('active');
+    selectedTab.classNameList.remove('hidden');
     
     // Efeito de animação de entrada
     selectedTab.style.opacity = '0';
