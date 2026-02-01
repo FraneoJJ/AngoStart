@@ -53,7 +53,7 @@ export const useAppAnimations = () => {
       observer.disconnect();
     };
   }, []);
-};
+};      
 
 // Exemplo de função auxiliar para as TABS (se você não usar State no React)
 // Mas recomendo usar o useState que mostrei na resposta anterior no componente ParaQuem.jsx

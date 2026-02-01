@@ -1,62 +1,105 @@
-import React from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const Navbar = () => {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  // Scroll effect navbar
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Scroll suave para âncoras
+  const scrollToSection = (id) => {
+    const el = document.querySelector(id)
+    if (!el) return
+
+    const navbarHeight = document.getElementById('navbar')?.offsetHeight || 0
+    const y = el.getBoundingClientRect().top + window.scrollY - navbarHeight
+
+    window.scrollTo({ top: y, behavior: 'smooth' })
+    setMenuOpen(false)
+  }
+
   return (
-      <nav id="navbar" className="navbar">
-    <div className="container">
-      <div className="navbar-content">
-        {/* <!-- Logo --> */}
-        <a href="#" className="navbar-logo">
-          <img src="img/logo.png" alt="AngoStart" className="logo-image"/>
-        </a>
+    <nav
+      id="navbar"
+      className={`navbar ${scrolled ? 'scrolled' : ''}`}
+    >
+      <div className="container">
+        <div className="navbar-content">
 
-        {/* <!-- Navegação Desktop (PC) --> */}
-        <div className="navbar-links">
-          <a href="#sobre" className="nav-link">Sobre</a>
-          <a href="#funcionalidades" className="nav-link">Funcionalidades</a>
-          <a href="#para-quem" className="nav-link">Para quem é?</a>
-          <a href="#mentores" className="nav-link">Mentores</a>
-          <a href="#investimento" className="nav-link">Marketplace</a>
-          <a href="#planos" className="nav-link">Planos</a>
+          {/* Logo */}
+          <button onClick={() => scrollToSection('#hero')} className="navbar-logo">
+            <img src="/logo.png" alt="AngoStart" className="logo-image" />
+          </button>
+
+          {/* Desktop Links */}
+          <div className="navbar-links">
+            <button onClick={() => scrollToSection('#sobre')} className="nav-link">Sobre</button>
+            <button onClick={() => scrollToSection('#funcionalidades')} className="nav-link">Funcionalidades</button>
+            <button onClick={() => scrollToSection('#para-quem')} className="nav-link">Para quem é?</button>
+            <button onClick={() => scrollToSection('#ia')} className="nav-link">IA</button>
+            <button onClick={() => scrollToSection('#mentores')} className="nav-link">Mentores</button>
+            <button onClick={() => scrollToSection('#investimento')} className="nav-link">Marketplace</button>
+            <button onClick={() => scrollToSection('#planos')} className="nav-link">Planos</button>
+            <button onClick={() => scrollToSection('#depoimentos')} className="nav-link">Depoimentos</button>
+            <button onClick={() => scrollToSection('#parceiros')} className="nav-link">Parcerias</button>
+          </div>
+
+          {/* CTAs */}
+          <div className="navbar-ctas">
+            <Link to="/login" className="btn btn-ghost">Entrar</Link>
+            <Link to="/criar-conta" className="btn btn-primary">Criar Conta</Link>
+          </div>
+
+          {/* Mobile Button */}
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menu"
+          >
+            {!menuOpen ? (
+              <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            )}
+          </button>
         </div>
 
-        {/* <!-- Desktop CTAs --> */}
-        <div className="navbar-ctas">
-          <button className="btn btn-ghost" onclick="window.location.href='html/login.html'">Entrar</button>
-          <button className="btn btn-primary" onclick="window.location.href='html/register.html'">Criar Conta</button>
-        </div>
+        {/* Mobile Menu */}
+        {menuOpen && (
+          <div className="mobile-menu">
+            <button onClick={() => scrollToSection('#sobre')} className="mobile-link">Sobre</button>
+            <button onClick={() => scrollToSection('#funcionalidades')} className="mobile-link">Funcionalidades</button>
+            <button onClick={() => scrollToSection('#para-quem')} className="mobile-link">Para quem é?</button>
+            <button onClick={() => scrollToSection('#ia')} className="mobile-link">IA</button>
+            <button onClick={() => scrollToSection('#mentores')} className="mobile-link">Mentores</button>
+            <button onClick={() => scrollToSection('#investimento')} className="mobile-link">Marketplace</button>
+            <button onClick={() => scrollToSection('#planos')} className="mobile-link">Planos</button>
+            <button onClick={() => scrollToSection('#depoimentos')} className="mobile-link">Depoimentos</button>
+            <button onClick={() => scrollToSection('#parceiros')} className="mobile-link">Parcerias</button>
 
-        {/* <!-- Mobile Menu Button --> */}
-        <button className="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
-          <svg className="menu-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-          <svg className="close-icon hidden" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+            <div className="mobile-menu-ctas">
+              <Link to="/login" className="btn btn-outline-mobile">Entrar</Link>
+              <Link to="/criar-conta" className="btn btn-primary-mobile">Criar Conta</Link>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Mobile Menu  */}
-      <div className="mobile-menu hidden" id="mobileMenu">
-        <div className="mobile-menu-links">
-          <a href="#sobre" className="mobile-link">Sobre</a>
-          <a href="#funcionalidades" className="mobile-link">Funcionalidades</a>
-          <a href="#para-quem" className="mobile-link">Para quem é?</a>
-          <a href="#mentores" className="mobile-link">Mentores</a>
-          <a href="#investimento" className="mobile-link">Marketplace</a>
-          <a href="#planos" className="mobile-link">Planos</a>
-        </div>
-        <div className="mobile-menu-ctas">
-          <button className="btn btn-outline-mobile" onclick="showLogin()">Entrar</button>
-          <button className="btn btn-primary-mobile" onclick="showRegister()">Criar Conta</button>
-        </div>
-      </div>
-    </div>
-  </nav>
+    </nav>
   )
 }
 

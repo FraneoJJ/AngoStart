@@ -1,32 +1,21 @@
-<!DOCTYPE html>
-<html lang="pt-AO">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recuperar Senha - AngoStart</title>
-  <link rel="stylesheet" href="../styles/styles.css">
-  <link rel="stylesheet" href="../styles/auth.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+import React from 'react'
+import '../style/auth.css'
 
-  <!-- script  -->
-
-</head>
-<body className="auth-page">
-  
-  <div className="auth-container">
+const RecuperarSenha = () => {
+  return (
+    <div className="auth-page">
+        <div className="auth-container">
     <div className="auth-content">
-      <!-- Header -->
+      {/* <!-- Header --> */}
       <div className="auth-header">
         <div className="auth-logo">
-          <img src="..//logo.png" alt="AngoStart">
+          <img src="/logo.png" alt="AngoStart"/>
         </div>
         <h1 className="auth-title">Recuperar senha</h1>
         <p className="auth-subtitle">Digite seu email para receber instruções</p>
       </div>
 
-      <!-- Card -->
+      {/* <!-- Card --> */}
       <div className="auth-card">
         <div className="card-header">
           <h2>Esqueceu sua senha?</h2>
@@ -35,7 +24,7 @@
 
         <div className="card-content">
           <form id="forgotPasswordForm" className="auth-form">
-            <!-- Success Alert -->
+            {/* <!-- Success Alert --> */}
             <div id="successAlert" className="alert alert-success hidden">
               <svg className="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -44,7 +33,7 @@
               <span>Email de recuperação enviado com sucesso!</span>
             </div>
 
-            <!-- Email Field -->
+            {/* <!-- Email Field --> */}
             <div className="form-group">
               <label for="email" className="form-label">Email</label>
               <div className="input-wrapper">
@@ -58,16 +47,16 @@
                   className="form-input" 
                   placeholder="seu@email.com"
                   required
-                >
+                />
               </div>
             </div>
 
-            <!-- Submit Button -->
+            {/* <!-- Submit Button --> */}
             <button type="submit" className="btn btn-primary btn-block" id="submitBtn">
               Enviar link de recuperação
             </button>
 
-            <!-- Back to Login -->
+            {/* <!-- Back to Login --> */}
             <div className="auth-footer-link">
               <p>
                 Lembrou sua senha? 
@@ -80,7 +69,9 @@
     </div>
   </div>
 
-  <script>
+    </div>
+  )
+
     const form = document.getElementById('forgotPasswordForm');
     const submitBtn = document.getElementById('submitBtn');
     const successAlert = document.getElementById('successAlert');
@@ -105,6 +96,9 @@
         }, 3000);
       }, 1500);
     });
-  </script>
-</body>
-</html>
+
+}
+
+
+
+export default RecuperarSenha

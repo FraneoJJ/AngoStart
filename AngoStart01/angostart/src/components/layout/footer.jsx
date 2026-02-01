@@ -6,7 +6,7 @@ const footer = () => {
     <div className="container">
       <div className="footer-content">
         <div className="footer-brand">
-          <img src="img/logo.png" alt="AngoStart" className="footer-logo"/>
+          <img src="/logo.png" alt="AngoStart" className="footer-logo"/>
           <p className="footer-tagline">Transformando ideias angolanas em negócios de sucesso</p>
           <div className="social-links">
             <a href="#" className="social-link" aria-label="Facebook">

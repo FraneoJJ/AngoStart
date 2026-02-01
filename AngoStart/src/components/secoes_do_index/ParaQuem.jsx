@@ -21,7 +21,7 @@ const ParaQuem = () => {
         'Conecte-se com investidores',
         'Ferramentas de gestão financeira'
       ],
-      image: '/img/jovem-empresario-africano-feliz.jpg',
+      image: '//jovem-empresario-africano-feliz.jpg',
       buttonText: 'Começar Agora'
     },
     {
@@ -41,7 +41,7 @@ const ParaQuem = () => {
         'Conecte-se diretamente com empreendedores',
         'Acompanhe seu portfólio de investimentos'
       ],
-      image: '/img/download (2).jpg',
+      image: '//download (2).jpg',
       buttonText: 'Explorar Oportunidades'
     },
     {
@@ -61,7 +61,7 @@ const ParaQuem = () => {
         'Construa sua reputação',
         'Acesso a relatórios de impacto'
       ],
-      image: '/img/professional-black-excellence-art.jpg',
+      image: '//professional-black-excellence-art.jpg',
       buttonText: 'Torne-se Mentor'
     }
   ];
