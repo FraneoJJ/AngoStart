@@ -1,5 +1,7 @@
 import React from 'react'
 
+import { Link } from 'react-router-dom'
+
 const ComecarGratuitamente = () => {
   return (
       <section className="cta-section">
@@ -10,16 +12,16 @@ const ComecarGratuitamente = () => {
       </p>
       
       <div className="cta-buttons">
-        <button className="btn btn-secondary btn-lg">
+        <Link to={'/criar-conta'} className="btn btn-secondary btn-lg">
           Criar Conta Gratuitamente
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="ml-2">
             <line x1="5" y1="12" x2="19" y2="12"></line>
             <polyline points="12 5 19 12 12 19"></polyline>
           </svg>
-        </button>
-        <button className="btn btn-outline btn-lg">
-          Falar com Especialista
-        </button>
+        </Link>
+        <Link to={'/criar-conta'} className="btn btn-outline btn-lg">
+          Analise a sua ideia de negócio 
+        </Link>
       </div>
 
       <div className="cta-features">

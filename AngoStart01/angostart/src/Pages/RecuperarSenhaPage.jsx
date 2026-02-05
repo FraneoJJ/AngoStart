@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import '../style/auth.css'
 
 const RecuperarSenha = () => {
@@ -60,7 +61,7 @@ const RecuperarSenha = () => {
             <div className="auth-footer-link">
               <p>
                 Lembrou sua senha? 
-                <a href="login.html" className="link-primary">Voltar ao login</a>
+                <Link to={'/login'} className="link-primary">Voltar ao login</Link>
               </p>
             </div>
           </form>

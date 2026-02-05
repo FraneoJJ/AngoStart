@@ -1,5 +1,7 @@
 import React from 'react'
 
+import { Link } from 'react-router-dom'
+
 const Planos = () => {
   return (
       <section id="planos" className="section section-light">
@@ -28,7 +30,7 @@ const Planos = () => {
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Comunidade de empreendedores</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Suporte via email</li>
           </ul>
-          <button className="btn btn-outline btn-block mt-6">
+          <button className="btn btn-outline btn-block mt-6 colorblue">
             Começar Grátis
           </button>
         </div>
@@ -36,14 +38,14 @@ const Planos = () => {
         <div className="pricing-card popular">
           <div className="popular-badge">Mais Popular</div>
           <div className="pricing-header">
-            <h3 className="pricing-title">Pro</h3>
-            <p className="pricing-subtitle">Para empreendedores ativos</p>
+            <h3 className="pricing-title colorwhite">Pro</h3>
+            <p className="pricing-subtitle colorwhite">Para empreendedores ativos</p>
             <div className="pricing-price">
-              <span className="price">5.000kz</span>
-              <span className="period">/mês</span>
+              <span className="price colorwhite">5.000kz</span>
+              <span className="period colorwhite">/mês</span>
             </div>
           </div>
-          <ul className="pricing-features">
+          <ul className="pricing-features colorwhite">
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Validação ilimitada de ideias</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Análise completa de IA</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Geração de planos de negócio em PDF</li>
@@ -52,7 +54,7 @@ const Planos = () => {
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Matching com investidores</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Suporte prioritário</li>
           </ul>
-          <button className="btn btn-primary btn-block mt-6">
+          <button className="btn btnPlano btn-block mt-6">
             Escolher Pro
           </button>
         </div>
@@ -76,7 +78,7 @@ const Planos = () => {
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Gerente de conta dedicado</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Suporte 24/7</li>
           </ul>
-          <button className="btn btn-outline btn-block mt-6">
+          <button className="btn btn-outline btn-block mt-6 colorblue">
             Escolher Premium
           </button>
         </div>

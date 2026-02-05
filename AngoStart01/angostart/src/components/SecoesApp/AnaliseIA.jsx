@@ -137,7 +137,7 @@ const AnaliseIA = () => {
               <div className="score-value">{score}</div>
               <div className="score-label">de 100</div>
             </div>
-            <div className="score-title">Pontuação de Viabilidade</div>
+            <div className="score-title">Pontuação de Viabilidade (Exemplo)</div>
             
             <div className="ia-details">
               <div className="detail-section">

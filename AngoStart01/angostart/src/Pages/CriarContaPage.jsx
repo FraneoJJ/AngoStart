@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import '../style/auth.css'
 
 const CriarConta = () => {
@@ -78,7 +79,7 @@ const CriarConta = () => {
               <div className="auth-footer-link">
                 <p>
                   Já tem uma conta? 
-                  <a href="login.html" className="link-primary">Entrar</a>
+                  <Link to={'/login'} className="link-primary">Entrar</Link>
                 </p>
               </div>
             </div>

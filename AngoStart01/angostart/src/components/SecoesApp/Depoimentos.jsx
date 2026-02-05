@@ -38,8 +38,9 @@ const Depoimentos = () => {
           <div className="testimonial-author">
             <div className="author-avatar">JM</div>
             <div className="author-info">
-              <div className="author-name text-white">João Martins</div>
-              <div className="author-company text-white-muted">Fundador da TechStart</div>
+              <div className="author-name">João Martins</div>
+              <div className="author-company text-white-muted"> 
+                Fundador da TechStart</div>
             </div>
           </div>
         </div>
@@ -70,7 +71,7 @@ const Depoimentos = () => {
           <div className="testimonial-author">
             <div className="author-avatar">PF</div>
             <div className="author-info">
-              <div className="author-name text-white">Patricia Fernandes</div>
+              <div className="author-name">Patricia Fernandes</div>
               <div className="author-company text-white-muted">CEO da EcoSolutions</div>
             </div>
           </div>
@@ -102,7 +103,7 @@ const Depoimentos = () => {
           <div className="testimonial-author">
             <div className="author-avatar">MS</div>
             <div className="author-info">
-              <div className="author-name text-white">Miguel Santos</div>
+              <div className="author-name">Miguel Santos</div>
               <div className="author-company text-white-muted">Empreendedor</div>
             </div>
           </div>

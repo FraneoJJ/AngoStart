@@ -165,6 +165,7 @@
   --primary-300: #6b9ad6;
   --primary-200: #a8c8f0;
   --primary-100: #d4e6f9;
+  --primary-90: #e3edf7;
   
   /* Secondary Colors - Laranja */
   --secondary-900: #7a2e0e;
@@ -274,6 +275,24 @@
     font-size: inherit;
     font-weight: inherit;
   }
+
+  .colorwhite{
+    color: var(--neutral-white) !important;
+
+    li{
+      color: var(--neutral-white) !important;
+    }
+  }
+
+  .colorblue{
+    background-color: var(--primary-700) !important;
+    color: white !important;
+  }
+
+  .colorblue:hover{
+    background-color: var(--primary-600) !important;
+  }
+
 
   a {
     color: inherit;
@@ -3622,6 +3641,16 @@ a {
   transform: translateY(0);
 }
 
+.btnPlano{
+  background-color: var(--neutral-white);
+  color: var();
+}
+
+.btnPlano:hover{
+  background-color: var(--neutral-300);
+  box-shadow: var(--shadow-md);
+}
+
 .btn-primary {
   background-color: var(--secondary-500);
   color: var(--neutral-white);
@@ -3976,6 +4005,14 @@ a {
 .section-header {
   text-align: center;
   margin-bottom: 3rem;
+}
+
+.mentor-subtitle{
+  color: var(--secondary-400);
+  display: flex;
+  gap: 1rem;
+  text-align: center;
+  justify-content: center;
 }
 
 .section-title {
@@ -5999,21 +6036,19 @@ small {
   display: flex;
   flex-direction: column;
   color: var(--neutral-white);
+  padding-bottom: 1rem;
 
   svg {
     color: var(--secondary-400);
   }
+
 }
 
 .ia-feature {
-  /* background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1); */
   padding: 1rem;
   transition: all var(--transition-base);
   display: flex;
   flex-direction: row;
-  align-items: center;
   gap: 1rem;
 }
 
@@ -6254,7 +6289,7 @@ small {
 .mentor-card {
   background-color: var(--neutral-white);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--neutral-200);
+  border: 1px solid var(--neutral-300);
   transition: all var(--transition-base);
   padding: 1.5rem;
 }
@@ -6262,6 +6297,7 @@ small {
 .mentor-card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-4px);
+  background-color: var(--neutral-100);
 }
 
 .mentor-avatar {
@@ -6331,22 +6367,7 @@ small {
   transform: translateY(-4px);
 }
 
-.investment-card.featured {
-  background: linear-gradient( var(--primary-800), var(--primary-700));
-  border-color: var(--secondary-500);
-  position: relative;
-  overflow: hidden;
-}
 
-.investment-card.featured:hover {
-  /* content: ""; */
-  background: linear-gradient( var(--primary-800), var(--primary-600));
-  /* width: 100%;
-  height: 4px; */
-  /* position: absolute;
-  top: 0;
-  left: 0; */
-}
 
 .investment-badge {
   background-color: var(--primary-600);
@@ -6364,15 +6385,51 @@ small {
 }
 
 .investment-details {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  background: linear-gradient(135deg,var(--secondary-100), var(--neutral-white), var(--primary-90)); 
+  padding: 10px;
+  border-radius: 10px;
   margin-bottom: 1rem;
+
+  progress{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+  }
+
+  progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--secondary-300), var(--secondary-400), var(--primary-500), var(--primary-400)); 
+    border-radius: 10px;
+  }
+
+  progress::-webkit-progress-bar {
+    background: var(--neutral-200);
+    border-radius: 10px;
+  }
+}
+
+.btn-detalhe{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--secondary-400);
+  padding: 5px;
+  color: var(--neutral-white);
+  font-weight: bolder;
+  font-size: 14px;
+  border-radius: 10px;
+  margin-top: 10px;
+  transition: .5s;
+}
+
+.btn-detalhe:hover{
+  background-color: var(--secondary-600);
 }
 
 .detail-item {
   display: flex;
-  flex-direction: column;
+  justify-content:space-between;
 }
 
 .detail-label {
@@ -6414,7 +6471,7 @@ small {
 }
 
 .pricing-card.popular {
-  border-color: var(--secondary-500);
+  background-color: var(--primary-700) !important;
   transform: scale(1.05);
   background-color: var(--neutral-200);
 }
@@ -6502,6 +6559,12 @@ small {
   border-radius: var(--radius-xl);
   border: 1px solid #ffffff1a;
   padding: 2rem;
+  transition: .5s;
+  scale: 1;
+}
+
+.testimonial-card:hover{
+  transform: scale(1.01);
 }
 
 .testimonial-rating {
@@ -6541,8 +6604,9 @@ small {
 }
 
 .author-name {
-  font-weight: 600;
+  font-weight: 650;
   margin-bottom: 0.25rem;
+  font-size: 17px;
 }
 
 .author-company {

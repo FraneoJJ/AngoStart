@@ -14,6 +14,7 @@ import Parceiros from '../components/SecoesApp/Parceiros'
 import TesteGratuito from '../components/SecoesApp/ComecarGratuitamente'
 import Footer from '../components/layout/footer'
 
+
 function PaginaInicial() {
   return (
     <>

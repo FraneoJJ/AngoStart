@@ -1,5 +1,7 @@
 import React from 'react'
 
+import { Link } from 'react-router-dom'
+
 const Mentores = () => {
   return (
       <section id="mentores" className="section section-light">
@@ -38,9 +40,7 @@ const Mentores = () => {
               </svg>
               Disponível
             </div>
-            <button className="btn btn-outline btn-sm mt-3">
-              Ver Perfil
-            </button>
+            <Link to={"/login"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
           </div>
         </div>
 
@@ -70,9 +70,7 @@ const Mentores = () => {
               </svg>
               Disponível
             </div>
-            <button className="btn btn-outline btn-sm mt-3">
-              Ver Perfil
-            </button>
+            <Link to={"/login"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
           </div>
         </div>
 
@@ -102,21 +100,19 @@ const Mentores = () => {
               </svg>
               Ocupado
             </div>
-            <button className="btn btn-outline btn-sm mt-3">
-              Ver Perfil
-            </button>
+            <Link to={"/login"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
           </div>
         </div>
       </div>
 
       <div className="text-center mt-8">
-        <button className="btn btn-primary btn-lg">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="mr-2">
+        <Link to={"/login"} className="btn btn-primary btn-lg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="mr-2">
             <circle cx="11" cy="11" r="8"/>
             <path d="M21 21l-4.35-4.35"/>
           </svg>
           Encontrar um mentor
-        </button>
+        </Link>
       </div>
     </div>
   </section>

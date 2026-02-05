@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import '../style/auth.css'
 
 const Login = () => {
@@ -72,7 +73,7 @@ const Login = () => {
 
             {/* <!-- Forgot Password --> */}
             <div className="form-actions">
-              <a href="forgot-password.html" className="link-primary">Esqueceu a senha?</a>
+              <Link to={'/recuperar-senha'} className="link-primary">Esqueceu a senha?</Link>
             </div>
 
             {/* <!-- Submit Button --> */}
@@ -84,12 +85,12 @@ const Login = () => {
             <div className="auth-footer-link">
               <p>
                 Não tem uma conta? 
-                <a href="register.html" className="link-primary">Criar conta</a>
+                <Link to={'/criar-conta'} className="link-primary">Criar conta</Link>
               </p>
             </div>
 
             {/* <!-- Demo Credentials --> */}
-            <div className="demo-box">
+            {/* <div className="demo-box">
               <p className="demo-title">Contas de demonstração:</p>
               <div className="demo-list">
                 <p>• empreendedor@angostart.com</p>
@@ -98,7 +99,7 @@ const Login = () => {
                 <p>• admin@angostart.com</p>
                 <p className="demo-note">Qualquer senha funciona</p>
               </div>
-            </div>
+            </div> */}
           </form>
         </div>
       </div>
