@@ -45,7 +45,7 @@ const ComecarGratuitamente = () => {
         </div>
       </div>
     </div>
-  </section>
+  </section>  
   )
 }
 
