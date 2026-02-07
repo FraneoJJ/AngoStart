@@ -3,22 +3,22 @@ const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileMenu = document.getElementById('mobileMenu');
 
 function toggleMobileMenu() {
-    mobileMenu.classList.toggle('active');
+    mobileMenu.classNameList.toggle('active');
     const icon = mobileMenuBtn.querySelector('i');
-    if (mobileMenu.classList.contains('active')) {
-        icon.classList.remove('fa-bars');
-        icon.classList.add('fa-times');
+    if (mobileMenu.classNameList.contains('active')) {
+        icon.classNameList.remove('fa-bars');
+        icon.classNameList.add('fa-times');
     } else {
-        icon.classList.remove('fa-times');
-        icon.classList.add('fa-bars');
+        icon.classNameList.remove('fa-times');
+        icon.classNameList.add('fa-bars');
     }
 }
 
 function closeMobileMenu() {
-    mobileMenu.classList.remove('active');
+    mobileMenu.classNameList.remove('active');
     const icon = mobileMenuBtn.querySelector('i');
-    icon.classList.remove('fa-times');
-    icon.classList.add('fa-bars');
+    icon.classNameList.remove('fa-times');
+    icon.classNameList.add('fa-bars');
 }
 
 mobileMenuBtn.addEventListener('click', toggleMobileMenu);
@@ -34,19 +34,19 @@ document.addEventListener('click', (event) => {
 function openTab(tabName) {
     // Esconder todos os tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
+        tab.classNameList.remove('active');
     });
     
-    // Remover classe active de todos os botões
+    // Remover classNamee active de todos os botões
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
+        btn.classNameList.remove('active');
     });
     
     // Mostrar o tab selecionado
-    document.getElementById(tabName).classList.add('active');
+    document.getElementById(tabName).classNameList.add('active');
     
-    // Adicionar classe active ao botão clicado
-    event.currentTarget.classList.add('active');
+    // Adicionar classNamee active ao botão clicado
+    event.currentTarget.classNameList.add('active');
 }
 
 // ===== AUTH MODALS =====
@@ -55,13 +55,13 @@ const registerModal = document.getElementById('registerModal');
 
 function showLogin() {
     closeModals();
-    loginModal.classList.add('active');
+    loginModal.classNameList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
 function showRegister() {
     closeModals();
-    registerModal.classList.add('active');
+    registerModal.classNameList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
@@ -72,8 +72,8 @@ function showForgotPassword() {
 }
 
 function closeModals() {
-    loginModal.classList.remove('active');
-    registerModal.classList.remove('active');
+    loginModal.classNameList.remove('active');
+    registerModal.classNameList.remove('active');
     document.body.style.overflow = 'auto';
 }
 
@@ -207,9 +207,9 @@ window.addEventListener('scroll', () => {
         
         if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
             document.querySelectorAll('.nav-desktop a, .mobile-menu a').forEach(link => {
-                link.classList.remove('active');
+                link.classNameList.remove('active');
                 if (link.getAttribute('href') === `#${sectionId}`) {
-                    link.classList.add('active');
+                    link.classNameList.add('active');
                 }
             });
         }
@@ -220,14 +220,14 @@ window.addEventListener('scroll', () => {
 function showNotification(type, message) {
     // Criar elemento de notificação
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
+    notification.classNameName = `notification notification-${type}`;
     notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <div className="notification-content">
+            <i className="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
             <span>${message}</span>
         </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
+        <button className="notification-close" onclick="this.parentElement.remove()">
+            <i className="fas fa-times"></i>
         </button>
     `;
     
@@ -323,10 +323,10 @@ function checkCookieConsent() {
     if (!localStorage.getItem('cookieConsent')) {
         // Criar banner de cookies se necessário
         const cookieBanner = document.createElement('div');
-        cookieBanner.className = 'cookie-banner';
+        cookieBanner.classNameName = 'cookie-banner';
         cookieBanner.innerHTML = `
             <p>Usamos cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa <a href="#" onclick="showPrivacyPolicy()">Política de Privacidade</a>.</p>
-            <button onclick="acceptCookies()" class="btn btn-sm btn-primary">Aceitar</button>
+            <button onclick="acceptCookies()" className="btn btn-sm btn-primary">Aceitar</button>
         `;
         document.body.appendChild(cookieBanner);
         
