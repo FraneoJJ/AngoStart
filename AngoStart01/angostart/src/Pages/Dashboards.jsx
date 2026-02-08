@@ -102,7 +102,7 @@ export default function Dashboard() {
       email: "investidor@gmail.com",
       password: "123456",
       name: "Pedro Silva",
-      role: "investidor",
+      role: "Jano Bernado",
     },
     {
       email: "empreendedor@gmail.com",
@@ -113,13 +113,13 @@ export default function Dashboard() {
     {
       email: "mentor@gmail.com",
       password: "123456",
-      name: "Ana Tavares",
+      name: "Alexandre Dala",
       role: "mentor",
     },
     {
       email: "admin@gmail.com",
       password: "123456",
-      name: "Nzamba Nkunku",
+      name: "Frâneo João",
       role: "admin",
     },
   ];
@@ -634,15 +634,6 @@ function RenderAdminPage() {
 
         <div className="card-content">
           <form id="loginForm" className="auth-form">
-            {/* <!-- Error Alert --> */}
-            {/* <div id="errorAlert" className="alert alert-error hidden">
-              <svg className="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <span id="errorMessage">Email ou senha incorretos</span>
-            </div> */}
             {error && (
                   <div className="alert alert-error">{error}</div>
                 )}
