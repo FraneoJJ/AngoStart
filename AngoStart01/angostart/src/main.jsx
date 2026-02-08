@@ -10,7 +10,6 @@ import { BrowserRouter, RouterProvider, Route, createBrowserRouter } from 'react
 import ErrorPage from './Pages/ErrorPage.jsx'
 
 // Paginas de navegacao
-import LoginPage from './Pages/LoginPage.jsx'
 import CriarContaPage from './Pages/CriarContaPage.jsx'
 import RecuperarSenhaPage from './Pages/RecuperarSenhaPage.jsx'
 import DashboardPage from './Pages/Dashboards.jsx'
@@ -20,10 +19,6 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     errorElement: <ErrorPage />,
-  },
-  {
-    path: "/login",
-    element: <LoginPage />,
   },
   {
     path: "/criar-conta",

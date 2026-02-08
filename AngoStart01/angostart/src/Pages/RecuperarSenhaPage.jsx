@@ -61,7 +61,7 @@ const RecuperarSenha = () => {
             <div className="auth-footer-link">
               <p>
                 Lembrou sua senha? 
-                <Link to={'/login'} className="link-primary">Voltar ao login</Link>
+                <Link to={'/dashboard'} className="link-primary">Voltar ao login</Link>
               </p>
             </div>
           </form>

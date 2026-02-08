@@ -79,7 +79,7 @@ const CriarConta = () => {
               <div className="auth-footer-link">
                 <p>
                   Já tem uma conta? 
-                  <Link to={'/login'} className="link-primary">Entrar</Link>
+                  <Link to={'/dashboard'} className="link-primary">Entrar</Link>
                 </p>
               </div>
             </div>

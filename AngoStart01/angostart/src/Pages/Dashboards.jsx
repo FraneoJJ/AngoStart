@@ -714,7 +714,6 @@ function RenderAdminPage() {
                 <p>• investidor@gmail.com / 123456</p>
                 <p>• mentor@gmail.com / 123456</p>
                 <p>• admin@gmail.com / 123456</p>
-                <p className="demo-note">Qualquer senha funciona</p>
               </div>
             </div>
           </form>

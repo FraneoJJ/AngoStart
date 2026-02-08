@@ -5108,6 +5108,13 @@ a {
   font-weight: 700;
 }
 
+.stat-valueHome {
+  color: var(--neutral-400);
+  margin-bottom: .25rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
 .stat-change {
   color: var(--neutral-500);
   font-size: .75rem;

@@ -122,15 +122,15 @@ const Home = () => {
           {/* Stats */}
           <div className="hero-stats fade-in-delay-4">
             <div className="stat-item">
-              <div className="stat-value">500+</div>
+              <div className="stat-valueHome">500+</div>
               <div className="stat-label">Ideias Validadas</div>
             </div>
             <div className="stat-item">
-              <div className="stat-value">150+</div>
+              <div className="stat-valueHome">150+</div>
               <div className="stat-label">Mentores Ativos</div>
             </div>
             <div className="stat-item">
-              <div className="stat-value">20+</div>
+              <div className="stat-valueHome">20+</div>
               <div className="stat-label">Investidores Ativos</div>
             </div>
           </div>
