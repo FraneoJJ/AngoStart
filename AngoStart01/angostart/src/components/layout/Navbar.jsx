@@ -54,7 +54,7 @@ const Navbar = () => {
 
           {/* CTAs */}
           <div className="navbar-ctas">
-            <Link to="/login" className="btn btn-ghost">Entrar</Link>
+            <Link to="/dashboard" className="btn btn-ghost">Entrar</Link>
             <Link to="/criar-conta" className="btn btn-primary">Criar Conta</Link>
           </div>
 
@@ -93,7 +93,7 @@ const Navbar = () => {
             <button onClick={() => scrollToSection('#parceiros')} className="mobile-link">Parcerias</button>
 
             <div className="mobile-menu-ctas">
-              <Link to="/login" className="btn btn-outline-mobile">Entrar</Link>
+              <Link to="/dashboard" className="btn btn-outline-mobile">Entrar</Link>
               <Link to="/criar-conta" className="btn btn-primary-mobile">Criar Conta</Link>
             </div>
           </div>

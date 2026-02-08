@@ -13,6 +13,7 @@ import ErrorPage from './Pages/ErrorPage.jsx'
 import LoginPage from './Pages/LoginPage.jsx'
 import CriarContaPage from './Pages/CriarContaPage.jsx'
 import RecuperarSenhaPage from './Pages/RecuperarSenhaPage.jsx'
+import DashboardPage from './Pages/Dashboards.jsx'
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,10 @@ const router = createBrowserRouter([
   {
     path: "/recuperar-senha",
     element: <RecuperarSenhaPage />,
+  },
+   {
+    path: "/dashboard",
+    element: <DashboardPage />, // Rota alternativa para dashboard
   },
 ])
 

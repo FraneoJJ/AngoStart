@@ -2,7 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import '../style/auth.css'
 
-const Login = () => {
+const Login = ({ email, setEmail, password, setPassword, error, handleLogin, users }) => {
   return (
     <div className="auth-page">
         <div className="auth-container">
@@ -49,6 +49,8 @@ const Login = () => {
                   className="form-input" 
                   placeholder="seu@email.com"
                   required
+                  value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -67,7 +69,13 @@ const Login = () => {
                   className="form-input" 
                   placeholder="••••••••"
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
+
+                {error && (
+                <div className="alert alert-error">{error}</div>
+              )}
               </div>
             </div>
 
@@ -77,7 +85,7 @@ const Login = () => {
             </div>
 
             {/* <!-- Submit Button --> */}
-            <button type="submit" className="btn btn-primary btn-block" id="submitBtn">
+            <button type="submit" className="btn btn-primary btn-block" id="submitBtn" onClick={handleLogin}>
               Entrar
             </button>
 
@@ -90,16 +98,16 @@ const Login = () => {
             </div>
 
             {/* <!-- Demo Credentials --> */}
-            {/* <div className="demo-box">
-              <p className="demo-title">Contas de demonstração:</p>
+            <div className="demo-box">
+              <p className="demo-title">Usuários de teste</p>
               <div className="demo-list">
-                <p>• empreendedor@angostart.com</p>
-                <p>• investidor@angostart.com</p>
-                <p>• mentor@angostart.com</p>
-                <p>• admin@angostart.com</p>
+                <p>• empreendedor@gmail.com / 123456</p>
+                <p>• investidor@gmail.com / 123456</p>
+                <p>• mentor@gmail.com / 123456</p>
+                <p>• admin@gmail.com / 123456</p>
                 <p className="demo-note">Qualquer senha funciona</p>
               </div>
-            </div> */}
+            </div>
           </form>
         </div>
       </div>
