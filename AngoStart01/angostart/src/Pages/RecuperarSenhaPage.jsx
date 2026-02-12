@@ -1,0 +1,105 @@
+import React from 'react'
+import { Link } from 'react-router-dom'
+import '../style/auth.css'
+
+const RecuperarSenha = () => {
+  return (
+    <div className="auth-page">
+        <div className="auth-container">
+    <div className="auth-content">
+      {/* <!-- Header --> */}
+      <div className="auth-header">
+        <div className="auth-logo">
+          <img src="/logo.png" alt="AngoStart"/>
+        </div>
+        <h1 className="auth-title">Recuperar senha</h1>
+        <p className="auth-subtitle">Digite seu email para receber instruções</p>
+      </div>
+
+      {/* <!-- Card --> */}
+      <div className="auth-card">
+        <div className="card-header">
+          <h2>Esqueceu sua senha?</h2>
+          <p className="card-description">Enviaremos um link de recuperação para seu email</p>
+        </div>
+
+        <div className="card-content">
+          <form id="forgotPasswordForm" className="auth-form">
+            {/* <!-- Success Alert --> */}
+            <div id="successAlert" className="alert alert-success hidden">
+              <svg className="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              <span>Email de recuperação enviado com sucesso!</span>
+            </div>
+
+            {/* <!-- Email Field --> */}
+            <div className="form-group">
+              <label for="email" className="form-label">Email</label>
+              <div className="input-wrapper">
+                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <input 
+                  type="email" 
+                  id="email" 
+                  className="form-input" 
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* <!-- Submit Button --> */}
+            <button type="submit" className="btn btn-primary btn-block" id="submitBtn">
+              Enviar link de recuperação
+            </button>
+
+            {/* <!-- Back to Login --> */}
+            <div className="auth-footer-link">
+              <p>
+                Lembrou sua senha? 
+                <Link to={'/dashboard'} className="link-primary">Voltar ao login</Link>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    </div>
+  )
+
+    const form = document.getElementById('forgotPasswordForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const successAlert = document.getElementById('successAlert');
+    const emailInput = document.getElementById('email');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Simulate sending email
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+      
+      setTimeout(function() {
+        successAlert.classNameList.remove('hidden');
+        emailInput.value = '';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Enviar link de recuperação';
+        
+        // Redirect to login after 3 seconds
+        setTimeout(function() {
+          window.location.href = 'login.html';
+        }, 3000);
+      }, 1500);
+    });
+
+}
+
+
+
+export default RecuperarSenha

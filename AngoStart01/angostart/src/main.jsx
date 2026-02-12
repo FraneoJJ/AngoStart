@@ -1,0 +1,41 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+// Para navegar em todas apaginas 
+import { BrowserRouter, RouterProvider, Route, createBrowserRouter } from 'react-router-dom'
+
+// Pagina de erro 
+import ErrorPage from './Pages/ErrorPage.jsx'
+
+// Paginas de navegacao
+import CriarContaPage from './Pages/CriarContaPage.jsx'
+import RecuperarSenhaPage from './Pages/RecuperarSenhaPage.jsx'
+import DashboardPage from './Pages/Dashboards.jsx'
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+    errorElement: <ErrorPage />,
+  },
+  {
+    path: "/criar-conta",
+    element: <CriarContaPage />,
+  },
+  {
+    path: "/recuperar-senha",
+    element: <RecuperarSenhaPage />,
+  },
+   {
+    path: "/dashboard",
+    element: <DashboardPage />, // Rota alternativa para dashboard
+  },
+])
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>,
+)
