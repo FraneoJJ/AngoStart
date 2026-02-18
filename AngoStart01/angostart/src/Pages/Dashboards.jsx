@@ -1,6 +1,6 @@
 import { useState , useEffect } from "react";
 import { Link } from "react-router-dom";
-import '../App.css';
+import '../style/auth.css';
 
 const navigationConfig = {
  empreendedor: [

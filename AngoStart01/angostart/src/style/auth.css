@@ -684,3 +684,36 @@ select.form-input {
     font-size: 0.75rem;
   }
 }
+body.dark-theme {
+  --neutral-white: #1f2937; 
+  --neutral-900: #f9fafb;    
+  --neutral-600: #d1d5db;    
+  --text-main: #ffffff;
+  --text-muted: #e5e7eb;
+  background-color: #0f172a; 
+}
+
+body {
+  color: var(--text-main);
+}
+
+.dashboard-card, .stat-card {
+  background-color: var(--neutral-white);
+  color: var(--text-main);
+}
+
+.card-description, .stat-label,.nav-label ,
+.stat-value,.stat-change,
+.sidebar-header,.dashboard-card-description {
+  color: var(--text-muted) !important;
+}
+
+body.dark-theme .data-table th {
+  color: #ffffff;
+  background-color: #374151;
+}
+
+body.dark-theme .data-table td {
+  color: #f3f4f6;
+  border-bottom-color: #374151;
+}
