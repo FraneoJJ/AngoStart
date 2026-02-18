@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState , useEffect } from "react";
 import { Link } from "react-router-dom";
+import '../App.css';
 
 const navigationConfig = {
  empreendedor: [
@@ -102,7 +103,7 @@ export default function Dashboard() {
       email: "investidor@gmail.com",
       password: "123456",
       name: "Pedro Silva",
-      role: "Jano Bernado",
+      role: "investidor",
     },
     {
       email: "empreendedor@gmail.com",
@@ -113,13 +114,13 @@ export default function Dashboard() {
     {
       email: "mentor@gmail.com",
       password: "123456",
-      name: "Alexandre Dala",
+      name: "Ana Tavares",
       role: "mentor",
     },
     {
       email: "admin@gmail.com",
       password: "123456",
-      name: "Frâneo João",
+      name: "Nzamba Nkunku",
       role: "admin",
     },
   ];
@@ -148,6 +149,7 @@ function RenderInvestidorPage() {
   switch(currentPage) {
     case 'dashboard': return <Investidor />;
     case 'marketplace': return <Marketplace />;
+    case 'meus-investimentos': return <Investimentos />;
     case 'propostas': return <Propostas />;
     case 'analytics': return <Analytics />;
     case 'perfil': return <InvestidorPerfil />;
@@ -157,39 +159,36 @@ function RenderInvestidorPage() {
 }
 function RenderEmpreendedorPage() {
   switch(currentPage) {
-    case 'dashboard': return <Investidor />;
-    case 'submeter-ideia': return <Marketplace />;
-    case 'minhas-ideias': return <Propostas />;
-    case 'mentoria': return <Analytics />;
-    case 'investidores': return <InvestidorPerfil />;
-    case 'plano-negocio': return <Configuracoes />;
-    case 'perfil': return <Configuracoes />;
-    case 'assinatura': return <Configuracoes />;
-     case 'configuracoes': return <Configuracoes />;
-    default: return <Investidor />;
+    case 'dashboard': return <Empreendedor />;
+    case 'submeter-ideia': return <SubmeterIdeia/>;
+    case 'minhas-ideias': return <MinhasIdeias />;
+    case 'mentoria': return <Mentoria />;
+    case 'investidores': return <Investidores />;
+    case 'perfil': return <Perfilmentor />;
+    case 'configuracoes': return <Configuracoes />;
+    default: return <Empreendedor />;
   }
 }
 function RenderMentorPage() {
   switch(currentPage) {
-    case 'dashboard': return <Investidor />;
-    case 'sessoes': return <Marketplace />;
-    case 'mentorados': return <Propostas />;
-    case 'recursos': return <Analytics />;
-    case 'disponibilidade': return <InvestidorPerfil />;
-    case 'perfil': return <Configuracoes />;
-    case 'especialidades': return <Configuracoes />;
+    case 'dashboard': return <Mentor />;
+    case 'sessoes': return <Sessoes/>;
+    case 'mentorados': return <Mentorados/>;
+    case 'agenda': return <Agenda/>;
+    case 'mensagens': return < Mensagens/>;
+    case 'perfil': return <Perfilmentor />;
     case 'configuracoes': return <Configuracoes />;
-    default: return <Investidor />;
+    default: return <Mentor />;
   }
 }
 function RenderAdminPage() {
   switch(currentPage) {
-    case 'dashboard': return <Investidor />;
+    case 'dashboard': return <Admin />;
     case 'usuarios': return <Usuarios />;
     case 'ideias': return <Ideias />;
     case 'relatorios': return <Relatorio />;
     case 'configuracoes': return <Configuracoes />;
-    default: return <Investidor />;
+    default: return <Admin />;
   }
 }
 
@@ -603,8 +602,8 @@ function RenderAdminPage() {
 
   function RenderArea() {
     if (user.role === "investidor") return <RenderInvestidorPage />;
-    if (user.role === "empreendedor") return <Empreendedor />;
-    if (user.role === "mentor") return <Mentor />;
+    if (user.role === "empreendedor") return <RenderEmpreendedorPage/>;
+    if (user.role === "mentor") return <RenderMentorPage />;
     return <RenderAdminPage/>;
   }
 
@@ -612,108 +611,56 @@ function RenderAdminPage() {
   // LOGIN PAGE
   // =========================
   if (!user) {
-  return (
-    <div className="auth-page">
+    return (
+      <div className="auth-page">
         <div className="auth-container">
-    <div className="auth-content">
-      {/* <!-- Header --> */}
-      <div className="auth-header">
-        <div className="auth-logo">
-          <img src="..//logo.png" alt="AngoStart"/>
-        </div>
-        <h1 className="auth-title">Bem-vindo de volta!</h1>
-        <p className="auth-subtitle">Entre para continuar sua jornada empreendedora</p>
-      </div>
+          <div className="auth-header">
+            <h1 className="auth-title">Bem-vindo de volta!</h1>
+            <p className="auth-subtitle">Entre para continuar sua jornada empreendedora</p>
+          </div>
 
-      {/* <!-- Card --> */}
-      <div className="auth-card">
-        <div className="card-header">
-          <h2>Entrar na sua conta</h2>
-          <p className="card-description">Digite suas credenciais para acessar a plataforma</p>
-        </div>
-
-        <div className="card-content">
-          <form id="loginForm" className="auth-form">
-            {error && (
-                  <div className="alert alert-error">{error}</div>
-                )}
-
-            {/* <!-- Email Field --> */}
-            <div className="form-group">
-              <label for="email" className="form-label">Email</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
-                </svg>
-                <input 
-                  type="email" 
-                  id="email" 
-                  className="form-input" 
-                  placeholder="seu@email.com"
-                  required
+          <div className="auth-card">
+            <div className="card-content">
+              <div className="auth-form">
+                <input
+                  className="form-input"
+                  type="email"
+                  placeholder="Gmail"
                   value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
-              </div>
-            </div>
 
-            {/* <!-- Password Field --> */}
-            <div className="form-group">
-              <label for="password" className="form-label">Senha</label>
-              <div className="input-wrapper">
-                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-                <input 
-                  type="password" 
-                  id="password" 
-                  className="form-input" 
-                  placeholder="••••••••"
-                  required
+                <input
+                  className="form-input"
+                  type="password"
+                  placeholder="Senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
 
+                {error && (
+                  <div className="alert alert-error">{error}</div>
+                )}
+
+                <button className="btn btn-primary btn-block" onClick={handleLogin}>
+                  Entrar
+                </button>
+
+                <div className="demo-box">
+                  <div className="demo-title">Usuários de teste</div>
+                  <div className="demo-list">
+                    investidor@gmail.com / 123456<br />
+                    empreendedor@gmail.com / 123456<br />
+                    mentor@gmail.com / 123456<br />
+                    admin@gmail.com / 123456
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* <!-- Forgot Password --> */}
-            <div className="form-actions">
-              <Link to={'/recuperar-senha'} className="link-primary">Esqueceu a senha?</Link>
-            </div>
-
-            {/* <!-- Submit Button --> */}
-            <button className="btn btn-primary btn-block" onClick={handleLogin}>
-              Entrar
-            </button>
-
-            {/* <!-- Register Link --> */}
-            <div className="auth-footer-link">
-              <p>
-                Não tem uma conta? 
-                <Link to={'/criar-conta'} className="link-primary">Criar conta</Link>
-              </p>
-            </div>
-
-            {/* <!-- Demo Credentials --> */}
-            <div className="demo-box">
-              <p className="demo-title">Usuários de teste</p>
-              <div className="demo-list">
-                <p>• empreendedor@gmail.com / 123456</p>
-                <p>• investidor@gmail.com / 123456</p>
-                <p>• mentor@gmail.com / 123456</p>
-                <p>• admin@gmail.com / 123456</p>
-              </div>
-            </div>
-          </form>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-    </div>
-  );
+    );
   }
 
   // =========================
@@ -723,7 +670,7 @@ function RenderAdminPage() {
 return (<>
 <div className="dashboard-page"> 
   <header className="sidebar-header">
-    <img src="/logo.png" alt="AngoStart" className="logo-image"/>
+    <h2>AngoStart</h2>
   </header>
   <aside className="sidebar">
   <div className="sidebar-nav">
@@ -1308,8 +1255,6 @@ function Propostas() {
           </button>
         </div>
       </div>
-
-      {/* ESTILOS LOCAIS */}
       <style>
         {`
           .proposta-item:hover { background: #f4f7fe; }
@@ -1427,59 +1372,105 @@ function InvestidorPerfil() {
 }
 
 function Configuracoes() {
-  
-  const isDarkMode = document.body.classList.contains('dark-theme');
+  // Estado para controlar o Modo Escuro
+  const [dark, setDark] = useState(document.body.classList.contains('dark-theme'));
+  const [notificacoes, setNotificacoes] = useState(true);
+  const [idioma, setIdioma] = useState('pt');
 
-  return(
-    <div className="dashboard-card" style={{maxWidth: '700px', margin:' 0 auto'}}>
-      <div className="dashboard-card-header">
-        <h3 className="dashboard-card-title">Configurações do Sistema</h3>
+  // Efeito para aplicar/remover a classe no body
+  useEffect(() => {
+    if (dark) {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  }, [dark]);
+
+  return (
+    <div className="dashboard-card" style={{ maxWidth: '700px', margin: '0 auto', padding: 0, overflow: 'hidden' }}>
+      <div className="dashboard-card-header" style={{ padding: '25px', borderBottom: '1px solid var(--neutral-200)' }}>
+        <h3 className="dashboard-card-title" style={{ fontSize: '1.25rem' }}>Configurações do Sistema</h3>
         <p className="dashboard-card-description">Personalize sua experiência na plataforma AngoStart.</p>
       </div>
 
-      <div style={{padding: '20px'}}>
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0', borderBottom:'1px solid #eee'}}>
+      <div style={{ padding: '10px 25px 25px 25px' }}>
+        
+        {/* MODO ESCURO */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid var(--neutral-100)' }}>
           <div>
-            <h4 style={{margin: '0'}}>Modo Escuro</h4>
-            <p style={{margin: '0', fontSize: '0.85rem', color: '#666'}}>Altera a aparência do site para cores escuras.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Modo Escuro</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Altera a aparência para cores mais confortáveis à noite.</p>
           </div>
           <label className="switch">
-            <input type="checkbox" checked={isDarkMode} />
+            <input 
+              type="checkbox" 
+              checked={dark} 
+              onChange={() => setDark(!dark)} 
+            />
             <span className="slider round"></span>
           </label>
         </div>
 
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0', borderBottom: '1px solid #eee'}}>
+        {/* IDIOMA */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid var(--neutral-100)' }}>
           <div>
-            <h4 style={{margin: '0'}}>Idioma do Sistema</h4>
-            <p style={{margin: '0', fontSize: '0.85rem', color: '#666'}}>Escolha o idioma das interfaces.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Idioma do Sistema</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Escolha o idioma preferencial das interfaces.</p>
           </div>
-          <select id="languageSelect" className="input-field" style={{padding: '8px', borderRadius: '6px', border:' 1px solid #ddd'}}>
+          <select 
+            className="form-input" 
+            value={idioma}
+            onChange={(e) => setIdioma(e.target.value)}
+            style={{ width: 'auto', minWidth: '160px', padding: '8px' }}
+          >
             <option value="pt">Português (AO)</option>
             <option value="en">English (US)</option>
             <option value="fr">Français</option>
           </select>
         </div>
 
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 0', borderBottom:' 1px solid #eee'}}>
+        {/* NOTIFICAÇÕES */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
           <div>
-            <h4 style={{margin: '0'}}>Notificações por Email</h4>
-            <p style={{margin: '0', fontSize: '0.85rem', color:' #666'}}>Receba alertas de novos Projectos e mensagens.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Notificações por Email</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Receba alertas de novos projetos e mensagens diretas.</p>
           </div>
           <label className="switch">
-            <input type="checkbox" checked/>
+            <input 
+              type="checkbox" 
+              checked={notificacoes} 
+              onChange={() => setNotificacoes(!notificacoes)}
+            />
             <span className="slider round"></span>
           </label>
         </div>
 
-        <div style={{marginTop: '30px'}}>
-          <button className="btn btn-primary"   onClick={() => alert('Configurações salvas com sucesso!')}>Salvar Alterações</button>
+        {/* BOTÕES DE AÇÃO */}
+        <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
+          <button 
+            className="btn btn-primary" 
+            style={{ padding: '12px 30px', width: 'auto' }}
+            onClick={() => alert('Configurações salvas com sucesso!')}
+          >
+            Salvar Alterações
+          </button>
+          <button 
+            className="btn-logout" 
+            style={{ padding: '12px 30px', width: 'auto' }}
+            onClick={() => {
+              setDark(false);
+              setNotificacoes(true);
+              setIdioma('pt');
+            }}
+          >
+            Restaurar Padrão
+          </button>
         </div>
       </div>
     </div>
-
   );
 }
+
 function Info({ label, value }) {
   return (
     <div>
@@ -1741,4 +1732,1334 @@ function Relatorio() {
       </div>
     </div>
   </>);
+}
+function Sessoes() {
+  const [filtroArea, setFiltroArea] = useState('Todos');
+
+  const empreendedores = [
+    { id: 1, nome: 'Ana Silva', projecto: 'EducaTech', area: 'Educação', data: 'Há 2 horas', cor: '#4f46e5' },
+    { id: 2, nome: 'Carlos Mendes', projecto: 'Kwanza Pay', area: 'Fintech', data: 'Há 5 horas', cor: '#10b981' },
+    { id: 3, nome: 'João Pedro', projecto: 'AgroSmart', area: 'AgriTech', data: 'Ontem', cor: '#f59e0b' },
+    { id: 4, nome: 'Maria Lopes', projecto: 'Health Connect', area: 'Saúde', data: 'Há 2 dias', cor: '#ef4444' },
+  ];
+
+  const areas = ['Todos', 'Educação', 'Fintech', 'AgriTech', 'Saúde'];
+
+  const listaFiltrada = filtroArea === 'Todos'
+    ? empreendedores
+    : empreendedores.filter(e => e.area === filtroArea);
+
+  return (
+    <div style={{ padding: '10px' }}>
+      {/* HEADER */}
+      <div className="dashboard-card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 className="dashboard-card-title">Solicitações de Mentoria</h2>
+          <p className="dashboard-card-description">Acompanhe os novos projetos que aguardam sua análise.</p>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+           <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--neutral-500)' }}>FILTRAR:</span>
+           <select
+            className="form-input"
+            style={{ width: 'auto', minWidth: '150px' }}
+            value={filtroArea}
+            onChange={e => setFiltroArea(e.target.value)}
+          >
+            {areas.map(area => (
+              <option key={area} value={area}>{area}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* LISTA DE CARDS ESPAÇADOS */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}> {/* Gap aumentado aqui */}
+        {listaFiltrada.map(emp => (
+          <div 
+            key={emp.id} 
+            className="dashboard-card" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              padding: '20px 25px',
+              margin: 0,
+              borderLeft: `6px solid ${emp.cor}`, // Detalhe de cor lateral
+              transition: 'transform 0.2s',
+              cursor: 'default'
+            }}
+          >
+            {/* INFORMAÇÃO PRINCIPAL */}
+            <div style={{ flex: 1.5 }}>
+              <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{emp.nome}</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Solicitado {emp.data}</div>
+            </div>
+
+            {/* PROJETO */}
+            <div style={{ flex: 2 }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)', display: 'block', fontWeight: 'bold' }}>PROJETO</span>
+              <div style={{ fontWeight: '600', color: 'var(--primary-600)' }}>{emp.projecto}</div>
+            </div>
+
+            {/* ÁREA COM TAG COLORIDA */}
+            <div style={{ flex: 1 }}>
+              <span style={{ 
+                padding: '5px 12px', 
+                borderRadius: '6px', 
+                fontSize: '0.75rem', 
+                fontWeight: '600',
+                backgroundColor: emp.cor + '15', // Cor de fundo suave
+                color: emp.cor 
+              }}>
+                {emp.area}
+              </span>
+            </div>
+
+            {/* STATUS E AÇÃO */}
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--success-500)' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success-500)' }}></div>
+                Ativo
+              </div>
+              
+              <button 
+                className="btn btn-primary" 
+                style={{ padding: '10px 20px', fontSize: '0.85rem' }}
+                onClick={() => alert(`Iniciando mentoria com ${emp.nome}`)}
+              >
+                Analisar
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {listaFiltrada.length === 0 && (
+          <div className="dashboard-card" style={{ textAlign: 'center', padding: '3rem' }}>
+            <p className="dashboard-card-description">Nenhuma solicitação encontrada para esta categoria.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function Mentorados() {
+  const [busca, setBusca] = useState("");
+
+  const conversas = [
+    {
+      id: 1,
+      nome: 'Ana Silva',
+      projeto: 'EducaTech',
+      ultimaMensagem: 'Professor, acabei de enviar o novo Business Plan.',
+      horario: '10:45',
+      naoLidas: 2,
+      online: true,
+      avatar: 'AS'
+    },
+    {
+      id: 2,
+      nome: 'Carlos Mendes',
+      projeto: 'Kwanza Pay',
+      ultimaMensagem: 'Obrigado pelas dicas no pitch de ontem!',
+      horario: 'Ontem',
+      naoLidas: 0,
+      online: false,
+      avatar: 'CM'
+    },
+    {
+      id: 3,
+      nome: 'João Pedro',
+      projeto: 'AgroSmart',
+      ultimaMensagem: 'Podemos adiar a sessão para as 16h?',
+      horario: 'Segunda',
+      naoLidas: 0,
+      online: true,
+      avatar: 'JP'
+    }
+  ];
+
+  const conversasFiltradas = conversas.filter(c => 
+    c.nome.toLowerCase().includes(busca.toLowerCase()) || 
+    c.projeto.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  return (
+    <div style={{ padding: '10px' }}>
+      {/* HEADER E BUSCA */}
+      <div className="dashboard-card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 className="dashboard-card-title">Minhas Conversas</h2>
+          <p className="dashboard-card-description">Mantenha contato direto com seus mentorados ativos.</p>
+        </div>
+        
+        <div style={{ position: 'relative', width: '300px' }}>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="Buscar mentorado ou projeto..." 
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={{ paddingLeft: '15px' }}
+          />
+        </div>
+      </div>
+
+      {/* LISTA DE CONVERSAS */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {conversasFiltradas.map(chat => (
+          <div 
+            key={chat.id} 
+            className="dashboard-card" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              padding: '15px 20px',
+              margin: 0,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              border: chat.naoLidas > 0 ? '1px solid var(--primary-300)' : '1px solid var(--neutral-200)',
+              backgroundColor: chat.naoLidas > 0 ? 'var(--primary-50)' : 'var(--neutral-white)'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}
+            onClick={() => alert(`Abrindo chat com ${chat.nome}`)}
+          >
+            {/* AVATAR COM STATUS ONLINE */}
+            <div style={{ position: 'relative', marginRight: '20px' }}>
+              <div style={{ 
+                width: '55px', height: '55px', borderRadius: '50%', 
+                backgroundColor: 'var(--primary-100)', color: 'var(--primary-600)',
+                display: 'flex', alignItems: 'center', justifySelf: 'center',
+                justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem'
+              }}>
+                {chat.avatar}
+              </div>
+              {chat.online && (
+                <div style={{ 
+                  position: 'absolute', bottom: '2px', right: '2px', 
+                  width: '12px', height: '12px', borderRadius: '50%', 
+                  backgroundColor: 'var(--success-500)', border: '2px solid white' 
+                }}></div>
+              )}
+            </div>
+
+            {/* CONTEÚDO DA MENSAGEM */}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--neutral-900)' }}>
+                  {chat.nome} <span style={{ fontWeight: '400', color: 'var(--neutral-400)', fontSize: '0.85rem' }}>• {chat.projeto}</span>
+                </span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--neutral-500)' }}>{chat.horario}</span>
+              </div>
+              <div style={{ 
+                fontSize: '0.9rem', 
+                color: chat.naoLidas > 0 ? 'var(--neutral-900)' : 'var(--neutral-500)',
+                fontWeight: chat.naoLidas > 0 ? '500' : '400',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '500px'
+              }}>
+                {chat.ultimaMensagem}
+              </div>
+            </div>
+
+            {/* INDICADOR DE NÃO LIDAS */}
+            {chat.naoLidas > 0 && (
+              <div style={{ 
+                marginLeft: '20px', backgroundColor: 'var(--primary-600)', 
+                color: 'white', borderRadius: '50%', width: '24px', height: '24px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.75rem', fontWeight: 'bold'
+              }}>
+                {chat.naoLidas}
+              </div>
+            )}
+            
+            <div style={{ marginLeft: '20px', color: 'var(--neutral-300)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function Agenda() {
+  const [dataSelecionada, setDataSelecionada] = useState("11 de Fevereiro, 2026");
+
+  const mentoriasAgendadas = [
+    { id: 1, hora: "09:00", mentorado: "Ana Silva", projeto: "EducaTech", status: "Confirmado" },
+    { id: 2, hora: "11:30", mentorado: "Carlos Mendes", projeto: "Kwanza Pay", status: "Confirmado" },
+    { id: 3, hora: "14:00", mentorado: "João Pedro", projeto: "AgroSmart", status: "Pendente" },
+    { id: 4, hora: "16:30", mentorado: "Maria Lopes", projeto: "Health Connect", status: "Confirmado" },
+  ];
+
+  return (
+    <div style={{ padding: '10px' }}>
+      {/* HEADER */}
+      <div className="dashboard-card" style={{ marginBottom: '2rem' }}>
+        <h2 className="dashboard-card-title">Minha Agenda</h2>
+        <p className="dashboard-card-description">Gerencie seus horários e sessões de mentoria.</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '25px', alignItems: 'start' }}>
+        
+        {/* LADO ESQUERDO: TIMELINE DE HORÁRIOS */}
+        <div className="dashboard-card" style={{ padding: '20px' }}>
+          <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--neutral-200)', paddingBottom: '10px' }}>
+            <h3 style={{ fontSize: '1rem', color: 'var(--neutral-900)' }}>{dataSelecionada}</h3>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {mentoriasAgendadas.map((item) => (
+              <div key={item.id} style={{ 
+                display: 'flex', 
+                gap: '15px', 
+                padding: '12px', 
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--neutral-50)',
+                borderLeft: `4px solid ${item.status === 'Confirmado' ? 'var(--primary-600)' : 'var(--warning-500)'}`
+              }}>
+                <div style={{ fontWeight: '700', color: 'var(--primary-600)', minWidth: '50px' }}>
+                  {item.hora}
+                </div>
+                <div>
+                  <div style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--neutral-900)' }}>{item.mentorado}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>{item.projeto}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <button className="btn-logout" style={{ marginTop: '20px', width: '100%', borderColor: 'var(--primary-600)', color: 'var(--primary-600)' }}>
+            + Adicionar Horário
+          </button>
+        </div>
+
+        {/* LADO DIREITO: CALENDÁRIO VISUAL */}
+        <div className="dashboard-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Fevereiro 2026</h3>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="icon-btn" style={{ border: '1px solid var(--neutral-200)' }}>&lt;</button>
+              <button className="icon-btn" style={{ border: '1px solid var(--neutral-200)' }}>&gt;</button>
+            </div>
+          </div>
+
+          {/* DIAS DA SEMANA */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(7, 1fr)', 
+            textAlign: 'center', 
+            fontWeight: '600', 
+            fontSize: '0.8rem', 
+            color: 'var(--neutral-400)',
+            marginBottom: '10px'
+          }}>
+            <div>DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div>
+          </div>
+
+          {/* GRADE DE DIAS */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
+            {/* Espaços vazios para o início do mês se necessário */}
+            {[...Array(31)].map((_, i) => {
+              const dia = i + 1;
+              const isToday = dia === 11;
+              const hasMeeting = [11, 15, 20].includes(dia);
+
+              return (
+                <div 
+                  key={i} 
+                  style={{ 
+                    height: '80px', 
+                    border: '1px solid var(--neutral-100)', 
+                    borderRadius: '8px',
+                    padding: '5px',
+                    backgroundColor: isToday ? 'var(--primary-50)' : 'white',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
+                >
+                  <span style={{ 
+                    fontSize: '0.85rem', 
+                    fontWeight: isToday ? '700' : '400',
+                    color: isToday ? 'var(--primary-600)' : 'var(--neutral-700)'
+                  }}>{dia}</span>
+                  
+                  {hasMeeting && (
+                    <div style={{ 
+                      marginTop: '5px', 
+                      backgroundColor: 'var(--primary-600)', 
+                      height: '4px', 
+                      borderRadius: '2px' 
+                    }}></div>
+                  )}
+                  {hasMeeting && (
+                    <div style={{ fontSize: '0.65rem', color: 'var(--primary-700)', marginTop: '2px' }}>
+                      {dia === 11 ? '4 sessões' : '1 sessão'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+function Mensagens() {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '320px 1fr',
+        gap: '20px',
+        height: 'calc(100vh - 200px)', // Ajuste para caber sob a top-bar
+        minHeight: '550px'
+      }}
+    >
+      {/* LISTA DE CONVERSAS / PROPOSTAS */}
+      <div
+        className="dashboard-card"
+        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
+      >
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--neutral-200)' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--neutral-900)' }}>Solicitações</h3>
+          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--neutral-500)' }}>
+            2 propostas aguardando retorno
+          </p>
+        </div>
+
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {/* ITEM ATIVO */}
+          <div
+            style={{
+              padding: '15px',
+              borderBottom: '1px solid var(--neutral-100)',
+              cursor: 'pointer',
+              background: 'var(--primary-50)',
+              borderLeft: '4px solid var(--primary-600)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--neutral-900)' }}>SolarPay Angola</strong>
+              <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)' }}>10:30</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--neutral-600)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+               Olá, Mentor! Enviamos nosso pitch deck atualizado...
+            </p>
+            <span className="badge badge-warning" style={{ fontSize: '0.6rem', marginTop: '8px' }}>Pendente</span>
+          </div>
+
+          {/* ITEM INATIVO */}
+          <div
+            style={{ padding: '15px', borderBottom: '1px solid var(--neutral-100)', cursor: 'pointer' }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <strong style={{ fontSize: '0.9rem', color: 'var(--neutral-900)' }}>AgroFácil</strong>
+              <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)' }}>Ontem</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--neutral-600)' }}>Solicitação de Mentoria...</p>
+            <span className="badge badge-success" style={{ fontSize: '0.6rem', marginTop: '8px' }}>Em conversa</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ÁREA DO CHAT */}
+      <div
+        className="dashboard-card"
+        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
+      >
+        {/* HEADER DO CHAT */}
+        <div
+          style={{
+            padding: '15px 20px',
+            borderBottom: '1px solid var(--neutral-200)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'var(--neutral-white)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: 40, height: 40, background: 'var(--primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>
+              S
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--neutral-900)' }}>SolarPay Angola</h4>
+              <span style={{ fontSize: '0.75rem', color: 'var(--success-500)', fontWeight: '600' }}>Score IA: 92/100</span>
+            </div>
+          </div>
+        </div>
+
+        {/* CORPO DAS MENSAGENS */}
+        <div
+          style={{
+            flex: 1,
+            padding: '20px',
+            background: 'var(--neutral-50)',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px'
+          }}
+        >
+          {/* MENSAGEM RECEBIDA */}
+          <div style={{ alignSelf: 'flex-start', background: '#fff', padding: '12px', borderRadius: '12px', borderBottomLeftRadius: '2px', maxWidth: '70%', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid var(--neutral-200)' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--neutral-800)' }}>
+              Olá, Mentor! Enviamos nosso pitch deck atualizado. Estamos buscando expansão em Benguela.
+            </p>
+            <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)', marginTop: '5px', display: 'block' }}>10:30 AM</span>
+          </div>
+
+          {/* MENSAGEM ENVIADA */}
+          <div style={{ alignSelf: 'flex-end', background: 'var(--primary-600)', color: '#fff', padding: '12px', borderRadius: '12px', borderBottomRightRadius: '2px', maxWidth: '70%' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem' }}>
+              Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos agendar uma call?
+            </p>
+            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', marginTop: '5px', display: 'block' }}>10:45 AM</span>
+          </div>
+        </div>
+
+        {/* INPUT DE MENSAGEM */}
+        <div style={{ padding: '15px', borderTop: '1px solid var(--neutral-200)', background: 'var(--neutral-white)', display: 'flex', gap: '10px' }}>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Escreva sua mensagem..."
+            style={{ flex: 1, paddingLeft: '15px' }}
+          />
+          <button className="btn btn-primary" style={{ padding: '0 20px' }}>Enviar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubmeterIdeia() {
+  const [etapa, setEtapa] = useState(1);
+  const [analisando, setAnalisando] = useState(false);
+  const [resultadoIA, setResultadoIA] = useState(null);
+  
+  const [dados, setDados] = useState({
+    nome: '', descricao: '', setor: '',
+    cidade: '', localizacao: '',
+    capital: '',
+    problema: '', diferencial: '', publico: '',
+    arquivos: null
+  });
+
+  const proximaEtapa = () => setEtapa(etapa + 1);
+  const etapaAnterior = () => setEtapa(etapa - 1);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setDados({ ...dados, [name]: value });
+  };
+
+  const simularAnaliseIA = () => {
+    setAnalisando(true);
+    // Simulando o tempo de processamento da IA
+    setTimeout(() => {
+      setResultadoIA({
+        viabilidade: "Alta",
+        pontosFortes: ["Setor em crescimento", "Solução escalável", "Capital inicial sólido"],
+        pontosFracos: ["Concorrência estabelecida", "Dependência de logística"],
+        melhorias: "Focar na validação do MVP com usuários reais antes da expansão em larga escala.",
+        score: 85
+      });
+      setAnalisando(false);
+      setEtapa(7); // Vai para a tela de resultado
+    }, 3000);
+  };
+
+  // --- RENDERS DAS FASES ---
+
+  const renderFase1 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 1: Identificação</h3>
+      <div className="form-group">
+        <label className="form-label">Nome do Projecto</label>
+        <input className="form-input" name="nome" value={dados.nome} onChange={handleChange} placeholder="Ex: SolarPay" />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Setor de Atuação</label>
+        <select className="form-input" name="setor" value={dados.setor} onChange={handleChange}>
+          <option value="">Selecione...</option>
+          <option value="Fintech">Fintech</option>
+          <option value="Agrotech">Agrotech</option>
+          <option value="Educação">Educação</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label className="form-label">Descrição Curta</label>
+        <textarea className="form-input" name="descricao" value={dados.descricao} onChange={handleChange} style={{height: '100px'}} />
+      </div>
+    </div>
+  );
+
+  const renderFase2 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 2: Localização</h3>
+      <div className="form-group">
+        <label className="form-label">Cidade</label>
+        <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Ponto de Localização (Mapa)</label>
+        <div style={{ height: '200px', background: '#e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+          [Simulação de Mapa Interativo]
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFase3 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 3: Finanças</h3>
+      <div className="form-group">
+        <label className="form-label">Quanto você tem para investir inicialmente? (Kz)</label>
+        <input className="form-input" type="number" name="capital" value={dados.capital} onChange={handleChange} placeholder="Ex: 5000" />
+      </div>
+    </div>
+  );
+
+  const renderFase4 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 4: Modelo de Negócio</h3>
+      <div className="form-group">
+        <label className="form-label">Qual problema específico o seu produto resolve?</label>
+        <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Como sua solução é diferente das existentes?</label>
+        <textarea className="form-input" name="diferencial" value={dados.diferencial} onChange={handleChange} />
+      </div>
+    </div>
+  );
+
+  const renderFase5 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 5: Uploads</h3>
+      <div style={{ border: '2px dashed var(--neutral-300)', padding: '40px', textAlign: 'center', borderRadius: '12px' }}>
+        <p>Arraste imagens ou vídeos do produto/protótipo</p>
+        <button className="btn-logout" style={{marginTop: '10px', width: 'auto', display: 'inline-block'}}>Selecionar Arquivos</button>
+      </div>
+    </div>
+  );
+
+  const renderFase6 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 6: Revisão</h3>
+      <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
+        <p><strong>Projeto:</strong> {dados.nome}</p>
+        <p><strong>Setor:</strong> {dados.setor}</p>
+        <p><strong>Investimento:</strong> Kz{dados.capital}</p>
+        <p><strong>Problema:</strong> {dados.problema.substring(0, 50)}...</p>
+      </div>
+      <p style={{fontSize: '0.8rem', color: 'var(--neutral-500)'}}>Ao clicar em submeter, nossa IA analisará a viabilidade do seu negócio.</p>
+    </div>
+  );
+
+  const renderResultado = () => (
+    <div className="dashboard-card" style={{ textAlign: 'center', animation: 'fadeIn 0.5s' }}>
+      <div style={{ fontSize: '3rem' }}>{resultadoIA.score >= 70 ? '🚀' : '💡'}</div>
+      <h2 className="dashboard-card-title">Análise de Viabilidade: {resultadoIA.viabilidade}</h2>
+      <div style={{ margin: '20px 0', padding: '15px', background: 'var(--primary-50)', borderRadius: '12px' }}>
+        <p><strong>Score Geral: {resultadoIA.score}/100</strong></p>
+      </div>
+      
+      <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="badge-success" style={{ padding: '15px', borderRadius: '8px' }}>
+          <strong>Pontos Fortes:</strong>
+          <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
+            {resultadoIA.pontosFortes.map(p => <li key={p}>{p}</li>)}
+          </ul>
+        </div>
+        <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: '#92400e' }}>
+          <strong>A melhorar:</strong>
+          <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
+            {resultadoIA.pontosFracos.map(p => <li key={p}>{p}</li>)}
+          </ul>
+        </div>
+      </div>
+      
+      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)' }}>
+        <h4 style={{ color: 'var(--primary-600)' }}>Conselho da IA:</h4>
+        <p>{resultadoIA.melhorias}</p>
+      </div>
+
+      <button className="btn btn-primary" onClick={() => setEtapa(1)} style={{ marginTop: '20px' }}>Nova Submissão</button>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      
+      {/* INDICADOR DE ETAPAS */}
+      {etapa < 7 && (
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} style={{ 
+              flex: 1, height: '8px', borderRadius: '4px',
+              background: i <= etapa ? 'var(--primary-600)' : 'var(--neutral-200)',
+              transition: '0.3s'
+            }} />
+          ))}
+        </div>
+      )}
+
+      {/* CONTEÚDO DINÂMICO */}
+      <div className="dashboard-card" style={{ padding: '30px' }}>
+        {analisando ? (
+          <div className="loading">
+            <div className="spinner"></div>
+            <p style={{ marginTop: '20px' }}>A Inteligência Artificial está analisando seu projeto...</p>
+          </div>
+        ) : (
+          <>
+            {etapa === 1 && renderFase1()}
+            {etapa === 2 && renderFase2()}
+            {etapa === 3 && renderFase3()}
+            {etapa === 4 && renderFase4()}
+            {etapa === 5 && renderFase5()}
+            {etapa === 6 && renderFase6()}
+            {etapa === 7 && renderResultado()}
+
+            {/* BOTÕES DE NAVEGAÇÃO */}
+            {etapa < 7 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--neutral-100)' }}>
+                <button 
+                  className="btn-logout" 
+                  onClick={etapaAnterior} 
+                  disabled={etapa === 1}
+                  style={{ width: 'auto', padding: '10px 30px', opacity: etapa === 1 ? 0.3 : 1 }}
+                >
+                  Voltar
+                </button>
+                
+                {etapa < 6 ? (
+                  <button className="btn btn-primary" onClick={proximaEtapa} style={{ width: 'auto', padding: '10px 40px' }}>
+                    Próxima Fase
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" onClick={simularAnaliseIA} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
+                    Enviar para Análise IA
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+function MinhasIdeias() {
+  const [abaAtiva, setAbaAtiva] = useState('todas');
+
+  const ideias = [
+    {
+      id: 1,
+      nome: 'SolarPay Angola',
+      score: 92,
+      setor: 'Fintech',
+      status: 'Em Execução',
+      progresso: 65,
+      faseAtual: 'Desenvolvimento do MVP',
+      proximoPasso: 'Testes Beta com 50 usuários'
+    },
+    {
+      id: 2,
+      nome: 'AgroFácil',
+      score: 78,
+      setor: 'AgriTech',
+      status: 'Em Análise',
+      progresso: 0,
+    },
+    {
+      id: 3,
+      nome: 'EducaTech',
+      score: 85,
+      setor: 'Educação',
+      status: 'Em Execução',
+      progresso: 30,
+      faseAtual: 'Pesquisa de Mercado',
+      proximoPasso: 'Finalizar protótipo UI/UX'
+    }
+  ];
+
+  const ideiasExecucao = ideias.filter(i => i.status === 'Em Execução');
+
+  return (
+    <div style={{ padding: '10px' }}>
+      {/* HEADER */}
+      <div className="dashboard-card" style={{ marginBottom: '2rem' }}>
+        <h2 className="dashboard-card-title">Minhas Ideias</h2>
+        <p className="dashboard-card-description">Gerencie suas submissões e acompanhe o desenvolvimento dos projetos ativos.</p>
+        
+        {/* SWITCH DE ABAS INTERNAS */}
+        <div style={{ display: 'flex', gap: '20px', marginTop: '20px', borderTop: '1px solid var(--neutral-100)', paddingTop: '20px' }}>
+          <button 
+            onClick={() => setAbaAtiva('todas')}
+            style={{ 
+              background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer',
+              color: abaAtiva === 'todas' ? 'var(--primary-600)' : 'var(--neutral-500)',
+              fontWeight: '600', borderBottom: abaAtiva === 'todas' ? '2px solid var(--primary-600)' : 'none'
+            }}
+          >
+            Todas Submissões
+          </button>
+          <button 
+            onClick={() => setAbaAtiva('execucao')}
+            style={{ 
+              background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer',
+              color: abaAtiva === 'execucao' ? 'var(--primary-600)' : 'var(--neutral-500)',
+              fontWeight: '600', borderBottom: abaAtiva === 'execucao' ? '2px solid var(--primary-600)' : 'none'
+            }}
+          >
+            Em Execução ({ideiasExecucao.length})
+          </button>
+        </div>
+      </div>
+
+      {/* CONTEÚDO: TODAS AS SUBMISSÕES */}
+      {abaAtiva === 'todas' && (
+        <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Projeto</th>
+                <th>Setor</th>
+                <th>Score IA</th>
+                <th>Status</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ideias.map(ideia => (
+                <tr key={ideia.id}>
+                  <td><strong>{ideia.nome}</strong></td>
+                  <td><span className="badge badge-info">{ideia.setor}</span></td>
+                  <td>
+                    <span style={{ fontWeight: '700', color: ideia.score > 80 ? 'var(--success-500)' : 'var(--primary-600)' }}>
+                      {ideia.score}/100
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${ideia.status === 'Em Execução' ? 'badge-success' : 'badge-warning'}`}>
+                      {ideia.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="btn-logout" style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto' }}>
+                      Ver Detalhes
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* CONTEÚDO: EM EXECUÇÃO (TRACKING DE DESENVOLVIMENTO) */}
+      {abaAtiva === 'execucao' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          {ideiasExecucao.map(ideia => (
+            <div key={ideia.id} className="dashboard-card" style={{ borderLeft: '6px solid var(--success-500)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{ideia.nome}</h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--neutral-500)' }}>{ideia.setor}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>Progresso Geral</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--primary-600)' }}>{ideia.progresso}%</div>
+                </div>
+              </div>
+
+              {/* BARRA DE PROGRESSO */}
+              <div style={{ width: '100%', height: '10px', background: 'var(--neutral-100)', borderRadius: '5px', marginBottom: '25px', overflow: 'hidden' }}>
+                <div style={{ width: `${ideia.progresso}%`, height: '100%', background: 'var(--success-500)', transition: 'width 1s ease-in-out' }}></div>
+              </div>
+
+              {/* DETALHES DO DESENVOLVIMENTO */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{ padding: '15px', background: 'var(--neutral-50)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--neutral-500)', marginBottom: '5px' }}>FASE ATUAL</div>
+                  <div style={{ fontWeight: '600', color: 'var(--neutral-900)' }}>{ideia.faseAtual}</div>
+                </div>
+                <div style={{ padding: '15px', background: 'var(--primary-50)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--primary-600)', marginBottom: '5px' }}>PRÓXIMO PASSO</div>
+                  <div style={{ fontWeight: '600', color: 'var(--primary-600)' }}>{ideia.proximoPasso}</div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button className="btn-logout" style={{ width: 'auto', padding: '8px 20px' }}>Relatório Completo</button>
+                <button className="btn btn-primary" style={{ width: 'auto', padding: '8px 20px' }}>Atualizar Status</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+function Investidores() {
+  const [busca, setBusca] = useState('');
+
+  const investidores = [
+    {
+      id: 1,
+      nome: 'Ricardo Santos',
+      tipo: 'Investidor Anjo',
+      areas: ['Fintech', 'Educação'],
+      imagem: 'https://i.pravatar.cc/150?u=ricardo',
+      descricao: 'Focado em startups de tecnologia com impacto social em Angola.'
+    },
+    {
+      id: 2,
+      nome: 'Beatriz Costa',
+      tipo: 'Venture Capital',
+      areas: ['AgriTech', 'Saúde'],
+      imagem: '',
+      descricao: 'Busco projetos escaláveis no setor do agronegócio e saúde digital.'
+    },
+    {
+      id: 3,
+      nome: 'Mário Varela',
+      tipo: 'Investidor Privado',
+      areas: ['Energia', 'Logística'],
+      imagem: '',
+      descricao: 'Interesse em infraestrutura e soluções logísticas para o mercado africano.'
+    },
+    {
+      id: 4,
+      nome: 'Helena Matos',
+      tipo: 'Aceleradora',
+      areas: ['Todas as áreas'],
+      imagem: '',
+      descricao: 'Apoio no desenvolvimento de MVPs e entrada no mercado.'
+    }
+  ];
+
+  const filtrados = investidores.filter(inv => 
+    inv.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  return (
+    <div style={{ padding: '10px' }}>
+      {/* HEADER E BUSCA */}
+      <div className="dashboard-card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 className="dashboard-card-title">Investidores Disponíveis</h2>
+          <p className="dashboard-card-description">Conecte-se com parceiros que podem impulsionar sua ideia.</p>
+        </div>
+        <div style={{ width: '300px' }}>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="Buscar por nome..." 
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* GRID DE INVESTIDORES */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+        gap: '25px' 
+      }}>
+        {filtrados.map(inv => (
+          <div key={inv.id} className="dashboard-card" style={{ 
+            textAlign: 'center', 
+            padding: '30px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            transition: 'transform 0.3s ease',
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            {/* IMAGEM DO INVESTIDOR */}
+            <div style={{ 
+              width: '100px', 
+              height: '100px', 
+              borderRadius: '50%', 
+              overflow: 'hidden',
+              marginBottom: '15px',
+              border: '4px solid var(--primary-50)'
+            }}>
+              <img src={inv.imagem} alt={inv.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+
+            {/* NOME E TIPO */}
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{inv.nome}</h3>
+            <span style={{ 
+              fontSize: '0.8rem', 
+              color: 'var(--primary-600)', 
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              display: 'block',
+              marginBottom: '15px'
+            }}>
+              {inv.tipo}
+            </span>
+
+            {/* ÁREAS DE INTERESSE */}
+            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '20px' }}>
+              {inv.areas.map(area => (
+                <span key={area} className="badge badge-info" style={{ fontSize: '0.65rem' }}>{area}</span>
+              ))}
+            </div>
+
+            {/* DESCRIÇÃO CURTA */}
+            <p style={{ 
+              fontSize: '0.85rem', 
+              color: 'var(--neutral-500)', 
+              lineHeight: '1.5',
+              marginBottom: '25px',
+              minHeight: '40px'
+            }}>
+              "{inv.descricao}"
+            </p>
+
+            {/* BOTÃO SABER MAIS */}
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', marginTop: 'auto' }}
+              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}
+            >
+              Saber Mais
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* CASO NÃO ENCONTRE NADA */}
+      {filtrados.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <p style={{ color: 'var(--neutral-500)' }}>Nenhum investidor encontrado com esse nome.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+function Mentoria() {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '350px 1fr',
+        gap: '20px',
+        height: 'calc(100vh - 180px)',
+        minHeight: '500px'
+      }}
+    >
+      {/* LISTA DE PROPOSTAS */}
+      <div
+        className="dashboard-card"
+        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
+      >
+        <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Solicitações Recebidas</h3>
+          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#666' }}>
+            Você tem 2 mensagens pendentes
+          </p>
+        </div>
+
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div
+            className="proposta-item active"
+            style={{
+              padding: '15px',
+              borderBottom: '1px solid #eee',
+              cursor: 'pointer',
+              background: '#f8faff',
+              borderLeft: '4px solid #2563eb'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <strong style={{ fontSize: '0.9rem' }}>Teresa Ana </strong>
+              <span style={{ fontSize: '0.7rem', color: '#999' }}>Hoje</span>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.85rem',
+                color: '#444',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              Proposta de Equity: 5% por $25k...
+            </p>
+            <span className="badge badge-warning" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
+              Pendente
+            </span>
+          </div>
+
+          <div
+            className="proposta-item"
+            style={{ padding: '15px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <strong style={{ fontSize: '0.9rem' }}>João Paulo</strong>
+              <span style={{ fontSize: '0.7rem', color: '#999' }}>Ontem</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#444' }}>
+              Precisas verificar a...
+            </p>
+            <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
+              Em conversa
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* CHAT / DETALHE */}
+      <div
+        className="dashboard-card"
+        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
+      >
+        <div
+          style={{
+            padding: '15px 20px',
+            borderBottom: '1px solid #eee',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: '#fff'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                background: '#2563eb',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: 'bold'
+              }}
+            >
+              F
+            </div>
+            <div>
+              <h4 style={{ margin: 0 }}>Franeo josé</h4>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            padding: '20px',
+            background: '#f9fafb',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px'
+          }}
+        >
+          <div
+            style={{
+              alignSelf: 'flex-start',
+              background: '#fff',
+              padding: '12px',
+              borderRadius: '12px',
+              borderBottomLeftRadius: '2px',
+              maxWidth: '70%',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '0.9rem' }}>
+              Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
+              25.000 USD para expansão em Benguela em troca de 5% de equity.
+            </p>
+            <span style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px', display: 'block' }}>
+              10:30 AM
+            </span>
+          </div>
+
+          <div
+            style={{
+              alignSelf: 'flex-end',
+              background: '#2563eb',
+              color: '#fff',
+              padding: '12px',
+              borderRadius: '12px',
+              borderBottomRightRadius: '2px',
+              maxWidth: '70%'
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '0.9rem' }}>
+              Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos
+              agendar uma call amanhã?
+            </p>
+            <span
+              style={{
+                fontSize: '0.7rem',
+                color: '#e0e7ff',
+                marginTop: '5px',
+                display: 'block'
+              }}
+            >
+              10:45 AM
+            </span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: '15px',
+            borderTop: '1px solid #eee',
+            background: '#fff',
+            display: 'flex',
+            gap: '10px'
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Escreva sua mensagem ou contraproposta..."
+            style={{
+              flex: 1,
+              padding: '10px',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              outline: 'none'
+            }}
+          />
+          <button className="btn btn-primary" style={{ padding: '0 20px' }}>
+            Enviar
+          </button>
+        </div>
+      </div>
+      <style>
+        {`
+          .proposta-item:hover { background: #f4f7fe; }
+          .badge-warning { background: #fef3c7; color: #92400e; }
+          .badge-success { background: #dcfce7; color: #166534; }
+        `}
+      </style>
+    </div>
+  );
+}
+function Perfilmentor() {
+
+  const investidor = {
+    nome: 'Alenxandre Dala',
+    titulo: 'Mentor ',
+    local: 'Luanda, Angola',
+    verificado: true,
+    tese: [
+      'Foco em Fintech e EdTech',
+      'Tickets de 10k a 50k',
+      'Busca por impacto social',
+      'Zonas: Luanda e Huambo'
+    ],
+    bio: `
+      Especialista em finanças com mais de 15 anos de experiência no setor bancário angolano.
+      Atualmente focada em apoiar empreendedores locais que resolvem problemas de inclusão
+      financeira e digitalização de processos tradicionais.
+    `,
+    contato: {
+      email: 'alexandre.dala.mentor@exemplo.ao',
+      telefone: '+244 9XX XXX XXX',
+      linkedin: 'https://linkedin.com/in/alexandre-inv',
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      
+      {/* HEADER PERFIL */}
+      <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
+        <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
+        
+        <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid #fff', background: '#eee' }} />
+
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
+            <p style={{ margin: '5px 0 0', color: '#666' }}>
+              {investidor.titulo} • {investidor.local}
+            </p>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            onClick={() => alert('Funcionalidade de edição aberta!')}
+          >
+            Editar Perfil
+          </button>
+        </div>
+      </div>
+
+      {/* CONTEÚDO */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
+        
+        {/* COLUNA ESQUERDA */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          
+          <div className="dashboard-card">
+            <h4>Status de Verificação</h4>
+            {investidor.verificado ? (
+              <div style={{ color: '#10b981', fontWeight: 600 }}>✔ Conta Verificada</div>
+            ) : (
+              <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
+            )}
+            <p style={{ fontSize: '0.8rem', color: '#999' }}>
+              Identidade e fundos validados pela AngoStart.
+            </p>
+          </div>
+
+          <div className="dashboard-card">
+            <h4>Tese de Investimento</h4>
+            <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              {investidor.tese.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* COLUNA DIREITA */}
+        <div className="dashboard-card">
+          <h3 className="dashboard-card-title">Biografia Profissional</h3>
+          <p style={{ lineHeight: '1.6', color: '#444' }}>
+            {investidor.bio}
+          </p>
+
+          <hr style={{ borderTop: '1px solid #eee', margin: '25px 0' }} />
+
+          <h3 className="dashboard-card-title">Informações de Contato</h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <Info label="E-mail" value={investidor.contato.email} />
+            <Info label="Telefone" value={investidor.contato.telefone} />
+            <Info
+              label="LinkedIn"
+              value={<a href={investidor.contato.linkedin} style={{ color: '#2563eb' }}>Ver perfil</a>}
+            />
+            <Info label="Website" value={investidor.contato.website} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
