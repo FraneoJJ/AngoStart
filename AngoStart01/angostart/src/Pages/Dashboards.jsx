@@ -12,18 +12,16 @@ const navigationConfig = {
     { section: 'Crescimento', items: [
       { id: 'mentoria', label: 'Mentoria', icon: 'users' },
       { id: 'investidores', label: 'Investidores', icon: 'trending-up' },
-      { id: 'plano-negocio', label: 'Plano de Negócio', icon: 'file-text' },
     ]},
     { section: 'Configurações', items: [
       { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'assinatura', label: 'Assinatura', icon: 'credit-card' },
       { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
     ]},
   ],
   investidor: [
     { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' , route: "/investidor" },
-      { id: 'marketplace', label: 'Marketplace', icon: 'shopping-bag', badge: 12 ,route: "/investidor/marketplace"},
+      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+      { id: 'marketplace', label: 'Marketplace', icon: 'shopping-bag', badge: 12 ,},
       { id: 'meus-investimentos', label: 'Investimentos', icon: 'trending-up' },
     ]},
     { section: 'Análise', items: [
@@ -42,12 +40,12 @@ const navigationConfig = {
       { id: 'mentorados', label: 'Mentorados', icon: 'users' },
     ]},
     { section: 'Conteúdo', items: [
-      { id: 'recursos', label: 'Recursos', icon: 'book' },
-      { id: 'disponibilidade', label: 'Disponibilidade', icon: 'clock' },
+      { id: 'agenda', label: 'Agenda', icon: 'clock' },
+      { id: 'mensagens', label: 'Mensagens', icon: 'user' },
     ]},
     { section: 'Configurações', items: [
       { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'especialidades', label: 'Especialidades', icon: 'award' },
+      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
     ]},
   ],
   admin: [
