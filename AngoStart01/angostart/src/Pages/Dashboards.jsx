@@ -610,57 +610,109 @@ function RenderAdminPage() {
   // =========================
   // LOGIN PAGE
   // =========================
-  if (!user) {
-    return (
-      <div className="auth-page">
+ if (!user) {
+  return (
+    <div className="auth-page">
         <div className="auth-container">
-          <div className="auth-header">
-            <h1 className="auth-title">Bem-vindo de volta!</h1>
-            <p className="auth-subtitle">Entre para continuar sua jornada empreendedora</p>
-          </div>
+    <div className="auth-content">
+      {/* <!-- Header --> */}
+      <div className="auth-header">
+        <div className="auth-logo">
+          <img src="..//logo.png" alt="AngoStart"/>
+        </div>
+        <h1 className="auth-title">Bem-vindo de volta!</h1>
+        <p className="auth-subtitle">Entre para continuar sua jornada empreendedora</p>
+      </div>
 
-          <div className="auth-card">
-            <div className="card-content">
-              <div className="auth-form">
-                <input
-                  className="form-input"
-                  type="email"
-                  placeholder="Gmail"
+      {/* <!-- Card --> */}
+      <div className="auth-card">
+        <div className="card-header">
+          <h2>Entrar na sua conta</h2>
+          <p className="card-description">Digite suas credenciais para acessar a plataforma</p>
+        </div>
+
+        <div className="card-content">
+          <form id="loginForm" className="auth-form">
+            {error && (
+                  <div className="alert alert-error">{error}</div>
+                )}
+
+            {/* <!-- Email Field --> */}
+            <div className="form-group">
+              <label for="email" className="form-label">Email</label>
+              <div className="input-wrapper">
+                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <input 
+                  type="email" 
+                  id="email" 
+                  className="form-input" 
+                  placeholder="seu@email.com"
+                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 />
+              </div>
+            </div>
 
-                <input
-                  className="form-input"
-                  type="password"
-                  placeholder="Senha"
+            {/* <!-- Password Field --> */}
+            <div className="form-group">
+              <label for="password" className="form-label">Senha</label>
+              <div className="input-wrapper">
+                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input 
+                  type="password" 
+                  id="password" 
+                  className="form-input" 
+                  placeholder="••••••••"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
 
-                {error && (
-                  <div className="alert alert-error">{error}</div>
-                )}
-
-                <button className="btn btn-primary btn-block" onClick={handleLogin}>
-                  Entrar
-                </button>
-
-                <div className="demo-box">
-                  <div className="demo-title">Usuários de teste</div>
-                  <div className="demo-list">
-                    investidor@gmail.com / 123456<br />
-                    empreendedor@gmail.com / 123456<br />
-                    mentor@gmail.com / 123456<br />
-                    admin@gmail.com / 123456
-                  </div>
-                </div>
               </div>
             </div>
-          </div>
+
+            {/* <!-- Forgot Password --> */}
+            <div className="form-actions">
+              <Link to={'/recuperar-senha'} className="link-primary">Esqueceu a senha?</Link>
+            </div>
+
+            {/* <!-- Submit Button --> */}
+            <button className="btn btn-primary btn-block" onClick={handleLogin}>
+              Entrar
+            </button>
+
+            {/* <!-- Register Link --> */}
+            <div className="auth-footer-link">
+              <p>
+                Não tem uma conta? 
+                <Link to={'/criar-conta'} className="link-primary">Criar conta</Link>
+              </p>
+            </div>
+
+            {/* <!-- Demo Credentials --> */}
+            <div className="demo-box">
+              <p className="demo-title">Usuários de teste</p>
+              <div className="demo-list">
+                <p>• empreendedor@gmail.com / 123456</p>
+                <p>• investidor@gmail.com / 123456</p>
+                <p>• mentor@gmail.com / 123456</p>
+                <p>• admin@gmail.com / 123456</p>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
-    );
+    </div>
+  </div>
+    </div>
+  );
   }
 
   // =========================
