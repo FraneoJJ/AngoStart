@@ -809,31 +809,31 @@ function Marketplace() {
           >
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                <div style={{ width: 50, height: 50, background: '#eee', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#2563eb' }}>
+                <div style={{ width: 50, height: 50, background: 'var(--dm-bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--primary-600)' }}>
                   {s.name.charAt(0)}
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>
                     Score IA: {s.score}
                   </span>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 5 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--dm-text-muted)', marginTop: 5 }}>
                     {s.location}, Angola
                   </div>
                 </div>
               </div>
 
               <h3 style={{ margin: '0 0 10px 0' }}>{s.name}</h3>
-              <span style={{ display: 'inline-block', padding: '2px 8px', background: '#eef2ff', color: '#4338ca', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
+              <span style={{ display: 'inline-block', padding: '2px 8px', background: 'var(--primary-100)', color: 'var(--primary-600)', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
                 {s.sector}
               </span>
-              <p style={{ fontSize: '0.9rem', color: '#666', lineHeight: 1.5, marginTop: 10 }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--dm-text-muted)', lineHeight: 1.5, marginTop: 10 }}>
                 {s.desc}
               </p>
             </div>
 
-            <div style={{ borderTop: '1px solid #eee', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span style={{ display: 'block', fontSize: '0.7rem', color: '#999', textTransform: 'uppercase' }}>
+                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--dm-text-muted)', textTransform: 'uppercase' }}>
                   Ticket de Investimento
                 </span>
                 <strong style={{ color: '#10b981' }}>{s.ask}</strong>
@@ -901,8 +901,8 @@ function Investimentos() {
           <button
             className="btn"
             style={{
-              background: '#f4f7fe',
-              color: '#2563eb',
+              background: 'var(--primary-100)',
+              color: 'var(--primary-600)',
               fontWeight: 600,
               border: 'none',
               padding: '10px 15px',
@@ -953,7 +953,7 @@ function Investimentos() {
                   <td>
                     <button
                       className="btn"
-                      style={{ padding: '5px 10px', fontSize: '0.75rem', background: '#eee' }}
+                      style={{ padding: '5px 10px', fontSize: '0.75rem', background: 'var(--dm-bg)' }}
                       onClick={() => alert(`Abrindo relatórios da ${item.startup}`)}
                     >
                       Relatórios
@@ -974,9 +974,9 @@ function Analytics() {
       <div className="dashboard-card" style={{marginBottom: '25px', display: 'flex', justifyContent:' space-between', alignItems: 'center'}}>
         <div>
           <h3 style={{margin: '0'}}>Análise de Mercado & Performance</h3>
-          <p style={{margin:' 5px 0 0 0', color:' #666', fontSize: '0.85rem'}}>Dados baseados em tendências reais do ecossistema AngoStart.</p>
+          <p style={{margin:' 5px 0 0 0', color:' var(--dm-text-muted)', fontSize: '0.85rem'}}>Dados baseados em tendências reais do ecossistema AngoStart.</p>
         </div>
-        <select className="input-field" style={{padding: '8px 15px' , borderRadius: '8px', border:' 1px solid #ddd'}}>
+        <select className="input-field form-input" style={{padding: '8px 15px' , borderRadius: '8px', border:' 1px solid var(--dm-border)'}}>
           <option>Últimos 12 meses</option>
           <option>Últimos 6 meses</option>
           <option>Este Ano (2026)</option>
@@ -989,7 +989,7 @@ function Analytics() {
           <h4 className="dashboard-card-title">Crescimento Médio do Portfólio</h4>
           <p className="dashboard-card-description">Evolução do valuation das suas startups investidas.</p>
           
-          <div style={{height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding:' 0 10px', borderBottom:' 2px solid #eee', borderLeft: '2px solid #eee'}}>
+          <div style={{height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding:' 0 10px', borderBottom:' 2px solid var(--dm-border)', borderLeft: '2px solid var(--dm-border)'}}>
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jan"></div>
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Fev"></div>
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Mar"></div>
@@ -998,7 +998,7 @@ function Analytics() {
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jun"></div>
 
           </div>
-          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: '#999'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--dm-text-muted)'}}>
             <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
           </div>
         </div>
@@ -1011,7 +1011,7 @@ function Analytics() {
                 <span>Fintech</span>
                 <span style={{color: '#10b981', fontWeight: 'bold'}}>+42%</span>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '8px', borderRadius: '4px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
                 <div style={{width: '90%', background:' #10b981', height: '100%', borderRadius: '4px'}}></div>
               </div>
             </div>
@@ -1020,8 +1020,8 @@ function Analytics() {
                 <span>AgriTech</span>
                 <span style={{color: '#10b981', fontWeight: 'bold'}}>+28%</span>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '8px', borderRadius: '4px'}}>
-                <div style={{width:' 65%', background: '#2563eb', height: '100%', borderRadius: '4px'}}></div>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
+                <div style={{width:' 65%', background: 'var(--primary-600)', height: '100%', borderRadius: '4px'}}></div>
               </div>
             </div>
             <div style={{marginBottom: '15px'}}>
@@ -1029,7 +1029,7 @@ function Analytics() {
                 <span>EdTech</span>
                 <span style={{color: '#f59e0b', fontWeight: 'bold'}}>+12%</span>
               </div>
-              <div style={{width: '100%', background: '#eee', height:' 8px', borderRadius: '4px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height:' 8px', borderRadius: '4px'}}>
                 <div style={{width: '40%', background: '#f59e0b', height: '100%', borderRadius: '4px'}}></div>
               </div>
             </div>
@@ -1099,9 +1099,9 @@ function Propostas() {
         className="dashboard-card"
         style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
       >
-        <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--dm-border)' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Solicitações Recebidas</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#666' }}>
+          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
             Você tem 2 propostas pendentes
           </p>
         </div>
@@ -1111,21 +1111,21 @@ function Propostas() {
             className="proposta-item active"
             style={{
               padding: '15px',
-              borderBottom: '1px solid #eee',
+              borderBottom: '1px solid var(--dm-border)',
               cursor: 'pointer',
-              background: '#f8faff',
-              borderLeft: '4px solid #2563eb'
+              background: 'var(--primary-100)',
+              borderLeft: '4px solid var(--primary-600)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>SolarPay Angola</strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Hoje</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Hoje</span>
             </div>
             <p
               style={{
                 margin: 0,
                 fontSize: '0.85rem',
-                color: '#444',
+                color: 'var(--dm-text)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
@@ -1140,13 +1140,13 @@ function Propostas() {
 
           <div
             className="proposta-item"
-            style={{ padding: '15px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
+            style={{ padding: '15px', borderBottom: '1px solid var(--dm-border)', cursor: 'pointer' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>AgroFácil</strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Ontem</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Ontem</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#444' }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--dm-text)' }}>
               Solicitação de Mentoria e Aporte
             </p>
             <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
@@ -1164,11 +1164,11 @@ function Propostas() {
         <div
           style={{
             padding: '15px 20px',
-            borderBottom: '1px solid #eee',
+            borderBottom: '1px solid var(--dm-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#fff'
+            background: 'var(--dm-surface)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1176,12 +1176,12 @@ function Propostas() {
               style={{
                 width: 40,
                 height: 40,
-                background: '#2563eb',
+                background: 'var(--primary-600)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--on-primary)',
                 fontWeight: 'bold'
               }}
             >
@@ -1199,8 +1199,8 @@ function Propostas() {
             <button
               className="btn"
               style={{
-                background: '#fee2e2',
-                color: '#ef4444',
+                background: 'var(--error-100)',
+                color: 'var(--error-500)',
                 border: 'none',
                 padding: '8px 15px',
                 borderRadius: '6px',
@@ -1225,7 +1225,7 @@ function Propostas() {
           style={{
             flex: 1,
             padding: '20px',
-            background: '#f9fafb',
+            background: 'var(--neutral-50)',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -1235,7 +1235,7 @@ function Propostas() {
           <div
             style={{
               alignSelf: 'flex-start',
-              background: '#fff',
+              background: 'var(--dm-surface)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomLeftRadius: '2px',
@@ -1247,7 +1247,7 @@ function Propostas() {
               Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
               25.000 USD para expansão em Benguela em troca de 5% de equity.
             </p>
-            <span style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px', display: 'block' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
               10:30 AM
             </span>
           </div>
@@ -1255,8 +1255,8 @@ function Propostas() {
           <div
             style={{
               alignSelf: 'flex-end',
-              background: '#2563eb',
-              color: '#fff',
+              background: 'var(--primary-600)',
+              color: 'var(--on-primary)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomRightRadius: '2px',
@@ -1283,8 +1283,8 @@ function Propostas() {
         <div
           style={{
             padding: '15px',
-            borderTop: '1px solid #eee',
-            background: '#fff',
+            borderTop: '1px solid var(--dm-border)',
+            background: 'var(--dm-surface)',
             display: 'flex',
             gap: '10px'
           }}
@@ -1295,7 +1295,7 @@ function Propostas() {
             style={{
               flex: 1,
               padding: '10px',
-              border: '1px solid #ddd',
+              border: '1px solid var(--dm-border)',
               borderRadius: '8px',
               outline: 'none'
             }}
@@ -1307,9 +1307,9 @@ function Propostas() {
       </div>
       <style>
         {`
-          .proposta-item:hover { background: #f4f7fe; }
-          .badge-warning { background: #fef3c7; color: #92400e; }
-          .badge-success { background: #dcfce7; color: #166534; }
+          .proposta-item:hover { background: var(--primary-100); }
+          .badge-warning { background: var(--warning-100); color: var(--warning-500); }
+          .badge-success { background: var(--success-100); color: var(--success-500); }
         `}
       </style>
     </div>
@@ -1349,11 +1349,11 @@ function InvestidorPerfil() {
         <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid #fff', background: '#eee' }} />
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--dm-bg)' }} />
 
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
-            <p style={{ margin: '5px 0 0', color: '#666' }}>
+            <p style={{ margin: '5px 0 0', color: 'var(--dm-text-muted)' }}>
               {investidor.titulo} • {investidor.local}
             </p>
           </div>
@@ -1380,7 +1380,7 @@ function InvestidorPerfil() {
             ) : (
               <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
             )}
-            <p style={{ fontSize: '0.8rem', color: '#999' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
               Identidade e fundos validados pela AngoStart.
             </p>
           </div>
@@ -1398,11 +1398,11 @@ function InvestidorPerfil() {
         {/* COLUNA DIREITA */}
         <div className="dashboard-card">
           <h3 className="dashboard-card-title">Biografia Profissional</h3>
-          <p style={{ lineHeight: '1.6', color: '#444' }}>
+          <p style={{ lineHeight: '1.6', color: 'var(--dm-text)' }}>
             {investidor.bio}
           </p>
 
-          <hr style={{ borderTop: '1px solid #eee', margin: '25px 0' }} />
+          <hr style={{ borderTop: '1px solid var(--dm-border)', margin: '25px 0' }} />
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
@@ -1524,7 +1524,7 @@ function Configuracoes() {
 function Info({ label, value }) {
   return (
     <div>
-      <label style={{ fontSize: '0.8rem', color: '#999', display: 'block' }}>{label}</label>
+      <label style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)', display: 'block' }}>{label}</label>
       <strong>{value}</strong>
     </div>
   );
@@ -1681,11 +1681,11 @@ function Relatorio() {
       <div className="dashboard-card" style={{marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px', flexWrap: 'wrap'}}>
         <div>
           <h3 style={{margin: '0'}}>Análise de Performance</h3>
-          <p style={{margin: '0', color: '#666', fontSize: '0.9rem'}}>Relatórios detalhados da plataforma</p>
+          <p style={{margin: '0', color: 'var(--dm-text-muted)', fontSize: '0.9rem'}}>Relatórios detalhados da plataforma</p>
         </div>
         <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
           <label>Mês de Referência:</label>
-          <select id="monthFilter" className="input-field" style={{padding: '5px 10px ', borderRadius: '5px', border: '1px solid #ddd'}}>
+          <select id="monthFilter" className="input-field" style={{padding: '5px 10px ', borderRadius: '5px', border: '1px solid var(--dm-border)'}}>
             <option value="janeiro-2026">Janeiro 2026</option>
             <option value="dezembro-2025">Dezembro 2025</option>
             <option value="novembro-2025">Novembro 2025</option>
@@ -1733,7 +1733,7 @@ function Relatorio() {
                 <span>Empreendedores</span>
                 <strong>650</strong>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '10px', borderRadius: '5px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
                 <div style={{width: '65%', background: 'var(--primary-color, #2563eb)', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
@@ -1743,7 +1743,7 @@ function Relatorio() {
                 <span>Investidores</span>
                 <strong>120</strong>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '10px', borderRadius: '5px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
                 <div style={{width: '25%', background: '#10b981', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
@@ -1753,7 +1753,7 @@ function Relatorio() {
                 <span>Mentores</span>
                 <strong>45</strong>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '10px', borderRadius: '5px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
                 <div style={{width: '15%', background: '#f59e0b', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
@@ -1764,15 +1764,15 @@ function Relatorio() {
           <h3 className="dashboard-card-title">Atividade Recente</h3>
           <div style={{marginTop: '15px'}}>
             <ul style={{listStyle: 'none', padding: '0'}}>
-              <li style={{padding: '10px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between'}}>
+              <li style={{padding: '10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Sessões de Mentoria</span>
                 <strong>28</strong>
               </li>
-              <li style={{padding:' 10px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between'}}>
+              <li style={{padding:' 10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Investimentos Feitos</span>
                 <strong>14</strong>
               </li>
-              <li style={{padding: '10px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between'}}>
+              <li style={{padding: '10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Taxa de Aprovação</span>
                 <strong>78%</strong>
               </li>
@@ -2236,7 +2236,7 @@ function Mensagens() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 40, height: 40, background: 'var(--primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>
+            <div style={{ width: 40, height: 40, background: 'var(--primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-primary)', fontWeight: 'bold' }}>
               S
             </div>
             <div>
@@ -2259,7 +2259,7 @@ function Mensagens() {
           }}
         >
           {/* MENSAGEM RECEBIDA */}
-          <div style={{ alignSelf: 'flex-start', background: '#fff', padding: '12px', borderRadius: '12px', borderBottomLeftRadius: '2px', maxWidth: '70%', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid var(--neutral-200)' }}>
+          <div style={{ alignSelf: 'flex-start', background: 'var(--dm-surface)', padding: '12px', borderRadius: '12px', borderBottomLeftRadius: '2px', maxWidth: '70%', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid var(--neutral-200)' }}>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--neutral-800)' }}>
               Olá, Mentor! Enviamos nosso pitch deck atualizado. Estamos buscando expansão em Benguela.
             </p>
@@ -2267,7 +2267,7 @@ function Mensagens() {
           </div>
 
           {/* MENSAGEM ENVIADA */}
-          <div style={{ alignSelf: 'flex-end', background: 'var(--primary-600)', color: '#fff', padding: '12px', borderRadius: '12px', borderBottomRightRadius: '2px', maxWidth: '70%' }}>
+          <div style={{ alignSelf: 'flex-end', background: 'var(--primary-600)', color: 'var(--on-primary)', padding: '12px', borderRadius: '12px', borderBottomRightRadius: '2px', maxWidth: '70%' }}>
             <p style={{ margin: 0, fontSize: '0.9rem' }}>
               Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos agendar uma call?
             </p>
@@ -2361,7 +2361,7 @@ function SubmeterIdeia() {
       </div>
       <div className="form-group">
         <label className="form-label">Ponto de Localização (Mapa)</label>
-        <div style={{ height: '200px', background: '#e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+        <div style={{ height: '200px', background: 'var(--dm-bg)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--dm-text-muted)' }}>
           [Simulação de Mapa Interativo]
         </div>
       </div>
@@ -2430,7 +2430,7 @@ function SubmeterIdeia() {
             {resultadoIA.pontosFortes.map(p => <li key={p}>{p}</li>)}
           </ul>
         </div>
-        <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: '#92400e' }}>
+        <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: 'var(--warning-500)' }}>
           <strong>A melhorar:</strong>
           <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
             {resultadoIA.pontosFracos.map(p => <li key={p}>{p}</li>)}
@@ -2821,9 +2821,9 @@ function Mentoria() {
         className="dashboard-card"
         style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
       >
-        <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--dm-border)' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Solicitações Recebidas</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#666' }}>
+          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
             Você tem 2 mensagens pendentes
           </p>
         </div>
@@ -2833,21 +2833,21 @@ function Mentoria() {
             className="proposta-item active"
             style={{
               padding: '15px',
-              borderBottom: '1px solid #eee',
+              borderBottom: '1px solid var(--dm-border)',
               cursor: 'pointer',
-              background: '#f8faff',
-              borderLeft: '4px solid #2563eb'
+              background: 'var(--primary-100)',
+              borderLeft: '4px solid var(--primary-600)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>Teresa Ana </strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Hoje</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Hoje</span>
             </div>
             <p
               style={{
                 margin: 0,
                 fontSize: '0.85rem',
-                color: '#444',
+                color: 'var(--dm-text)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
@@ -2862,13 +2862,13 @@ function Mentoria() {
 
           <div
             className="proposta-item"
-            style={{ padding: '15px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
+            style={{ padding: '15px', borderBottom: '1px solid var(--dm-border)', cursor: 'pointer' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>João Paulo</strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Ontem</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Ontem</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#444' }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--dm-text)' }}>
               Precisas verificar a...
             </p>
             <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
@@ -2886,11 +2886,11 @@ function Mentoria() {
         <div
           style={{
             padding: '15px 20px',
-            borderBottom: '1px solid #eee',
+            borderBottom: '1px solid var(--dm-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#fff'
+            background: 'var(--dm-surface)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2898,12 +2898,12 @@ function Mentoria() {
               style={{
                 width: 40,
                 height: 40,
-                background: '#2563eb',
+                background: 'var(--primary-600)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--on-primary)',
                 fontWeight: 'bold'
               }}
             >
@@ -2919,7 +2919,7 @@ function Mentoria() {
           style={{
             flex: 1,
             padding: '20px',
-            background: '#f9fafb',
+            background: 'var(--neutral-50)',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -2929,7 +2929,7 @@ function Mentoria() {
           <div
             style={{
               alignSelf: 'flex-start',
-              background: '#fff',
+              background: 'var(--dm-surface)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomLeftRadius: '2px',
@@ -2941,7 +2941,7 @@ function Mentoria() {
               Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
               25.000 USD para expansão em Benguela em troca de 5% de equity.
             </p>
-            <span style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px', display: 'block' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
               10:30 AM
             </span>
           </div>
@@ -2949,8 +2949,8 @@ function Mentoria() {
           <div
             style={{
               alignSelf: 'flex-end',
-              background: '#2563eb',
-              color: '#fff',
+              background: 'var(--primary-600)',
+              color: 'var(--on-primary)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomRightRadius: '2px',
@@ -2977,8 +2977,8 @@ function Mentoria() {
         <div
           style={{
             padding: '15px',
-            borderTop: '1px solid #eee',
-            background: '#fff',
+            borderTop: '1px solid var(--dm-border)',
+            background: 'var(--dm-surface)',
             display: 'flex',
             gap: '10px'
           }}
@@ -2989,7 +2989,7 @@ function Mentoria() {
             style={{
               flex: 1,
               padding: '10px',
-              border: '1px solid #ddd',
+              border: '1px solid var(--dm-border)',
               borderRadius: '8px',
               outline: 'none'
             }}
@@ -3001,9 +3001,9 @@ function Mentoria() {
       </div>
       <style>
         {`
-          .proposta-item:hover { background: #f4f7fe; }
-          .badge-warning { background: #fef3c7; color: #92400e; }
-          .badge-success { background: #dcfce7; color: #166534; }
+          .proposta-item:hover { background: var(--primary-100); }
+          .badge-warning { background: var(--warning-100); color: var(--warning-500); }
+          .badge-success { background: var(--success-100); color: var(--success-500); }
         `}
       </style>
     </div>
@@ -3042,11 +3042,11 @@ function Perfilmentor() {
         <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid #fff', background: '#eee' }} />
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--dm-bg)' }} />
 
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
-            <p style={{ margin: '5px 0 0', color: '#666' }}>
+            <p style={{ margin: '5px 0 0', color: 'var(--dm-text-muted)' }}>
               {investidor.titulo} • {investidor.local}
             </p>
           </div>
@@ -3073,7 +3073,7 @@ function Perfilmentor() {
             ) : (
               <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
             )}
-            <p style={{ fontSize: '0.8rem', color: '#999' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
               Identidade e fundos validados pela AngoStart.
             </p>
           </div>
@@ -3091,11 +3091,11 @@ function Perfilmentor() {
         {/* COLUNA DIREITA */}
         <div className="dashboard-card">
           <h3 className="dashboard-card-title">Biografia Profissional</h3>
-          <p style={{ lineHeight: '1.6', color: '#444' }}>
+          <p style={{ lineHeight: '1.6', color: 'var(--dm-text)' }}>
             {investidor.bio}
           </p>
 
-          <hr style={{ borderTop: '1px solid #eee', margin: '25px 0' }} />
+          <hr style={{ borderTop: '1px solid var(--dm-border)', margin: '25px 0' }} />
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
