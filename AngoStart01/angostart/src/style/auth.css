@@ -916,3 +916,311 @@ body.dark-theme .slider {
 body.dark-theme input:checked + .slider {
   background-color: var(--primary-500);
 }
+
+/* ===== HOMEPAGE / PÁGINA INICIAL NO MODO ESCURO ===== */
+/* Garantir que títulos e texto fiquem legíveis em fundo escuro */
+
+body.dark-theme .hero-headline {
+  color: #f1f5f9;
+}
+
+body.dark-theme .hero-subheadline {
+  color: #e2e8f0;
+}
+
+body.dark-theme .hero-badge,
+body.dark-theme .hero-badge span {
+  color: #cbd5e1;
+}
+
+body.dark-theme .hero-section .stat-label,
+body.dark-theme .hero-section .stat-valueHome {
+  color: #e2e8f0;
+}
+
+body.dark-theme .gradient-text {
+  color: #fbbf24;
+  -webkit-text-fill-color: #fbbf24;
+  background: linear-gradient(135deg, var(--secondary-300), var(--secondary-500));
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+/* Secções: títulos e descrições legíveis */
+body.dark-theme .section-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .section-description {
+  color: #cbd5e1;
+}
+
+body.dark-theme .section-dark .section-title,
+body.dark-theme .section-dark .section-description {
+  color: #f1f5f9;
+}
+
+body.dark-theme .section-dark .section-description {
+  color: #cbd5e1;
+}
+
+/* Step cards (Como Funciona) */
+body.dark-theme .step-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .step-description {
+  color: #cbd5e1;
+}
+
+/* Feature cards (Funcionalidades) */
+body.dark-theme .feature-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .feature-description {
+  color: #cbd5e1;
+}
+
+/* CTA section (Começar gratuitamente) */
+body.dark-theme .cta-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme .cta-subtitle {
+  color: #cbd5e1;
+}
+
+body.dark-theme .cta-section .feature-item {
+  color: #e2e8f0;
+}
+
+/* Navbar na homepage em dark mode */
+body.dark-theme .navbar.scrolled {
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
+body.dark-theme .navbar.scrolled .nav-link {
+  color: #e2e8f0;
+}
+
+body.dark-theme .navbar.scrolled .nav-link:hover {
+  color: #93c5fd;
+}
+
+body.dark-theme .mobile-menu-btn {
+  color: #e2e8f0;
+}
+
+body.dark-theme .mobile-menu-btn:hover {
+  background-color: #334155;
+}
+
+/* Footer na homepage em dark mode */
+body.dark-theme .footer {
+  background-color: #0f172a;
+  color: #94a3b8;
+}
+
+body.dark-theme .footer a,
+body.dark-theme .footer h4 {
+  color: #e2e8f0;
+}
+
+/* ===== SECÇÃO IA (Análise com IA) NO MODO ESCURO ===== */
+body.dark-theme #ia.section .ia-subtitle,
+body.dark-theme #ia.section .section-title.text-white,
+body.dark-theme #ia.section .section-description.text-white-muted {
+  color: #e2e8f0 !important;
+}
+
+body.dark-theme #ia.section .ia-feature p {
+  color: #cbd5e1;
+}
+
+body.dark-theme #ia.section .ia-feature svg.text-primary-400 {
+  color: #93c5fd;
+}
+
+body.dark-theme #ia.section .ia-score-card {
+  background: linear-gradient(135deg, #1e3a5f, #0f172a);
+  border: 1px solid #334155;
+}
+
+body.dark-theme #ia.section .score-value {
+  color: #f1f5f9;
+}
+
+body.dark-theme #ia.section .score-label {
+  color: #94a3b8;
+}
+
+body.dark-theme #ia.section .score-title {
+  color: #e2e8f0;
+}
+
+body.dark-theme #ia.section .detail-section {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme #ia.section .detail-section:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme #ia.section .detail-section h4 {
+  color: #f1f5f9;
+}
+
+body.dark-theme #ia.section .detail-section p {
+  color: #cbd5e1;
+}
+
+body.dark-theme #ia.section .btn-ia-generate {
+  color: #fff;
+  background: linear-gradient(135deg, var(--secondary-500), var(--secondary-600));
+}
+
+body.dark-theme #ia.section .btn-ia-generate:hover {
+  color: #fff;
+}
+
+/* ===== SECÇÃO MARKETPLACE (Investimentos) NO MODO ESCURO ===== */
+body.dark-theme #investimento.section .mentor-subtitle {
+  color: #fbbf24;
+}
+
+body.dark-theme #investimento.section .section-title.text-white,
+body.dark-theme #investimento.section .section-description.text-white-muted {
+  color: #e2e8f0 !important;
+}
+
+body.dark-theme #investimento.section .investment-card {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+body.dark-theme #investimento.section .investment-card:hover {
+  background-color: #334155;
+  border-color: #475569;
+}
+
+body.dark-theme #investimento.section .investment-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme #investimento.section .investment-badge {
+  background-color: var(--primary-500);
+  color: #f1f5f9;
+}
+
+body.dark-theme #investimento.section .investment-details {
+  background: linear-gradient(135deg, #334155, #1e293b);
+  border-radius: 10px;
+}
+
+body.dark-theme #investimento.section .detail-label,
+body.dark-theme #investimento.section .detail-label.text-white-muted {
+  color: #94a3b8 !important;
+}
+
+body.dark-theme #investimento.section .detail-value {
+  color: #e2e8f0;
+}
+
+body.dark-theme #investimento.section .detail-value.score-high {
+  color: #34d399;
+}
+
+body.dark-theme #investimento.section .investment-details progress::-webkit-progress-bar {
+  background: #334155;
+}
+
+body.dark-theme #investimento.section .btn-detalhe {
+  background-color: var(--secondary-500);
+  color: #fff;
+}
+
+body.dark-theme #investimento.section .btn-detalhe:hover {
+  background-color: var(--secondary-600);
+  color: #fff;
+}
+
+body.dark-theme #investimento.section .btn.btn-secondary {
+  color: #fff;
+  border-color: #475569;
+}
+
+/* ===== SECÇÃO PLANOS NO MODO ESCURO ===== */
+body.dark-theme #planos.section .section-title {
+  color: #f1f5f9;
+}
+
+body.dark-theme #planos.section .section-description {
+  color: #cbd5e1;
+}
+
+body.dark-theme #planos.section .pricing-card {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+}
+
+body.dark-theme #planos.section .pricing-card:hover {
+  border-color: #475569;
+}
+
+body.dark-theme #planos.section .pricing-card .pricing-title,
+body.dark-theme #planos.section .pricing-card .price {
+  color: #f1f5f9;
+}
+
+body.dark-theme #planos.section .pricing-card .pricing-subtitle,
+body.dark-theme #planos.section .pricing-card .period {
+  color: #94a3b8;
+}
+
+body.dark-theme #planos.section .pricing-card .pricing-features li {
+  color: #cbd5e1;
+}
+
+body.dark-theme #planos.section .pricing-card.popular {
+  background: linear-gradient(180deg, #1e3a5f, #0f172a) !important;
+  border-color: #475569;
+}
+
+body.dark-theme #planos.section .pricing-card.popular .pricing-title.colorwhite,
+body.dark-theme #planos.section .pricing-card.popular .pricing-subtitle.colorwhite,
+body.dark-theme #planos.section .pricing-card.popular .price.colorwhite,
+body.dark-theme #planos.section .pricing-card.popular .period.colorwhite,
+body.dark-theme #planos.section .pricing-card.popular .pricing-features.colorwhite li {
+  color: #f1f5f9 !important;
+}
+
+body.dark-theme #planos.section .pricing-card.popular .btnPlano {
+  background-color: #f1f5f9;
+  color: var(--primary-700);
+}
+
+body.dark-theme #planos.section .pricing-card.popular .btnPlano:hover {
+  background-color: #e2e8f0;
+  color: var(--primary-800);
+}
+
+body.dark-theme #planos.section .pricing-card .btn-outline.colorblue {
+  color: #93c5fd;
+  border-color: #475569;
+}
+
+body.dark-theme #planos.section .pricing-card .btn-outline.colorblue:hover {
+  background-color: #334155;
+  color: #e2e8f0;
+}
+
+body.dark-theme #planos.section .pricing-note,
+body.dark-theme #planos.section .text-neutral-600 {
+  color: #94a3b8 !important;
+}
+
+body.dark-theme #planos.section .popular-badge {
+  background-color: var(--secondary-500);
+  color: #fff;
+}

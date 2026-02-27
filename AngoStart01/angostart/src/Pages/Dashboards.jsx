@@ -1,65 +1,131 @@
-import { useState , useEffect } from "react";
+import React, { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
 
+const STORAGE_KEY = 'angostart_settings';
+
+const translations = {
+  pt: {
+    nav: {
+      section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+    },
+    common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
+    config: {
+      title: 'Configurações do Sistema',
+      subtitle: 'Personalize a sua experiência na plataforma AngoStart.',
+      darkMode: 'Modo Escuro',
+      darkModeDesc: 'Altera a aparência para cores mais confortáveis à noite.',
+      language: 'Idioma do Sistema',
+      languageDesc: 'Escolha o idioma preferencial das interfaces.',
+      notifications: 'Notificações por Email',
+      notificationsDesc: 'Receba alertas de novos projetos e mensagens diretas.',
+      saveChanges: 'Salvar Alterações',
+      settingsSaved: 'Configurações guardadas com sucesso.',
+      defaultsRestored: 'Predefinições restauradas.',
+      openNewUser: 'Abrir modal de novo utilizador',
+      reportExported: 'Relatório exportado em PDF!',
+      proposalRejected: 'Proposta Recusada',
+      proposalAccepted: 'Proposta Aceite! A iniciar Due Diligence...',
+      editOpened: 'Funcionalidade de edição aberta!',
+      openingDetails: 'Abrir detalhes de',
+      openingReports: 'Abrir relatórios da',
+      startingMentoring: 'Iniciar mentoria com',
+      openingChat: 'Abrir chat com',
+      openingProfile: 'Abrir perfil detalhado de',
+    },
+  },
+  en: {
+    nav: {
+      section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+    },
+    common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
+    config: {
+      title: 'System Settings',
+      subtitle: 'Customise your experience on the AngoStart platform.',
+      darkMode: 'Dark Mode',
+      darkModeDesc: 'Switch to a more comfortable appearance at night.',
+      language: 'System Language',
+      languageDesc: 'Choose your preferred interface language.',
+      notifications: 'Email Notifications',
+      notificationsDesc: 'Receive alerts for new projects and direct messages.',
+      saveChanges: 'Save Changes',
+      settingsSaved: 'Settings saved successfully.',
+      defaultsRestored: 'Defaults restored.',
+      openNewUser: 'Open new user modal',
+      reportExported: 'Report exported as PDF!',
+      proposalRejected: 'Proposal Rejected',
+      proposalAccepted: 'Proposal Accepted! Starting Due Diligence...',
+      editOpened: 'Edit feature opened!',
+      openingDetails: 'Open details for',
+      openingReports: 'Open reports for',
+      startingMentoring: 'Start mentoring with',
+      openingChat: 'Open chat with',
+      openingProfile: 'Open detailed profile for',
+    },
+  },
+};
+
+const AppContext = createContext(null);
+
 const navigationConfig = {
- empreendedor: [
-    { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'submeter-ideia', label: 'Submeter Ideia', icon: 'lightbulb' },
-      { id: 'minhas-ideias', label: 'Minhas Ideias', icon: 'folder', badge: 3 },
+  empreendedor: [
+    { sectionKey: 'principal', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'submeter-ideia', icon: 'lightbulb', badge: 3 },
+      { id: 'minhas-ideias', icon: 'folder', badge: 3 },
     ]},
-    { section: 'Crescimento', items: [
-      { id: 'mentoria', label: 'Mentoria', icon: 'users' },
-      { id: 'investidores', label: 'Investidores', icon: 'trending-up' },
+    { sectionKey: 'crescimento', items: [
+      { id: 'mentoria', icon: 'users' },
+      { id: 'investidores', icon: 'trending-up' },
     ]},
-    { section: 'Configurações', items: [
-      { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'configuracoes', items: [
+      { id: 'perfil', icon: 'user' },
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
   investidor: [
-    { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'marketplace', label: 'Marketplace', icon: 'shopping-bag', badge: 12 ,},
-      { id: 'meus-investimentos', label: 'Investimentos', icon: 'trending-up' },
+    { sectionKey: 'principal', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'marketplace', icon: 'shopping-bag', badge: 12 },
+      { id: 'meus-investimentos', icon: 'trending-up' },
     ]},
-    { section: 'Análise', items: [
-      { id: 'propostas', label: 'Propostas', icon: 'inbox', badge: 5 },
-      { id: 'analytics', label: 'Analytics', icon: 'bar-chart' },
+    { sectionKey: 'analise', items: [
+      { id: 'propostas', icon: 'inbox', badge: 5 },
+      { id: 'analytics', icon: 'bar-chart' },
     ]},
-    { section: 'Configurações', items: [
-      { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'configuracoes', items: [
+      { id: 'perfil', icon: 'user' },
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
   mentor: [
-    { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'sessoes', label: 'Sessões', icon: 'calendar', badge: 4 },
-      { id: 'mentorados', label: 'Mentorados', icon: 'users' },
+    { sectionKey: 'principal', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'sessoes', icon: 'calendar', badge: 4 },
+      { id: 'mentorados', icon: 'users' },
     ]},
-    { section: 'Conteúdo', items: [
-      { id: 'agenda', label: 'Agenda', icon: 'clock' },
-      { id: 'mensagens', label: 'Mensagens', icon: 'user' },
+    { sectionKey: 'conteudo', items: [
+      { id: 'agenda', icon: 'clock' },
+      { id: 'mensagens', icon: 'user' },
     ]},
-    { section: 'Configurações', items: [
-      { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'configuracoes', items: [
+      { id: 'perfil', icon: 'user' },
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
   admin: [
-    { section: 'Administração', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'usuarios', label: 'Usuários', icon: 'users' },
-      { id: 'ideias', label: 'Ideias', icon: 'lightbulb', badge: 8 },
-      
+    { sectionKey: 'administracao', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'usuarios', icon: 'users' },
+      { id: 'ideias', icon: 'lightbulb', badge: 8 },
     ]},
-    { section: 'Analytics', items: [
-      { id: 'relatorios', label: 'Relatórios', icon: 'bar-chart' },
+    { sectionKey: 'analytics', items: [
+      { id: 'relatorios', icon: 'bar-chart' },
     ]},
-    { section: 'Sistema', items: [
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'sistema', items: [
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
 };
@@ -84,9 +150,27 @@ const icons = {
   award: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
   'check-circle': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   'dollar-sign': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
-  settings: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m0-18c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z"/></svg>,
+  settings: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 10.27 7 3.34"/><path d="m11 13.73-4 6.93"/><path d="M12 22v-2"/><path d="M12 2v2"/><path d="M14 12h8"/><path d="m17 20.66-1-1.73"/><path d="m17 3.34-1 1.73"/><path d="M2 12h2"/><path d="m20.66 17-1.73-1"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m3.34 7 1.73 1"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="8"/></svg>,
 };
 
+
+function ConfirmModal() {
+  const ctx = useContext(AppContext);
+  if (!ctx || !ctx.modal.open) return null;
+  const { modal, setModal, t } = ctx;
+  const close = () => setModal({ ...modal, open: false });
+  return (
+    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)' }}>
+        {modal.title && <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{modal.title}</h3>}
+        <p style={{ margin: 0, color: 'var(--dm-text)', fontSize: '0.95rem' }}>{modal.message}</p>
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-primary" onClick={close}>{t ? t('common.close') : 'Fechar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -94,6 +178,26 @@ export default function Dashboard() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [idioma, setIdioma] = useState(() => {
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      return s ? (JSON.parse(s).idioma || 'pt') : 'pt';
+    } catch { return 'pt'; }
+  });
+  const [modal, setModal] = useState({ open: false, title: '', message: '' });
+  const t = (key) => {
+    const parts = key.split('.');
+    let v = translations[idioma] || translations.pt;
+    for (const p of parts) v = v?.[p];
+    return v != null ? v : key;
+  };
+  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal }), [idioma, modal]);
+
+  useEffect(() => {
+    const s = loadSettings();
+    if (s.dark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
+  }, []);
 
 
   const users = [
@@ -194,6 +298,8 @@ function RenderAdminPage() {
   // ÁREAS (FUNCTIONS)
   // =========================
   function Investidor() {
+    const ctx = useContext(AppContext);
+    const t = ctx?.t ?? (k => k);
     return(
       <>
     <div className="stats-grid">
@@ -717,68 +823,58 @@ function RenderAdminPage() {
   // DASHBOARD
   // =========================
   
-return (<>
-<div className="dashboard-page"> 
-  <header className="sidebar-header">
-    <h2>AngoStart</h2>
-  </header>
-  <aside className="sidebar">
-  <div className="sidebar-nav">
-    {navigationConfig[user.role]?.map((group) => (
-      <div key={group.section} className="nav-section">
-        <div className="nav-section-title">
-          {group.section}
-        </div>
-
-        {group.items.map((item) => (
-      
-            <div key={item.id}className={`nav-item ${currentPage === item.id ? "active" : ""}`}
-             onClick={() => setCurrentPage(item.id)}>
-            <span className="nav-icon">
-              {icons[item.icon]}
-            </span>
-
-            <span className="nav-label">
-              {item.label}
-            </span>
-
-            {item.badge && (
-              <span className="nav-badge">
-                {item.badge}
-              </span>
-            )}
+return (
+    <AppContext.Provider value={ctxValue}>
+      <ConfirmModal />
+      <div className="dashboard-page">
+        <header className="sidebar-header">
+          <h2>AngoStart</h2>
+        </header>
+        <aside className="sidebar">
+          <div className="sidebar-nav">
+            {navigationConfig[user.role]?.map((group) => (
+              <div key={group.sectionKey} className="nav-section">
+                <div className="nav-section-title">
+                  {t('nav.section.' + group.sectionKey)}
+                </div>
+                {group.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`nav-item ${currentPage === item.id ? "active" : ""}`}
+                    onClick={() => setCurrentPage(item.id)}
+                  >
+                    <span className="nav-icon">{icons[item.icon]}</span>
+                    <span className="nav-label">{t('nav.item.' + item.id)}</span>
+                    {item.badge != null && <span className="nav-badge">{item.badge}</span>}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
-        ))}
+          <div className="sidebar-footer">
+            <div className="user-profile">
+              <div className="user-avatar">{user.name.charAt(0)}</div>
+              <div className="user-info">
+                <div className="user-name">{user.name}</div>
+                <div className="user-role">{user.role}</div>
+              </div>
+            </div>
+            <button className="btn-logout" onClick={logout}>{t('common.logout')}</button>
+          </div>
+        </aside>
+        <main className="main-content">
+          <div className="page-content">
+            <RenderArea />
+          </div>
+        </main>
       </div>
-    ))}
-  </div>
-
-  <div className="sidebar-footer">
-    <div className="user-profile">
-      <div className="user-avatar">
-        {user.name.charAt(0)}
-      </div>
-      <div className="user-info">
-        <div className="user-name">{user.name}</div>
-        <div className="user-role">{user.role}</div>
-      </div>
-    </div>
-
-    <button className="btn-logout" onClick={logout}>
-      Sair
-    </button>
-  </div>
-</aside>
-      <main className="main-content">
-        <div className="page-content">
-          <RenderArea />
-        </div>
-      </main>
-    </div>
-  </>);
+    </AppContext.Provider>
+  );
 }
 
 function Marketplace() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const startups = [
     { id: 1, name: "Kwanza Pay", sector: "Fintech", score: 94, ask: "25k - 50k", desc: "Solução de pagamentos móveis para mercados informais em Luanda.", location: "Luanda" },
     { id: 2, name: "AgroFácil", sector: "AgriTech", score: 88, ask: "10k - 30k", desc: "Monitoramento de colheitas via satélite para pequenos produtores.", location: "Huambo" },
@@ -841,7 +937,7 @@ function Marketplace() {
               <button
                 className="btn btn-primary"
                 style={{ padding: '8px 15px', fontSize: '0.85rem' }}
-                onClick={() => alert(`Abrindo detalhes de ${s.name}...`)}
+                onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingDetails') + ' ' + s.name + '...' })}
               >
                 Ver mais
               </button>
@@ -954,7 +1050,7 @@ function Investimentos() {
                     <button
                       className="btn"
                       style={{ padding: '5px 10px', fontSize: '0.75rem', background: 'var(--dm-bg)' }}
-                      onClick={() => alert(`Abrindo relatórios da ${item.startup}`)}
+                      onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingReports') + ' ' + item.startup })}
                     >
                       Relatórios
                     </button>
@@ -1084,6 +1180,8 @@ function Analytics() {
   </>);
 }
 function Propostas() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   return (
     <div
       style={{
@@ -1206,7 +1304,7 @@ function Propostas() {
                 borderRadius: '6px',
                 fontWeight: 600
               }}
-              onClick={() => alert('Proposta Recusada')}
+              onClick={() => ctx?.setModal?.({ open: true, message: t('config.proposalRejected') })}
             >
               Recusar
             </button>
@@ -1214,7 +1312,7 @@ function Propostas() {
             <button
               className="btn btn-primary"
               style={{ padding: '8px 15px', borderRadius: '6px' }}
-              onClick={() => alert('Proposta Aceite! Iniciando Due Diligence...')}
+              onClick={() => ctx?.setModal?.({ open: true, message: t('config.proposalAccepted') })}
             >
               Aceitar Proposta
             </button>
@@ -1316,7 +1414,8 @@ function Propostas() {
   );
 }
 function InvestidorPerfil() {
-
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const investidor = {
     nome: 'Maria Investidora',
     titulo: 'Investidora Anjo',
@@ -1360,7 +1459,7 @@ function InvestidorPerfil() {
 
           <button
             className="btn btn-primary"
-            onClick={() => alert('Funcionalidade de edição aberta!')}
+            onClick={() => ctx?.setModal?.({ open: true, message: t('config.editOpened') })}
           >
             Editar Perfil
           </button>
@@ -1421,99 +1520,117 @@ function InvestidorPerfil() {
   );
 }
 
-function Configuracoes() {
-  // Estado para controlar o Modo Escuro
-  const [dark, setDark] = useState(document.body.classList.contains('dark-theme'));
-  const [notificacoes, setNotificacoes] = useState(true);
-  const [idioma, setIdioma] = useState('pt');
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { dark: false, notificacoes: true, idioma: 'pt' };
+    const s = JSON.parse(raw);
+    return {
+      dark: !!s.dark,
+      notificacoes: s.notificacoes !== false,
+      idioma: s.idioma === 'en' ? 'en' : 'pt',
+    };
+  } catch {
+    return { dark: false, notificacoes: true, idioma: 'pt' };
+  }
+}
 
-  // Efeito para aplicar/remover a classe no body
+function saveSettings(dark, notificacoes, idioma) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ dark, notificacoes, idioma }));
+}
+
+function Configuracoes() {
+  const ctx = useContext(AppContext);
+  const globalIdioma = ctx?.idioma ?? 'pt';
+  const setGlobalIdioma = ctx?.setIdioma;
+  const setModal = ctx?.setModal;
+  const t = ctx?.t ?? (k => k);
+
+  const [dark, setDark] = useState(() => loadSettings().dark);
+  const [notificacoes, setNotificacoes] = useState(() => loadSettings().notificacoes);
+  const [idiomaLocal, setIdiomaLocal] = useState(() => ctx?.idioma ?? loadSettings().idioma);
+
   useEffect(() => {
-    if (dark) {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
+    if (dark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
   }, [dark]);
+
+  useEffect(() => {
+    if (globalIdioma !== idiomaLocal) setIdiomaLocal(globalIdioma);
+  }, [globalIdioma]);
+
+  const handleIdiomaChange = (newVal) => {
+    setIdiomaLocal(newVal);
+    setGlobalIdioma?.(newVal);
+  };
+
+  const handleSave = () => {
+    saveSettings(dark, notificacoes, idiomaLocal);
+    setGlobalIdioma?.(idiomaLocal);
+    if (dark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
+    setModal?.({ open: true, title: '', message: t('config.settingsSaved') });
+  };
+
+  const handleRestore = () => {
+    const def = { dark: false, notificacoes: true, idioma: 'pt' };
+    setDark(def.dark);
+    setNotificacoes(def.notificacoes);
+    setIdiomaLocal(def.idioma);
+    setGlobalIdioma?.(def.idioma);
+    saveSettings(def.dark, def.notificacoes, def.idioma);
+    document.body.classList.remove('dark-theme');
+    setModal?.({ open: true, title: '', message: t('config.defaultsRestored') });
+  };
 
   return (
     <div className="dashboard-card" style={{ maxWidth: '700px', margin: '0 auto', padding: 0, overflow: 'hidden' }}>
       <div className="dashboard-card-header" style={{ padding: '25px', borderBottom: '1px solid var(--neutral-200)' }}>
-        <h3 className="dashboard-card-title" style={{ fontSize: '1.25rem' }}>Configurações do Sistema</h3>
-        <p className="dashboard-card-description">Personalize sua experiência na plataforma AngoStart.</p>
+        <h3 className="dashboard-card-title" style={{ fontSize: '1.25rem' }}>{t('config.title')}</h3>
+        <p className="dashboard-card-description">{t('config.subtitle')}</p>
       </div>
-
       <div style={{ padding: '10px 25px 25px 25px' }}>
-        
-        {/* MODO ESCURO */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid var(--neutral-100)' }}>
           <div>
-            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Modo Escuro</h4>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Altera a aparência para cores mais confortáveis à noite.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>{t('config.darkMode')}</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>{t('config.darkModeDesc')}</p>
           </div>
           <label className="switch">
-            <input 
-              type="checkbox" 
-              checked={dark} 
-              onChange={() => setDark(!dark)} 
-            />
+            <input type="checkbox" checked={dark} onChange={() => setDark(!dark)} />
             <span className="slider round"></span>
           </label>
         </div>
-
-        {/* IDIOMA */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid var(--neutral-100)' }}>
           <div>
-            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Idioma do Sistema</h4>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Escolha o idioma preferencial das interfaces.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>{t('config.language')}</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>{t('config.languageDesc')}</p>
           </div>
-          <select 
-            className="form-input" 
-            value={idioma}
-            onChange={(e) => setIdioma(e.target.value)}
-            style={{ width: 'auto', minWidth: '160px', padding: '8px' }}
+          <select
+            className="form-input"
+            value={idiomaLocal}
+            onChange={(e) => handleIdiomaChange(e.target.value)}
+            style={{ width: 'auto', minWidth: '180px', padding: '8px' }}
           >
-            <option value="pt">Português (AO)</option>
-            <option value="en">English (US)</option>
-            <option value="fr">Français</option>
+            <option value="pt">Português (Portugal)</option>
+            <option value="en">English</option>
           </select>
         </div>
-
-        {/* NOTIFICAÇÕES */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
           <div>
-            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Notificações por Email</h4>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Receba alertas de novos projetos e mensagens diretas.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>{t('config.notifications')}</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>{t('config.notificationsDesc')}</p>
           </div>
           <label className="switch">
-            <input 
-              type="checkbox" 
-              checked={notificacoes} 
-              onChange={() => setNotificacoes(!notificacoes)}
-            />
+            <input type="checkbox" checked={notificacoes} onChange={() => setNotificacoes(!notificacoes)} />
             <span className="slider round"></span>
           </label>
         </div>
-
-        {/* BOTÕES DE AÇÃO */}
         <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
-          <button 
-            className="btn btn-primary" 
-            style={{ padding: '12px 30px', width: 'auto' }}
-            onClick={() => alert('Configurações salvas com sucesso!')}
-          >
-            Salvar Alterações
+          <button className="btn btn-primary" style={{ padding: '12px 30px', width: 'auto' }} onClick={handleSave}>
+            {t('config.saveChanges')}
           </button>
-          <button 
-            className="btn-logout" 
-            style={{ padding: '12px 30px', width: 'auto' }}
-            onClick={() => {
-              setDark(false);
-              setNotificacoes(true);
-              setIdioma('pt');
-            }}
-          >
-            Restaurar Padrão
+          <button className="btn-logout" style={{ padding: '12px 30px', width: 'auto' }} onClick={handleRestore}>
+            {t('common.restore')}
           </button>
         </div>
       </div>
@@ -1542,6 +1659,8 @@ function StatCard({ label, value, icon, color }) {
   );
 }     
 function Usuarios() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   return ( <>
     <div className="dashboard-card">
       <div className="dashboard-card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -1549,7 +1668,7 @@ function Usuarios() {
           <h3 className="dashboard-card-title">Gerenciamento de Usuários</h3>
           <p className="dashboard-card-description">Visualize e gerencie todos os usuários cadastrados na plataforma.</p>
         </div>
-        <button className="btn btn-primary"  onClick={() => alert('Abrir modal de novo usuário')} > + Novo Usuário</button>
+        <button className="btn btn-primary" onClick={() => ctx?.setModal?.({ open: true, message: t('config.openNewUser') })}> + Novo Usuário</button>
       </div>
       
       <div style={{marginTop: '20px'}}>
@@ -1676,6 +1795,8 @@ function Ideias() {
   </>);
 }
 function Relatorio() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   return (<>
     <div className="reports-container">
       <div className="dashboard-card" style={{marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px', flexWrap: 'wrap'}}>
@@ -1690,7 +1811,7 @@ function Relatorio() {
             <option value="dezembro-2025">Dezembro 2025</option>
             <option value="novembro-2025">Novembro 2025</option>
           </select>
-          <button className="btn btn-primary"  onClick={() =>alert('Relatório exportado em PDF!') } style={{padding: '5px 15px'}}>Exportar PDF</button>
+          <button className="btn btn-primary"  onClick={() => ctx?.setModal?.({ open: true, message: t('config.reportExported') })} style={{padding: '5px 15px'}}>Exportar PDF</button>
         </div>
       </div>
 
@@ -1784,6 +1905,8 @@ function Relatorio() {
   </>);
 }
 function Sessoes() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const [filtroArea, setFiltroArea] = useState('Todos');
 
   const empreendedores = [
@@ -1875,7 +1998,7 @@ function Sessoes() {
               <button 
                 className="btn btn-primary" 
                 style={{ padding: '10px 20px', fontSize: '0.85rem' }}
-                onClick={() => alert(`Iniciando mentoria com ${emp.nome}`)}
+                onClick={() => ctx?.setModal?.({ open: true, message: t('config.startingMentoring') + ' ' + emp.nome })}
               >
                 Analisar
               </button>
@@ -1893,6 +2016,8 @@ function Sessoes() {
   );
 }
 function Mentorados() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const [busca, setBusca] = useState("");
 
   const conversas = [
@@ -1972,7 +2097,7 @@ function Mentorados() {
             }}
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}
-            onClick={() => alert(`Abrindo chat com ${chat.nome}`)}
+            onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingChat') + ' ' + chat.nome })}
           >
             {/* AVATAR COM STATUS ONLINE */}
             <div style={{ position: 'relative', marginRight: '20px' }}>
@@ -2662,6 +2787,8 @@ function MinhasIdeias() {
   );
 }
 function Investidores() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const [busca, setBusca] = useState('');
 
   const investidores = [
@@ -2788,7 +2915,7 @@ function Investidores() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}
+              onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingProfile') + ' ' + inv.nome })}
             >
               Saber Mais
             </button>
@@ -3010,7 +3137,8 @@ function Mentoria() {
   );
 }
 function Perfilmentor() {
-
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const investidor = {
     nome: 'Alenxandre Dala',
     titulo: 'Mentor ',
@@ -3053,7 +3181,7 @@ function Perfilmentor() {
 
           <button
             className="btn btn-primary"
-            onClick={() => alert('Funcionalidade de edição aberta!')}
+            onClick={() => ctx?.setModal?.({ open: true, message: t('config.editOpened') })}
           >
             Editar Perfil
           </button>
