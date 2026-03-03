@@ -1197,7 +1197,7 @@ const CriarConta = () => {
       )}
 
       <div className="form-group">
-        <label htmlFor="linkedinOrWebsite" className="form-label">LinkedIn ou site da empresa (opcional)</label>
+        <label htmlFor="linkedinOrWebsite" className="form-label">LinkedIn ou site da empresa(opcional)</label>
         <input
           type="url"
           id="linkedinOrWebsite"
@@ -1222,7 +1222,7 @@ const CriarConta = () => {
       </div>
     </>
   );
-
+  
   const renderDetailsStep = () => (
     <div id="stepDetails" className="step-content">
       <div className="card-header">

@@ -2788,10 +2788,7 @@ function Investidores() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}
-            >
-              Saber Mais
-            </button>
+              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}>Saber Mais</button>
           </div>
         ))}
       </div>
