@@ -1224,3 +1224,15 @@ body.dark-theme #planos.section .popular-badge {
   background-color: var(--secondary-500);
   color: #fff;
 }
+
+/* Plano do meio (popular): forçar texto branco no dark mode */
+body.dark-theme #planos.section .pricing-card.popular .pricing-header,
+body.dark-theme #planos.section .pricing-card.popular .pricing-header *,
+body.dark-theme #planos.section .pricing-card.popular .pricing-features li {
+  color: #ffffff !important;
+}
+
+/* Depoimentos: nomes em preto no dark mode */
+body.dark-theme #depoimentos.section .testimonial-card .author-name {
+  color: #000000 !important;
+}

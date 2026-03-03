@@ -1,6 +1,8 @@
 import React, { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
+import { createIdea } from "../services/ideasApi";
+import { generateQuestionnaire, saveQuestionnaireAnswers } from "../services/questionnaireApi";
 
 const STORAGE_KEY = 'angostart_settings';
 
@@ -227,7 +229,32 @@ export default function Dashboard() {
     },
   ];
 
-  function handleLogin() {
+  async function handleLogin(e) {
+    e?.preventDefault();
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data?.success && data?.token) {
+        localStorage.setItem("angostart_token", data.token);
+        setUser({
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+        });
+        setError("");
+        return;
+      }
+    } catch {
+      // Fallback para modo demo local.
+    }
+
     const found = users.find(
       (u) => u.email === email && u.password === password
     );
@@ -245,6 +272,7 @@ export default function Dashboard() {
     setUser(null);
     setEmail("");
     setPassword("");
+    localStorage.removeItem("angostart_token");
   }
 
 function RenderInvestidorPage() {
@@ -736,7 +764,7 @@ function RenderAdminPage() {
         </div>
 
         <div className="card-content">
-          <form id="loginForm" className="auth-form">
+          <form id="loginForm" className="auth-form" onSubmit={handleLogin}>
             {error && (
                   <div className="alert alert-error">{error}</div>
                 )}
@@ -788,7 +816,7 @@ function RenderAdminPage() {
             </div>
 
             {/* <!-- Submit Button --> */}
-            <button className="btn btn-primary btn-block" onClick={handleLogin}>
+            <button type="submit" className="btn btn-primary btn-block">
               Entrar
             </button>
 
@@ -2416,13 +2444,21 @@ function Mensagens() {
 }
 
 function SubmeterIdeia() {
+  const ctx = useContext(AppContext);
   const [etapa, setEtapa] = useState(1);
   const [analisando, setAnalisando] = useState(false);
   const [resultadoIA, setResultadoIA] = useState(null);
-  
+  const [questionarioSessionId, setQuestionarioSessionId] = useState(null);
+  const [questionarioPerguntas, setQuestionarioPerguntas] = useState([]);
+  const [questionarioRespostas, setQuestionarioRespostas] = useState({});
+  const [gerandoQuestionario, setGerandoQuestionario] = useState(false);
+
   const [dados, setDados] = useState({
     nome: '', descricao: '', setor: '',
     cidade: '', localizacao: '',
+    regiao: '',
+    lat: '',
+    lng: '',
     capital: '',
     problema: '', diferencial: '', publico: '',
     arquivos: null
@@ -2434,6 +2470,117 @@ function SubmeterIdeia() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setDados({ ...dados, [name]: value });
+  };
+
+  const mapQuery = `${dados.localizacao || ''} ${dados.cidade || ''} ${dados.regiao || ''}`.trim() || "Luanda Angola";
+  const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
+
+  const usarMinhaLocalizacao = () => {
+    if (!navigator.geolocation) {
+      ctx?.setModal?.({ open: true, message: "Geolocalização não suportada neste navegador." });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude).toFixed(6);
+        const lng = Number(position.coords.longitude).toFixed(6);
+        setDados((prev) => ({
+          ...prev,
+          lat,
+          lng,
+          localizacao: `${lat}, ${lng}`,
+        }));
+      },
+      () => {
+        ctx?.setModal?.({ open: true, message: "Não foi possível obter sua localização atual." });
+      }
+    );
+  };
+
+  const salvarRascunhoLocal = () => {
+    const drafts = JSON.parse(localStorage.getItem("angostart_ideas_local") || "[]");
+    drafts.unshift({
+      ...dados,
+      id: Date.now(),
+      savedAt: new Date().toISOString(),
+      status: "draft",
+    });
+    localStorage.setItem("angostart_ideas_local", JSON.stringify(drafts));
+  };
+
+  const enviarParaAnalise = async () => {
+    const lat = Number(dados.lat || 0);
+    const lng = Number(dados.lng || 0);
+    const payload = {
+      title: dados.nome,
+      description: dados.descricao,
+      sector: dados.setor || "Geral",
+      city: dados.cidade,
+      address: dados.localizacao,
+      region: dados.regiao,
+      latitude: lat,
+      longitude: lng,
+      initialCapital: Number(dados.capital || 0),
+      problem: dados.problema,
+      differentialText: dados.diferencial,
+      targetAudience: dados.publico,
+      status: "submitted",
+    };
+
+    try {
+      await createIdea(payload);
+      if (questionarioSessionId && Object.keys(questionarioRespostas).length > 0) {
+        await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
+      }
+      ctx?.setModal?.({ open: true, message: "Ideia enviada para a API com sucesso." });
+    } catch (err) {
+      // Fallback para não quebrar o fluxo atual enquanto o login API ainda está em transição.
+      salvarRascunhoLocal();
+      ctx?.setModal?.({
+        open: true,
+        message: `Não foi possível enviar para API agora (${err.message}). Salvamos localmente e seguimos com a análise.`,
+      });
+    }
+
+    simularAnaliseIA();
+  };
+
+  const gerarQuestionarioIA = async () => {
+    setGerandoQuestionario(true);
+    try {
+      const session = await generateQuestionnaire({
+        sector: dados.setor,
+        city: dados.cidade,
+        region: dados.regiao,
+        initialCapital: Number(dados.capital || 0),
+        problem: dados.problema,
+        differentialText: dados.diferencial,
+        targetAudience: dados.publico,
+      });
+      setQuestionarioSessionId(session.id);
+      setQuestionarioPerguntas(session.questions || []);
+      const baseAnswers = {};
+      (session.questions || []).forEach((q) => {
+        baseAnswers[q.key] = questionarioRespostas[q.key] || "";
+      });
+      setQuestionarioRespostas(baseAnswers);
+      ctx?.setModal?.({ open: true, message: "Questionário dinâmico gerado com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao gerar questionário: ${err.message}` });
+    } finally {
+      setGerandoQuestionario(false);
+    }
+  };
+
+  const salvarQuestionarioIA = async () => {
+    if (!questionarioSessionId) return;
+    try {
+      await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
+      ctx?.setModal?.({ open: true, message: "Respostas do questionário guardadas." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao guardar respostas: ${err.message}` });
+    }
   };
 
   const simularAnaliseIA = () => {
@@ -2485,9 +2632,38 @@ function SubmeterIdeia() {
         <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
       </div>
       <div className="form-group">
-        <label className="form-label">Ponto de Localização (Mapa)</label>
-        <div style={{ height: '200px', background: 'var(--dm-bg)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--dm-text-muted)' }}>
-          [Simulação de Mapa Interativo]
+        <label className="form-label">Região/Província</label>
+        <input className="form-input" name="regiao" value={dados.regiao} onChange={handleChange} placeholder="Ex: Luanda" />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Endereço / Referência</label>
+        <input className="form-input" name="localizacao" value={dados.localizacao} onChange={handleChange} placeholder="Rua, bairro ou coordenadas" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div className="form-group">
+          <label className="form-label">Latitude</label>
+          <input className="form-input" name="lat" value={dados.lat} onChange={handleChange} placeholder="-8.8383" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Longitude</label>
+          <input className="form-input" name="lng" value={dados.lng} onChange={handleChange} placeholder="13.2344" />
+        </div>
+      </div>
+      <button className="btn btn-outline" type="button" onClick={usarMinhaLocalizacao} style={{ width: 'fit-content' }}>
+        Usar minha localização atual
+      </button>
+      <div className="form-group">
+        <label className="form-label">Pré-visualização no mapa (Google Maps)</label>
+        <div style={{ height: '240px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--dm-border)' }}>
+          <iframe
+            title="Mapa da localizacao da ideia"
+            src={mapSrc}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
       </div>
     </div>
@@ -2505,7 +2681,7 @@ function SubmeterIdeia() {
 
   const renderFase4 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 4: Modelo de Negócio</h3>
+      <h3 className="dashboard-card-title">Fase 4: Questionário Dinâmico (IA)</h3>
       <div className="form-group">
         <label className="form-label">Qual problema específico o seu produto resolve?</label>
         <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
@@ -2514,6 +2690,57 @@ function SubmeterIdeia() {
         <label className="form-label">Como sua solução é diferente das existentes?</label>
         <textarea className="form-input" name="diferencial" value={dados.diferencial} onChange={handleChange} />
       </div>
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+        <button type="button" className="btn btn-primary" onClick={gerarQuestionarioIA} disabled={gerandoQuestionario}>
+          {gerandoQuestionario ? "Gerando..." : "Gerar Questionário IA"}
+        </button>
+        <button type="button" className="btn btn-outline" onClick={salvarQuestionarioIA} disabled={!questionarioSessionId}>
+          Guardar Respostas
+        </button>
+      </div>
+
+      {questionarioPerguntas.length > 0 && (
+        <div className="dashboard-card" style={{ marginTop: "16px", background: "var(--neutral-50)" }}>
+          <h4 style={{ marginBottom: "12px" }}>Perguntas Dinâmicas</h4>
+          {questionarioPerguntas.map((q) => (
+            <div key={q.key} className="form-group" style={{ marginBottom: "10px" }}>
+              <label className="form-label">{q.label}</label>
+              {q.type === "select" ? (
+                <select
+                  className="form-input"
+                  value={questionarioRespostas[q.key] || ""}
+                  onChange={(e) =>
+                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
+                  }
+                >
+                  <option value="">Selecione...</option>
+                  {(q.options || []).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : q.type === "number" ? (
+                <input
+                  type="number"
+                  className="form-input"
+                  value={questionarioRespostas[q.key] || ""}
+                  onChange={(e) =>
+                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
+                  }
+                />
+              ) : (
+                <textarea
+                  className="form-input"
+                  style={{ minHeight: "80px" }}
+                  value={questionarioRespostas[q.key] || ""}
+                  onChange={(e) =>
+                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
+                  }
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -2533,8 +2760,9 @@ function SubmeterIdeia() {
       <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
         <p><strong>Projeto:</strong> {dados.nome}</p>
         <p><strong>Setor:</strong> {dados.setor}</p>
+        <p><strong>Localização:</strong> {dados.cidade} - {dados.regiao} ({dados.localizacao || "Sem referência"})</p>
         <p><strong>Investimento:</strong> Kz{dados.capital}</p>
-        <p><strong>Problema:</strong> {dados.problema.substring(0, 50)}...</p>
+        <p><strong>Problema:</strong> {(dados.problema || "").substring(0, 50)}...</p>
       </div>
       <p style={{fontSize: '0.8rem', color: 'var(--neutral-500)'}}>Ao clicar em submeter, nossa IA analisará a viabilidade do seu negócio.</p>
     </div>
@@ -2622,7 +2850,7 @@ function SubmeterIdeia() {
                     Próxima Fase
                   </button>
                 ) : (
-                  <button className="btn btn-primary" onClick={simularAnaliseIA} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
+                  <button className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
                     Enviar para Análise IA
                   </button>
                 )}
