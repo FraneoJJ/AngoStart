@@ -1,65 +1,133 @@
-import { useState , useEffect } from "react";
+import React, { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
+import { createIdea } from "../services/ideasApi";
+import { generateQuestionnaire, saveQuestionnaireAnswers } from "../services/questionnaireApi";
+
+const STORAGE_KEY = 'angostart_settings';
+
+const translations = {
+  pt: {
+    nav: {
+      section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+    },
+    common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
+    config: {
+      title: 'Configurações do Sistema',
+      subtitle: 'Personalize a sua experiência na plataforma AngoStart.',
+      darkMode: 'Modo Escuro',
+      darkModeDesc: 'Altera a aparência para cores mais confortáveis à noite.',
+      language: 'Idioma do Sistema',
+      languageDesc: 'Escolha o idioma preferencial das interfaces.',
+      notifications: 'Notificações por Email',
+      notificationsDesc: 'Receba alertas de novos projetos e mensagens diretas.',
+      saveChanges: 'Salvar Alterações',
+      settingsSaved: 'Configurações guardadas com sucesso.',
+      defaultsRestored: 'Predefinições restauradas.',
+      openNewUser: 'Abrir modal de novo utilizador',
+      reportExported: 'Relatório exportado em PDF!',
+      proposalRejected: 'Proposta Recusada',
+      proposalAccepted: 'Proposta Aceite! A iniciar Due Diligence...',
+      editOpened: 'Funcionalidade de edição aberta!',
+      openingDetails: 'Abrir detalhes de',
+      openingReports: 'Abrir relatórios da',
+      startingMentoring: 'Iniciar mentoria com',
+      openingChat: 'Abrir chat com',
+      openingProfile: 'Abrir perfil detalhado de',
+    },
+  },
+  en: {
+    nav: {
+      section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+    },
+    common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
+    config: {
+      title: 'System Settings',
+      subtitle: 'Customise your experience on the AngoStart platform.',
+      darkMode: 'Dark Mode',
+      darkModeDesc: 'Switch to a more comfortable appearance at night.',
+      language: 'System Language',
+      languageDesc: 'Choose your preferred interface language.',
+      notifications: 'Email Notifications',
+      notificationsDesc: 'Receive alerts for new projects and direct messages.',
+      saveChanges: 'Save Changes',
+      settingsSaved: 'Settings saved successfully.',
+      defaultsRestored: 'Defaults restored.',
+      openNewUser: 'Open new user modal',
+      reportExported: 'Report exported as PDF!',
+      proposalRejected: 'Proposal Rejected',
+      proposalAccepted: 'Proposal Accepted! Starting Due Diligence...',
+      editOpened: 'Edit feature opened!',
+      openingDetails: 'Open details for',
+      openingReports: 'Open reports for',
+      startingMentoring: 'Start mentoring with',
+      openingChat: 'Open chat with',
+      openingProfile: 'Open detailed profile for',
+    },
+  },
+};
+
+const AppContext = createContext(null);
 
 const navigationConfig = {
- empreendedor: [
-    { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'submeter-ideia', label: 'Submeter Ideia', icon: 'lightbulb' },
-      { id: 'minhas-ideias', label: 'Minhas Ideias', icon: 'folder', badge: 3 },
+  empreendedor: [
+    { sectionKey: 'principal', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'submeter-ideia', icon: 'lightbulb', badge: 3 },
+      { id: 'minhas-ideias', icon: 'folder', badge: 3 },
     ]},
-    { section: 'Crescimento', items: [
-      { id: 'mentoria', label: 'Mentoria', icon: 'users' },
-      { id: 'investidores', label: 'Investidores', icon: 'trending-up' },
+    { sectionKey: 'crescimento', items: [
+      { id: 'mentoria', icon: 'users' },
+      { id: 'investidores', icon: 'trending-up' },
     ]},
-    { section: 'Configurações', items: [
-      { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'configuracoes', items: [
+      { id: 'perfil', icon: 'user' },
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
   investidor: [
-    { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'marketplace', label: 'Marketplace', icon: 'shopping-bag', badge: 12 ,},
-      { id: 'meus-investimentos', label: 'Investimentos', icon: 'trending-up' },
+    { sectionKey: 'principal', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'marketplace', icon: 'shopping-bag', badge: 12 },
+      { id: 'meus-investimentos', icon: 'trending-up' },
     ]},
-    { section: 'Análise', items: [
-      { id: 'propostas', label: 'Propostas', icon: 'inbox', badge: 5 },
-      { id: 'analytics', label: 'Analytics', icon: 'bar-chart' },
+    { sectionKey: 'analise', items: [
+      { id: 'propostas', icon: 'inbox', badge: 5 },
+      { id: 'analytics', icon: 'bar-chart' },
     ]},
-    { section: 'Configurações', items: [
-      { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'configuracoes', items: [
+      { id: 'perfil', icon: 'user' },
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
   mentor: [
-    { section: 'Principal', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'sessoes', label: 'Sessões', icon: 'calendar', badge: 4 },
-      { id: 'mentorados', label: 'Mentorados', icon: 'users' },
+    { sectionKey: 'principal', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'sessoes', icon: 'calendar', badge: 4 },
+      { id: 'mentorados', icon: 'users' },
     ]},
-    { section: 'Conteúdo', items: [
-      { id: 'agenda', label: 'Agenda', icon: 'clock' },
-      { id: 'mensagens', label: 'Mensagens', icon: 'user' },
+    { sectionKey: 'conteudo', items: [
+      { id: 'agenda', icon: 'clock' },
+      { id: 'mensagens', icon: 'user' },
     ]},
-    { section: 'Configurações', items: [
-      { id: 'perfil', label: 'Perfil', icon: 'user' },
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'configuracoes', items: [
+      { id: 'perfil', icon: 'user' },
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
   admin: [
-    { section: 'Administração', items: [
-      { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-      { id: 'usuarios', label: 'Usuários', icon: 'users' },
-      { id: 'ideias', label: 'Ideias', icon: 'lightbulb', badge: 8 },
-      
+    { sectionKey: 'administracao', items: [
+      { id: 'dashboard', icon: 'home' },
+      { id: 'usuarios', icon: 'users' },
+      { id: 'ideias', icon: 'lightbulb', badge: 8 },
     ]},
-    { section: 'Analytics', items: [
-      { id: 'relatorios', label: 'Relatórios', icon: 'bar-chart' },
+    { sectionKey: 'analytics', items: [
+      { id: 'relatorios', icon: 'bar-chart' },
     ]},
-    { section: 'Sistema', items: [
-      { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
+    { sectionKey: 'sistema', items: [
+      { id: 'configuracoes', icon: 'settings' },
     ]},
   ],
 };
@@ -84,9 +152,27 @@ const icons = {
   award: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
   'check-circle': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
   'dollar-sign': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
-  settings: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m0-18c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10z"/></svg>,
+  settings: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 10.27 7 3.34"/><path d="m11 13.73-4 6.93"/><path d="M12 22v-2"/><path d="M12 2v2"/><path d="M14 12h8"/><path d="m17 20.66-1-1.73"/><path d="m17 3.34-1 1.73"/><path d="M2 12h2"/><path d="m20.66 17-1.73-1"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m3.34 7 1.73 1"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="8"/></svg>,
 };
 
+
+function ConfirmModal() {
+  const ctx = useContext(AppContext);
+  if (!ctx || !ctx.modal.open) return null;
+  const { modal, setModal, t } = ctx;
+  const close = () => setModal({ ...modal, open: false });
+  return (
+    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)' }}>
+        {modal.title && <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{modal.title}</h3>}
+        <p style={{ margin: 0, color: 'var(--dm-text)', fontSize: '0.95rem' }}>{modal.message}</p>
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-primary" onClick={close}>{t ? t('common.close') : 'Fechar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -94,6 +180,26 @@ export default function Dashboard() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [idioma, setIdioma] = useState(() => {
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      return s ? (JSON.parse(s).idioma || 'pt') : 'pt';
+    } catch { return 'pt'; }
+  });
+  const [modal, setModal] = useState({ open: false, title: '', message: '' });
+  const t = (key) => {
+    const parts = key.split('.');
+    let v = translations[idioma] || translations.pt;
+    for (const p of parts) v = v?.[p];
+    return v != null ? v : key;
+  };
+  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal }), [idioma, modal]);
+
+  useEffect(() => {
+    const s = loadSettings();
+    if (s.dark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
+  }, []);
 
 
   const users = [
@@ -123,7 +229,32 @@ export default function Dashboard() {
     },
   ];
 
-  function handleLogin() {
+  async function handleLogin(e) {
+    e?.preventDefault();
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data?.success && data?.token) {
+        localStorage.setItem("angostart_token", data.token);
+        setUser({
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+        });
+        setError("");
+        return;
+      }
+    } catch {
+      // Fallback para modo demo local.
+    }
+
     const found = users.find(
       (u) => u.email === email && u.password === password
     );
@@ -141,6 +272,7 @@ export default function Dashboard() {
     setUser(null);
     setEmail("");
     setPassword("");
+    localStorage.removeItem("angostart_token");
   }
 
 function RenderInvestidorPage() {
@@ -194,6 +326,8 @@ function RenderAdminPage() {
   // ÁREAS (FUNCTIONS)
   // =========================
   function Investidor() {
+    const ctx = useContext(AppContext);
+    const t = ctx?.t ?? (k => k);
     return(
       <>
     <div className="stats-grid">
@@ -630,7 +764,7 @@ function RenderAdminPage() {
         </div>
 
         <div className="card-content">
-          <form id="loginForm" className="auth-form">
+          <form id="loginForm" className="auth-form" onSubmit={handleLogin}>
             {error && (
                   <div className="alert alert-error">{error}</div>
                 )}
@@ -682,7 +816,7 @@ function RenderAdminPage() {
             </div>
 
             {/* <!-- Submit Button --> */}
-            <button className="btn btn-primary btn-block" onClick={handleLogin}>
+            <button type="submit" className="btn btn-primary btn-block">
               Entrar
             </button>
 
@@ -717,68 +851,58 @@ function RenderAdminPage() {
   // DASHBOARD
   // =========================
   
-return (<>
-<div className="dashboard-page"> 
-  <header className="sidebar-header">
-    <h2>AngoStart</h2>
-  </header>
-  <aside className="sidebar">
-  <div className="sidebar-nav">
-    {navigationConfig[user.role]?.map((group) => (
-      <div key={group.section} className="nav-section">
-        <div className="nav-section-title">
-          {group.section}
-        </div>
-
-        {group.items.map((item) => (
-      
-            <div key={item.id}className={`nav-item ${currentPage === item.id ? "active" : ""}`}
-             onClick={() => setCurrentPage(item.id)}>
-            <span className="nav-icon">
-              {icons[item.icon]}
-            </span>
-
-            <span className="nav-label">
-              {item.label}
-            </span>
-
-            {item.badge && (
-              <span className="nav-badge">
-                {item.badge}
-              </span>
-            )}
+return (
+    <AppContext.Provider value={ctxValue}>
+      <ConfirmModal />
+      <div className="dashboard-page">
+        <header className="sidebar-header">
+          <h2>AngoStart</h2>
+        </header>
+        <aside className="sidebar">
+          <div className="sidebar-nav">
+            {navigationConfig[user.role]?.map((group) => (
+              <div key={group.sectionKey} className="nav-section">
+                <div className="nav-section-title">
+                  {t('nav.section.' + group.sectionKey)}
+                </div>
+                {group.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`nav-item ${currentPage === item.id ? "active" : ""}`}
+                    onClick={() => setCurrentPage(item.id)}
+                  >
+                    <span className="nav-icon">{icons[item.icon]}</span>
+                    <span className="nav-label">{t('nav.item.' + item.id)}</span>
+                    {item.badge != null && <span className="nav-badge">{item.badge}</span>}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
-        ))}
+          <div className="sidebar-footer">
+            <div className="user-profile">
+              <div className="user-avatar">{user.name.charAt(0)}</div>
+              <div className="user-info">
+                <div className="user-name">{user.name}</div>
+                <div className="user-role">{user.role}</div>
+              </div>
+            </div>
+            <button className="btn-logout" onClick={logout}>{t('common.logout')}</button>
+          </div>
+        </aside>
+        <main className="main-content">
+          <div className="page-content">
+            <RenderArea />
+          </div>
+        </main>
       </div>
-    ))}
-  </div>
-
-  <div className="sidebar-footer">
-    <div className="user-profile">
-      <div className="user-avatar">
-        {user.name.charAt(0)}
-      </div>
-      <div className="user-info">
-        <div className="user-name">{user.name}</div>
-        <div className="user-role">{user.role}</div>
-      </div>
-    </div>
-
-    <button className="btn-logout" onClick={logout}>
-      Sair
-    </button>
-  </div>
-</aside>
-      <main className="main-content">
-        <div className="page-content">
-          <RenderArea />
-        </div>
-      </main>
-    </div>
-  </>);
+    </AppContext.Provider>
+  );
 }
 
 function Marketplace() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const startups = [
     { id: 1, name: "Kwanza Pay", sector: "Fintech", score: 94, ask: "25k - 50k", desc: "Solução de pagamentos móveis para mercados informais em Luanda.", location: "Luanda" },
     { id: 2, name: "AgroFácil", sector: "AgriTech", score: 88, ask: "10k - 30k", desc: "Monitoramento de colheitas via satélite para pequenos produtores.", location: "Huambo" },
@@ -809,31 +933,31 @@ function Marketplace() {
           >
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                <div style={{ width: 50, height: 50, background: '#eee', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#2563eb' }}>
+                <div style={{ width: 50, height: 50, background: 'var(--dm-bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--primary-600)' }}>
                   {s.name.charAt(0)}
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>
                     Score IA: {s.score}
                   </span>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 5 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--dm-text-muted)', marginTop: 5 }}>
                     {s.location}, Angola
                   </div>
                 </div>
               </div>
 
               <h3 style={{ margin: '0 0 10px 0' }}>{s.name}</h3>
-              <span style={{ display: 'inline-block', padding: '2px 8px', background: '#eef2ff', color: '#4338ca', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
+              <span style={{ display: 'inline-block', padding: '2px 8px', background: 'var(--primary-100)', color: 'var(--primary-600)', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
                 {s.sector}
               </span>
-              <p style={{ fontSize: '0.9rem', color: '#666', lineHeight: 1.5, marginTop: 10 }}>
+              <p style={{ fontSize: '0.9rem', color: 'var(--dm-text-muted)', lineHeight: 1.5, marginTop: 10 }}>
                 {s.desc}
               </p>
             </div>
 
-            <div style={{ borderTop: '1px solid #eee', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span style={{ display: 'block', fontSize: '0.7rem', color: '#999', textTransform: 'uppercase' }}>
+                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--dm-text-muted)', textTransform: 'uppercase' }}>
                   Ticket de Investimento
                 </span>
                 <strong style={{ color: '#10b981' }}>{s.ask}</strong>
@@ -841,7 +965,7 @@ function Marketplace() {
               <button
                 className="btn btn-primary"
                 style={{ padding: '8px 15px', fontSize: '0.85rem' }}
-                onClick={() => alert(`Abrindo detalhes de ${s.name}...`)}
+                onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingDetails') + ' ' + s.name + '...' })}
               >
                 Ver mais
               </button>
@@ -901,8 +1025,8 @@ function Investimentos() {
           <button
             className="btn"
             style={{
-              background: '#f4f7fe',
-              color: '#2563eb',
+              background: 'var(--primary-100)',
+              color: 'var(--primary-600)',
               fontWeight: 600,
               border: 'none',
               padding: '10px 15px',
@@ -953,8 +1077,8 @@ function Investimentos() {
                   <td>
                     <button
                       className="btn"
-                      style={{ padding: '5px 10px', fontSize: '0.75rem', background: '#eee' }}
-                      onClick={() => alert(`Abrindo relatórios da ${item.startup}`)}
+                      style={{ padding: '5px 10px', fontSize: '0.75rem', background: 'var(--dm-bg)' }}
+                      onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingReports') + ' ' + item.startup })}
                     >
                       Relatórios
                     </button>
@@ -974,9 +1098,9 @@ function Analytics() {
       <div className="dashboard-card" style={{marginBottom: '25px', display: 'flex', justifyContent:' space-between', alignItems: 'center'}}>
         <div>
           <h3 style={{margin: '0'}}>Análise de Mercado & Performance</h3>
-          <p style={{margin:' 5px 0 0 0', color:' #666', fontSize: '0.85rem'}}>Dados baseados em tendências reais do ecossistema AngoStart.</p>
+          <p style={{margin:' 5px 0 0 0', color:' var(--dm-text-muted)', fontSize: '0.85rem'}}>Dados baseados em tendências reais do ecossistema AngoStart.</p>
         </div>
-        <select className="input-field" style={{padding: '8px 15px' , borderRadius: '8px', border:' 1px solid #ddd'}}>
+        <select className="input-field form-input" style={{padding: '8px 15px' , borderRadius: '8px', border:' 1px solid var(--dm-border)'}}>
           <option>Últimos 12 meses</option>
           <option>Últimos 6 meses</option>
           <option>Este Ano (2026)</option>
@@ -989,7 +1113,7 @@ function Analytics() {
           <h4 className="dashboard-card-title">Crescimento Médio do Portfólio</h4>
           <p className="dashboard-card-description">Evolução do valuation das suas startups investidas.</p>
           
-          <div style={{height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding:' 0 10px', borderBottom:' 2px solid #eee', borderLeft: '2px solid #eee'}}>
+          <div style={{height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding:' 0 10px', borderBottom:' 2px solid var(--dm-border)', borderLeft: '2px solid var(--dm-border)'}}>
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jan"></div>
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Fev"></div>
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Mar"></div>
@@ -998,7 +1122,7 @@ function Analytics() {
             <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jun"></div>
 
           </div>
-          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: '#999'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--dm-text-muted)'}}>
             <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
           </div>
         </div>
@@ -1011,7 +1135,7 @@ function Analytics() {
                 <span>Fintech</span>
                 <span style={{color: '#10b981', fontWeight: 'bold'}}>+42%</span>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '8px', borderRadius: '4px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
                 <div style={{width: '90%', background:' #10b981', height: '100%', borderRadius: '4px'}}></div>
               </div>
             </div>
@@ -1020,8 +1144,8 @@ function Analytics() {
                 <span>AgriTech</span>
                 <span style={{color: '#10b981', fontWeight: 'bold'}}>+28%</span>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '8px', borderRadius: '4px'}}>
-                <div style={{width:' 65%', background: '#2563eb', height: '100%', borderRadius: '4px'}}></div>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
+                <div style={{width:' 65%', background: 'var(--primary-600)', height: '100%', borderRadius: '4px'}}></div>
               </div>
             </div>
             <div style={{marginBottom: '15px'}}>
@@ -1029,7 +1153,7 @@ function Analytics() {
                 <span>EdTech</span>
                 <span style={{color: '#f59e0b', fontWeight: 'bold'}}>+12%</span>
               </div>
-              <div style={{width: '100%', background: '#eee', height:' 8px', borderRadius: '4px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height:' 8px', borderRadius: '4px'}}>
                 <div style={{width: '40%', background: '#f59e0b', height: '100%', borderRadius: '4px'}}></div>
               </div>
             </div>
@@ -1084,6 +1208,8 @@ function Analytics() {
   </>);
 }
 function Propostas() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   return (
     <div
       style={{
@@ -1099,9 +1225,9 @@ function Propostas() {
         className="dashboard-card"
         style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
       >
-        <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--dm-border)' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Solicitações Recebidas</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#666' }}>
+          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
             Você tem 2 propostas pendentes
           </p>
         </div>
@@ -1111,21 +1237,21 @@ function Propostas() {
             className="proposta-item active"
             style={{
               padding: '15px',
-              borderBottom: '1px solid #eee',
+              borderBottom: '1px solid var(--dm-border)',
               cursor: 'pointer',
-              background: '#f8faff',
-              borderLeft: '4px solid #2563eb'
+              background: 'var(--primary-100)',
+              borderLeft: '4px solid var(--primary-600)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>SolarPay Angola</strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Hoje</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Hoje</span>
             </div>
             <p
               style={{
                 margin: 0,
                 fontSize: '0.85rem',
-                color: '#444',
+                color: 'var(--dm-text)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
@@ -1140,13 +1266,13 @@ function Propostas() {
 
           <div
             className="proposta-item"
-            style={{ padding: '15px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
+            style={{ padding: '15px', borderBottom: '1px solid var(--dm-border)', cursor: 'pointer' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>AgroFácil</strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Ontem</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Ontem</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#444' }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--dm-text)' }}>
               Solicitação de Mentoria e Aporte
             </p>
             <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
@@ -1164,11 +1290,11 @@ function Propostas() {
         <div
           style={{
             padding: '15px 20px',
-            borderBottom: '1px solid #eee',
+            borderBottom: '1px solid var(--dm-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#fff'
+            background: 'var(--dm-surface)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1176,12 +1302,12 @@ function Propostas() {
               style={{
                 width: 40,
                 height: 40,
-                background: '#2563eb',
+                background: 'var(--primary-600)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--on-primary)',
                 fontWeight: 'bold'
               }}
             >
@@ -1199,14 +1325,14 @@ function Propostas() {
             <button
               className="btn"
               style={{
-                background: '#fee2e2',
-                color: '#ef4444',
+                background: 'var(--error-100)',
+                color: 'var(--error-500)',
                 border: 'none',
                 padding: '8px 15px',
                 borderRadius: '6px',
                 fontWeight: 600
               }}
-              onClick={() => alert('Proposta Recusada')}
+              onClick={() => ctx?.setModal?.({ open: true, message: t('config.proposalRejected') })}
             >
               Recusar
             </button>
@@ -1214,7 +1340,7 @@ function Propostas() {
             <button
               className="btn btn-primary"
               style={{ padding: '8px 15px', borderRadius: '6px' }}
-              onClick={() => alert('Proposta Aceite! Iniciando Due Diligence...')}
+              onClick={() => ctx?.setModal?.({ open: true, message: t('config.proposalAccepted') })}
             >
               Aceitar Proposta
             </button>
@@ -1225,7 +1351,7 @@ function Propostas() {
           style={{
             flex: 1,
             padding: '20px',
-            background: '#f9fafb',
+            background: 'var(--neutral-50)',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -1235,7 +1361,7 @@ function Propostas() {
           <div
             style={{
               alignSelf: 'flex-start',
-              background: '#fff',
+              background: 'var(--dm-surface)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomLeftRadius: '2px',
@@ -1247,7 +1373,7 @@ function Propostas() {
               Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
               25.000 USD para expansão em Benguela em troca de 5% de equity.
             </p>
-            <span style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px', display: 'block' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
               10:30 AM
             </span>
           </div>
@@ -1255,8 +1381,8 @@ function Propostas() {
           <div
             style={{
               alignSelf: 'flex-end',
-              background: '#2563eb',
-              color: '#fff',
+              background: 'var(--primary-600)',
+              color: 'var(--on-primary)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomRightRadius: '2px',
@@ -1283,8 +1409,8 @@ function Propostas() {
         <div
           style={{
             padding: '15px',
-            borderTop: '1px solid #eee',
-            background: '#fff',
+            borderTop: '1px solid var(--dm-border)',
+            background: 'var(--dm-surface)',
             display: 'flex',
             gap: '10px'
           }}
@@ -1295,7 +1421,7 @@ function Propostas() {
             style={{
               flex: 1,
               padding: '10px',
-              border: '1px solid #ddd',
+              border: '1px solid var(--dm-border)',
               borderRadius: '8px',
               outline: 'none'
             }}
@@ -1307,16 +1433,17 @@ function Propostas() {
       </div>
       <style>
         {`
-          .proposta-item:hover { background: #f4f7fe; }
-          .badge-warning { background: #fef3c7; color: #92400e; }
-          .badge-success { background: #dcfce7; color: #166534; }
+          .proposta-item:hover { background: var(--primary-100); }
+          .badge-warning { background: var(--warning-100); color: var(--warning-500); }
+          .badge-success { background: var(--success-100); color: var(--success-500); }
         `}
       </style>
     </div>
   );
 }
 function InvestidorPerfil() {
-
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const investidor = {
     nome: 'Maria Investidora',
     titulo: 'Investidora Anjo',
@@ -1349,18 +1476,18 @@ function InvestidorPerfil() {
         <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid #fff', background: '#eee' }} />
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--dm-bg)' }} />
 
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
-            <p style={{ margin: '5px 0 0', color: '#666' }}>
+            <p style={{ margin: '5px 0 0', color: 'var(--dm-text-muted)' }}>
               {investidor.titulo} • {investidor.local}
             </p>
           </div>
 
           <button
             className="btn btn-primary"
-            onClick={() => alert('Funcionalidade de edição aberta!')}
+            onClick={() => ctx?.setModal?.({ open: true, message: t('config.editOpened') })}
           >
             Editar Perfil
           </button>
@@ -1380,7 +1507,7 @@ function InvestidorPerfil() {
             ) : (
               <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
             )}
-            <p style={{ fontSize: '0.8rem', color: '#999' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
               Identidade e fundos validados pela AngoStart.
             </p>
           </div>
@@ -1398,11 +1525,11 @@ function InvestidorPerfil() {
         {/* COLUNA DIREITA */}
         <div className="dashboard-card">
           <h3 className="dashboard-card-title">Biografia Profissional</h3>
-          <p style={{ lineHeight: '1.6', color: '#444' }}>
+          <p style={{ lineHeight: '1.6', color: 'var(--dm-text)' }}>
             {investidor.bio}
           </p>
 
-          <hr style={{ borderTop: '1px solid #eee', margin: '25px 0' }} />
+          <hr style={{ borderTop: '1px solid var(--dm-border)', margin: '25px 0' }} />
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
@@ -1421,99 +1548,117 @@ function InvestidorPerfil() {
   );
 }
 
-function Configuracoes() {
-  // Estado para controlar o Modo Escuro
-  const [dark, setDark] = useState(document.body.classList.contains('dark-theme'));
-  const [notificacoes, setNotificacoes] = useState(true);
-  const [idioma, setIdioma] = useState('pt');
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { dark: false, notificacoes: true, idioma: 'pt' };
+    const s = JSON.parse(raw);
+    return {
+      dark: !!s.dark,
+      notificacoes: s.notificacoes !== false,
+      idioma: s.idioma === 'en' ? 'en' : 'pt',
+    };
+  } catch {
+    return { dark: false, notificacoes: true, idioma: 'pt' };
+  }
+}
 
-  // Efeito para aplicar/remover a classe no body
+function saveSettings(dark, notificacoes, idioma) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ dark, notificacoes, idioma }));
+}
+
+function Configuracoes() {
+  const ctx = useContext(AppContext);
+  const globalIdioma = ctx?.idioma ?? 'pt';
+  const setGlobalIdioma = ctx?.setIdioma;
+  const setModal = ctx?.setModal;
+  const t = ctx?.t ?? (k => k);
+
+  const [dark, setDark] = useState(() => loadSettings().dark);
+  const [notificacoes, setNotificacoes] = useState(() => loadSettings().notificacoes);
+  const [idiomaLocal, setIdiomaLocal] = useState(() => ctx?.idioma ?? loadSettings().idioma);
+
   useEffect(() => {
-    if (dark) {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
+    if (dark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
   }, [dark]);
+
+  useEffect(() => {
+    if (globalIdioma !== idiomaLocal) setIdiomaLocal(globalIdioma);
+  }, [globalIdioma]);
+
+  const handleIdiomaChange = (newVal) => {
+    setIdiomaLocal(newVal);
+    setGlobalIdioma?.(newVal);
+  };
+
+  const handleSave = () => {
+    saveSettings(dark, notificacoes, idiomaLocal);
+    setGlobalIdioma?.(idiomaLocal);
+    if (dark) document.body.classList.add('dark-theme');
+    else document.body.classList.remove('dark-theme');
+    setModal?.({ open: true, title: '', message: t('config.settingsSaved') });
+  };
+
+  const handleRestore = () => {
+    const def = { dark: false, notificacoes: true, idioma: 'pt' };
+    setDark(def.dark);
+    setNotificacoes(def.notificacoes);
+    setIdiomaLocal(def.idioma);
+    setGlobalIdioma?.(def.idioma);
+    saveSettings(def.dark, def.notificacoes, def.idioma);
+    document.body.classList.remove('dark-theme');
+    setModal?.({ open: true, title: '', message: t('config.defaultsRestored') });
+  };
 
   return (
     <div className="dashboard-card" style={{ maxWidth: '700px', margin: '0 auto', padding: 0, overflow: 'hidden' }}>
       <div className="dashboard-card-header" style={{ padding: '25px', borderBottom: '1px solid var(--neutral-200)' }}>
-        <h3 className="dashboard-card-title" style={{ fontSize: '1.25rem' }}>Configurações do Sistema</h3>
-        <p className="dashboard-card-description">Personalize sua experiência na plataforma AngoStart.</p>
+        <h3 className="dashboard-card-title" style={{ fontSize: '1.25rem' }}>{t('config.title')}</h3>
+        <p className="dashboard-card-description">{t('config.subtitle')}</p>
       </div>
-
       <div style={{ padding: '10px 25px 25px 25px' }}>
-        
-        {/* MODO ESCURO */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid var(--neutral-100)' }}>
           <div>
-            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Modo Escuro</h4>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Altera a aparência para cores mais confortáveis à noite.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>{t('config.darkMode')}</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>{t('config.darkModeDesc')}</p>
           </div>
           <label className="switch">
-            <input 
-              type="checkbox" 
-              checked={dark} 
-              onChange={() => setDark(!dark)} 
-            />
+            <input type="checkbox" checked={dark} onChange={() => setDark(!dark)} />
             <span className="slider round"></span>
           </label>
         </div>
-
-        {/* IDIOMA */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0', borderBottom: '1px solid var(--neutral-100)' }}>
           <div>
-            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Idioma do Sistema</h4>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Escolha o idioma preferencial das interfaces.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>{t('config.language')}</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>{t('config.languageDesc')}</p>
           </div>
-          <select 
-            className="form-input" 
-            value={idioma}
-            onChange={(e) => setIdioma(e.target.value)}
-            style={{ width: 'auto', minWidth: '160px', padding: '8px' }}
+          <select
+            className="form-input"
+            value={idiomaLocal}
+            onChange={(e) => handleIdiomaChange(e.target.value)}
+            style={{ width: 'auto', minWidth: '180px', padding: '8px' }}
           >
-            <option value="pt">Português (AO)</option>
-            <option value="en">English (US)</option>
-            <option value="fr">Français</option>
+            <option value="pt">Português (Portugal)</option>
+            <option value="en">English</option>
           </select>
         </div>
-
-        {/* NOTIFICAÇÕES */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
           <div>
-            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>Notificações por Email</h4>
-            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>Receba alertas de novos projetos e mensagens diretas.</p>
+            <h4 style={{ margin: '0', color: 'var(--neutral-900)' }}>{t('config.notifications')}</h4>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--neutral-500)' }}>{t('config.notificationsDesc')}</p>
           </div>
           <label className="switch">
-            <input 
-              type="checkbox" 
-              checked={notificacoes} 
-              onChange={() => setNotificacoes(!notificacoes)}
-            />
+            <input type="checkbox" checked={notificacoes} onChange={() => setNotificacoes(!notificacoes)} />
             <span className="slider round"></span>
           </label>
         </div>
-
-        {/* BOTÕES DE AÇÃO */}
         <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
-          <button 
-            className="btn btn-primary" 
-            style={{ padding: '12px 30px', width: 'auto' }}
-            onClick={() => alert('Configurações salvas com sucesso!')}
-          >
-            Salvar Alterações
+          <button className="btn btn-primary" style={{ padding: '12px 30px', width: 'auto' }} onClick={handleSave}>
+            {t('config.saveChanges')}
           </button>
-          <button 
-            className="btn-logout" 
-            style={{ padding: '12px 30px', width: 'auto' }}
-            onClick={() => {
-              setDark(false);
-              setNotificacoes(true);
-              setIdioma('pt');
-            }}
-          >
-            Restaurar Padrão
+          <button className="btn-logout" style={{ padding: '12px 30px', width: 'auto' }} onClick={handleRestore}>
+            {t('common.restore')}
           </button>
         </div>
       </div>
@@ -1524,7 +1669,7 @@ function Configuracoes() {
 function Info({ label, value }) {
   return (
     <div>
-      <label style={{ fontSize: '0.8rem', color: '#999', display: 'block' }}>{label}</label>
+      <label style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)', display: 'block' }}>{label}</label>
       <strong>{value}</strong>
     </div>
   );
@@ -1542,6 +1687,8 @@ function StatCard({ label, value, icon, color }) {
   );
 }     
 function Usuarios() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   return ( <>
     <div className="dashboard-card">
       <div className="dashboard-card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -1549,7 +1696,7 @@ function Usuarios() {
           <h3 className="dashboard-card-title">Gerenciamento de Usuários</h3>
           <p className="dashboard-card-description">Visualize e gerencie todos os usuários cadastrados na plataforma.</p>
         </div>
-        <button className="btn btn-primary"  onClick={() => alert('Abrir modal de novo usuário')} > + Novo Usuário</button>
+        <button className="btn btn-primary" onClick={() => ctx?.setModal?.({ open: true, message: t('config.openNewUser') })}> + Novo Usuário</button>
       </div>
       
       <div style={{marginTop: '20px'}}>
@@ -1676,21 +1823,23 @@ function Ideias() {
   </>);
 }
 function Relatorio() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   return (<>
     <div className="reports-container">
       <div className="dashboard-card" style={{marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px', flexWrap: 'wrap'}}>
         <div>
           <h3 style={{margin: '0'}}>Análise de Performance</h3>
-          <p style={{margin: '0', color: '#666', fontSize: '0.9rem'}}>Relatórios detalhados da plataforma</p>
+          <p style={{margin: '0', color: 'var(--dm-text-muted)', fontSize: '0.9rem'}}>Relatórios detalhados da plataforma</p>
         </div>
         <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
           <label>Mês de Referência:</label>
-          <select id="monthFilter" className="input-field" style={{padding: '5px 10px ', borderRadius: '5px', border: '1px solid #ddd'}}>
+          <select id="monthFilter" className="input-field" style={{padding: '5px 10px ', borderRadius: '5px', border: '1px solid var(--dm-border)'}}>
             <option value="janeiro-2026">Janeiro 2026</option>
             <option value="dezembro-2025">Dezembro 2025</option>
             <option value="novembro-2025">Novembro 2025</option>
           </select>
-          <button className="btn btn-primary"  onClick={() =>alert('Relatório exportado em PDF!') } style={{padding: '5px 15px'}}>Exportar PDF</button>
+          <button className="btn btn-primary"  onClick={() => ctx?.setModal?.({ open: true, message: t('config.reportExported') })} style={{padding: '5px 15px'}}>Exportar PDF</button>
         </div>
       </div>
 
@@ -1733,7 +1882,7 @@ function Relatorio() {
                 <span>Empreendedores</span>
                 <strong>650</strong>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '10px', borderRadius: '5px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
                 <div style={{width: '65%', background: 'var(--primary-color, #2563eb)', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
@@ -1743,7 +1892,7 @@ function Relatorio() {
                 <span>Investidores</span>
                 <strong>120</strong>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '10px', borderRadius: '5px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
                 <div style={{width: '25%', background: '#10b981', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
@@ -1753,7 +1902,7 @@ function Relatorio() {
                 <span>Mentores</span>
                 <strong>45</strong>
               </div>
-              <div style={{width: '100%', background: '#eee', height: '10px', borderRadius: '5px'}}>
+              <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
                 <div style={{width: '15%', background: '#f59e0b', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
@@ -1764,15 +1913,15 @@ function Relatorio() {
           <h3 className="dashboard-card-title">Atividade Recente</h3>
           <div style={{marginTop: '15px'}}>
             <ul style={{listStyle: 'none', padding: '0'}}>
-              <li style={{padding: '10px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between'}}>
+              <li style={{padding: '10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Sessões de Mentoria</span>
                 <strong>28</strong>
               </li>
-              <li style={{padding:' 10px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between'}}>
+              <li style={{padding:' 10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Investimentos Feitos</span>
                 <strong>14</strong>
               </li>
-              <li style={{padding: '10px 0', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between'}}>
+              <li style={{padding: '10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Taxa de Aprovação</span>
                 <strong>78%</strong>
               </li>
@@ -1784,6 +1933,8 @@ function Relatorio() {
   </>);
 }
 function Sessoes() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const [filtroArea, setFiltroArea] = useState('Todos');
 
   const empreendedores = [
@@ -1875,7 +2026,7 @@ function Sessoes() {
               <button 
                 className="btn btn-primary" 
                 style={{ padding: '10px 20px', fontSize: '0.85rem' }}
-                onClick={() => alert(`Iniciando mentoria com ${emp.nome}`)}
+                onClick={() => ctx?.setModal?.({ open: true, message: t('config.startingMentoring') + ' ' + emp.nome })}
               >
                 Analisar
               </button>
@@ -1893,6 +2044,8 @@ function Sessoes() {
   );
 }
 function Mentorados() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const [busca, setBusca] = useState("");
 
   const conversas = [
@@ -1972,7 +2125,7 @@ function Mentorados() {
             }}
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}
-            onClick={() => alert(`Abrindo chat com ${chat.nome}`)}
+            onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingChat') + ' ' + chat.nome })}
           >
             {/* AVATAR COM STATUS ONLINE */}
             <div style={{ position: 'relative', marginRight: '20px' }}>
@@ -2236,7 +2389,7 @@ function Mensagens() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 40, height: 40, background: 'var(--primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>
+            <div style={{ width: 40, height: 40, background: 'var(--primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-primary)', fontWeight: 'bold' }}>
               S
             </div>
             <div>
@@ -2259,7 +2412,7 @@ function Mensagens() {
           }}
         >
           {/* MENSAGEM RECEBIDA */}
-          <div style={{ alignSelf: 'flex-start', background: '#fff', padding: '12px', borderRadius: '12px', borderBottomLeftRadius: '2px', maxWidth: '70%', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid var(--neutral-200)' }}>
+          <div style={{ alignSelf: 'flex-start', background: 'var(--dm-surface)', padding: '12px', borderRadius: '12px', borderBottomLeftRadius: '2px', maxWidth: '70%', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid var(--neutral-200)' }}>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--neutral-800)' }}>
               Olá, Mentor! Enviamos nosso pitch deck atualizado. Estamos buscando expansão em Benguela.
             </p>
@@ -2267,7 +2420,7 @@ function Mensagens() {
           </div>
 
           {/* MENSAGEM ENVIADA */}
-          <div style={{ alignSelf: 'flex-end', background: 'var(--primary-600)', color: '#fff', padding: '12px', borderRadius: '12px', borderBottomRightRadius: '2px', maxWidth: '70%' }}>
+          <div style={{ alignSelf: 'flex-end', background: 'var(--primary-600)', color: 'var(--on-primary)', padding: '12px', borderRadius: '12px', borderBottomRightRadius: '2px', maxWidth: '70%' }}>
             <p style={{ margin: 0, fontSize: '0.9rem' }}>
               Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos agendar uma call?
             </p>
@@ -2291,13 +2444,21 @@ function Mensagens() {
 }
 
 function SubmeterIdeia() {
+  const ctx = useContext(AppContext);
   const [etapa, setEtapa] = useState(1);
   const [analisando, setAnalisando] = useState(false);
   const [resultadoIA, setResultadoIA] = useState(null);
-  
+  const [questionarioSessionId, setQuestionarioSessionId] = useState(null);
+  const [questionarioPerguntas, setQuestionarioPerguntas] = useState([]);
+  const [questionarioRespostas, setQuestionarioRespostas] = useState({});
+  const [gerandoQuestionario, setGerandoQuestionario] = useState(false);
+
   const [dados, setDados] = useState({
     nome: '', descricao: '', setor: '',
     cidade: '', localizacao: '',
+    regiao: '',
+    lat: '',
+    lng: '',
     capital: '',
     problema: '', diferencial: '', publico: '',
     arquivos: null
@@ -2309,6 +2470,117 @@ function SubmeterIdeia() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setDados({ ...dados, [name]: value });
+  };
+
+  const mapQuery = `${dados.localizacao || ''} ${dados.cidade || ''} ${dados.regiao || ''}`.trim() || "Luanda Angola";
+  const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
+
+  const usarMinhaLocalizacao = () => {
+    if (!navigator.geolocation) {
+      ctx?.setModal?.({ open: true, message: "Geolocalização não suportada neste navegador." });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude).toFixed(6);
+        const lng = Number(position.coords.longitude).toFixed(6);
+        setDados((prev) => ({
+          ...prev,
+          lat,
+          lng,
+          localizacao: `${lat}, ${lng}`,
+        }));
+      },
+      () => {
+        ctx?.setModal?.({ open: true, message: "Não foi possível obter sua localização atual." });
+      }
+    );
+  };
+
+  const salvarRascunhoLocal = () => {
+    const drafts = JSON.parse(localStorage.getItem("angostart_ideas_local") || "[]");
+    drafts.unshift({
+      ...dados,
+      id: Date.now(),
+      savedAt: new Date().toISOString(),
+      status: "draft",
+    });
+    localStorage.setItem("angostart_ideas_local", JSON.stringify(drafts));
+  };
+
+  const enviarParaAnalise = async () => {
+    const lat = Number(dados.lat || 0);
+    const lng = Number(dados.lng || 0);
+    const payload = {
+      title: dados.nome,
+      description: dados.descricao,
+      sector: dados.setor || "Geral",
+      city: dados.cidade,
+      address: dados.localizacao,
+      region: dados.regiao,
+      latitude: lat,
+      longitude: lng,
+      initialCapital: Number(dados.capital || 0),
+      problem: dados.problema,
+      differentialText: dados.diferencial,
+      targetAudience: dados.publico,
+      status: "submitted",
+    };
+
+    try {
+      await createIdea(payload);
+      if (questionarioSessionId && Object.keys(questionarioRespostas).length > 0) {
+        await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
+      }
+      ctx?.setModal?.({ open: true, message: "Ideia enviada para a API com sucesso." });
+    } catch (err) {
+      // Fallback para não quebrar o fluxo atual enquanto o login API ainda está em transição.
+      salvarRascunhoLocal();
+      ctx?.setModal?.({
+        open: true,
+        message: `Não foi possível enviar para API agora (${err.message}). Salvamos localmente e seguimos com a análise.`,
+      });
+    }
+
+    simularAnaliseIA();
+  };
+
+  const gerarQuestionarioIA = async () => {
+    setGerandoQuestionario(true);
+    try {
+      const session = await generateQuestionnaire({
+        sector: dados.setor,
+        city: dados.cidade,
+        region: dados.regiao,
+        initialCapital: Number(dados.capital || 0),
+        problem: dados.problema,
+        differentialText: dados.diferencial,
+        targetAudience: dados.publico,
+      });
+      setQuestionarioSessionId(session.id);
+      setQuestionarioPerguntas(session.questions || []);
+      const baseAnswers = {};
+      (session.questions || []).forEach((q) => {
+        baseAnswers[q.key] = questionarioRespostas[q.key] || "";
+      });
+      setQuestionarioRespostas(baseAnswers);
+      ctx?.setModal?.({ open: true, message: "Questionário dinâmico gerado com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao gerar questionário: ${err.message}` });
+    } finally {
+      setGerandoQuestionario(false);
+    }
+  };
+
+  const salvarQuestionarioIA = async () => {
+    if (!questionarioSessionId) return;
+    try {
+      await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
+      ctx?.setModal?.({ open: true, message: "Respostas do questionário guardadas." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao guardar respostas: ${err.message}` });
+    }
   };
 
   const simularAnaliseIA = () => {
@@ -2360,9 +2632,38 @@ function SubmeterIdeia() {
         <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
       </div>
       <div className="form-group">
-        <label className="form-label">Ponto de Localização (Mapa)</label>
-        <div style={{ height: '200px', background: '#e5e7eb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-          [Simulação de Mapa Interativo]
+        <label className="form-label">Região/Província</label>
+        <input className="form-input" name="regiao" value={dados.regiao} onChange={handleChange} placeholder="Ex: Luanda" />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Endereço / Referência</label>
+        <input className="form-input" name="localizacao" value={dados.localizacao} onChange={handleChange} placeholder="Rua, bairro ou coordenadas" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div className="form-group">
+          <label className="form-label">Latitude</label>
+          <input className="form-input" name="lat" value={dados.lat} onChange={handleChange} placeholder="-8.8383" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Longitude</label>
+          <input className="form-input" name="lng" value={dados.lng} onChange={handleChange} placeholder="13.2344" />
+        </div>
+      </div>
+      <button className="btn btn-outline" type="button" onClick={usarMinhaLocalizacao} style={{ width: 'fit-content' }}>
+        Usar minha localização atual
+      </button>
+      <div className="form-group">
+        <label className="form-label">Pré-visualização no mapa (Google Maps)</label>
+        <div style={{ height: '240px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--dm-border)' }}>
+          <iframe
+            title="Mapa da localizacao da ideia"
+            src={mapSrc}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
       </div>
     </div>
@@ -2380,7 +2681,7 @@ function SubmeterIdeia() {
 
   const renderFase4 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 4: Modelo de Negócio</h3>
+      <h3 className="dashboard-card-title">Fase 4: Questionário Dinâmico (IA)</h3>
       <div className="form-group">
         <label className="form-label">Qual problema específico o seu produto resolve?</label>
         <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
@@ -2389,6 +2690,57 @@ function SubmeterIdeia() {
         <label className="form-label">Como sua solução é diferente das existentes?</label>
         <textarea className="form-input" name="diferencial" value={dados.diferencial} onChange={handleChange} />
       </div>
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+        <button type="button" className="btn btn-primary" onClick={gerarQuestionarioIA} disabled={gerandoQuestionario}>
+          {gerandoQuestionario ? "Gerando..." : "Gerar Questionário IA"}
+        </button>
+        <button type="button" className="btn btn-outline" onClick={salvarQuestionarioIA} disabled={!questionarioSessionId}>
+          Guardar Respostas
+        </button>
+      </div>
+
+      {questionarioPerguntas.length > 0 && (
+        <div className="dashboard-card" style={{ marginTop: "16px", background: "var(--neutral-50)" }}>
+          <h4 style={{ marginBottom: "12px" }}>Perguntas Dinâmicas</h4>
+          {questionarioPerguntas.map((q) => (
+            <div key={q.key} className="form-group" style={{ marginBottom: "10px" }}>
+              <label className="form-label">{q.label}</label>
+              {q.type === "select" ? (
+                <select
+                  className="form-input"
+                  value={questionarioRespostas[q.key] || ""}
+                  onChange={(e) =>
+                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
+                  }
+                >
+                  <option value="">Selecione...</option>
+                  {(q.options || []).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : q.type === "number" ? (
+                <input
+                  type="number"
+                  className="form-input"
+                  value={questionarioRespostas[q.key] || ""}
+                  onChange={(e) =>
+                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
+                  }
+                />
+              ) : (
+                <textarea
+                  className="form-input"
+                  style={{ minHeight: "80px" }}
+                  value={questionarioRespostas[q.key] || ""}
+                  onChange={(e) =>
+                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
+                  }
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -2408,8 +2760,9 @@ function SubmeterIdeia() {
       <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
         <p><strong>Projeto:</strong> {dados.nome}</p>
         <p><strong>Setor:</strong> {dados.setor}</p>
+        <p><strong>Localização:</strong> {dados.cidade} - {dados.regiao} ({dados.localizacao || "Sem referência"})</p>
         <p><strong>Investimento:</strong> Kz{dados.capital}</p>
-        <p><strong>Problema:</strong> {dados.problema.substring(0, 50)}...</p>
+        <p><strong>Problema:</strong> {(dados.problema || "").substring(0, 50)}...</p>
       </div>
       <p style={{fontSize: '0.8rem', color: 'var(--neutral-500)'}}>Ao clicar em submeter, nossa IA analisará a viabilidade do seu negócio.</p>
     </div>
@@ -2430,7 +2783,7 @@ function SubmeterIdeia() {
             {resultadoIA.pontosFortes.map(p => <li key={p}>{p}</li>)}
           </ul>
         </div>
-        <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: '#92400e' }}>
+        <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: 'var(--warning-500)' }}>
           <strong>A melhorar:</strong>
           <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
             {resultadoIA.pontosFracos.map(p => <li key={p}>{p}</li>)}
@@ -2497,7 +2850,7 @@ function SubmeterIdeia() {
                     Próxima Fase
                   </button>
                 ) : (
-                  <button className="btn btn-primary" onClick={simularAnaliseIA} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
+                  <button className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
                     Enviar para Análise IA
                   </button>
                 )}
@@ -2662,6 +3015,8 @@ function MinhasIdeias() {
   );
 }
 function Investidores() {
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const [busca, setBusca] = useState('');
 
   const investidores = [
@@ -2788,7 +3143,10 @@ function Investidores() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}>Saber Mais</button>
+              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}
+            >
+              Saber Mais
+            </button>
           </div>
         ))}
       </div>
@@ -2818,9 +3176,9 @@ function Mentoria() {
         className="dashboard-card"
         style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
       >
-        <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--dm-border)' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Solicitações Recebidas</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: '#666' }}>
+          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
             Você tem 2 mensagens pendentes
           </p>
         </div>
@@ -2830,21 +3188,21 @@ function Mentoria() {
             className="proposta-item active"
             style={{
               padding: '15px',
-              borderBottom: '1px solid #eee',
+              borderBottom: '1px solid var(--dm-border)',
               cursor: 'pointer',
-              background: '#f8faff',
-              borderLeft: '4px solid #2563eb'
+              background: 'var(--primary-100)',
+              borderLeft: '4px solid var(--primary-600)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>Teresa Ana </strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Hoje</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Hoje</span>
             </div>
             <p
               style={{
                 margin: 0,
                 fontSize: '0.85rem',
-                color: '#444',
+                color: 'var(--dm-text)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
@@ -2859,13 +3217,13 @@ function Mentoria() {
 
           <div
             className="proposta-item"
-            style={{ padding: '15px', borderBottom: '1px solid #eee', cursor: 'pointer' }}
+            style={{ padding: '15px', borderBottom: '1px solid var(--dm-border)', cursor: 'pointer' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '0.9rem' }}>João Paulo</strong>
-              <span style={{ fontSize: '0.7rem', color: '#999' }}>Ontem</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Ontem</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#444' }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--dm-text)' }}>
               Precisas verificar a...
             </p>
             <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
@@ -2883,11 +3241,11 @@ function Mentoria() {
         <div
           style={{
             padding: '15px 20px',
-            borderBottom: '1px solid #eee',
+            borderBottom: '1px solid var(--dm-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: '#fff'
+            background: 'var(--dm-surface)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2895,12 +3253,12 @@ function Mentoria() {
               style={{
                 width: 40,
                 height: 40,
-                background: '#2563eb',
+                background: 'var(--primary-600)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--on-primary)',
                 fontWeight: 'bold'
               }}
             >
@@ -2916,7 +3274,7 @@ function Mentoria() {
           style={{
             flex: 1,
             padding: '20px',
-            background: '#f9fafb',
+            background: 'var(--neutral-50)',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -2926,7 +3284,7 @@ function Mentoria() {
           <div
             style={{
               alignSelf: 'flex-start',
-              background: '#fff',
+              background: 'var(--dm-surface)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomLeftRadius: '2px',
@@ -2938,7 +3296,7 @@ function Mentoria() {
               Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
               25.000 USD para expansão em Benguela em troca de 5% de equity.
             </p>
-            <span style={{ fontSize: '0.7rem', color: '#999', marginTop: '5px', display: 'block' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
               10:30 AM
             </span>
           </div>
@@ -2946,8 +3304,8 @@ function Mentoria() {
           <div
             style={{
               alignSelf: 'flex-end',
-              background: '#2563eb',
-              color: '#fff',
+              background: 'var(--primary-600)',
+              color: 'var(--on-primary)',
               padding: '12px',
               borderRadius: '12px',
               borderBottomRightRadius: '2px',
@@ -2974,8 +3332,8 @@ function Mentoria() {
         <div
           style={{
             padding: '15px',
-            borderTop: '1px solid #eee',
-            background: '#fff',
+            borderTop: '1px solid var(--dm-border)',
+            background: 'var(--dm-surface)',
             display: 'flex',
             gap: '10px'
           }}
@@ -2986,7 +3344,7 @@ function Mentoria() {
             style={{
               flex: 1,
               padding: '10px',
-              border: '1px solid #ddd',
+              border: '1px solid var(--dm-border)',
               borderRadius: '8px',
               outline: 'none'
             }}
@@ -2998,16 +3356,17 @@ function Mentoria() {
       </div>
       <style>
         {`
-          .proposta-item:hover { background: #f4f7fe; }
-          .badge-warning { background: #fef3c7; color: #92400e; }
-          .badge-success { background: #dcfce7; color: #166534; }
+          .proposta-item:hover { background: var(--primary-100); }
+          .badge-warning { background: var(--warning-100); color: var(--warning-500); }
+          .badge-success { background: var(--success-100); color: var(--success-500); }
         `}
       </style>
     </div>
   );
 }
 function Perfilmentor() {
-
+  const ctx = useContext(AppContext);
+  const t = ctx?.t ?? (k => k);
   const investidor = {
     nome: 'Alenxandre Dala',
     titulo: 'Mentor ',
@@ -3039,18 +3398,18 @@ function Perfilmentor() {
         <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid #fff', background: '#eee' }} />
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--dm-bg)' }} />
 
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
-            <p style={{ margin: '5px 0 0', color: '#666' }}>
+            <p style={{ margin: '5px 0 0', color: 'var(--dm-text-muted)' }}>
               {investidor.titulo} • {investidor.local}
             </p>
           </div>
 
           <button
             className="btn btn-primary"
-            onClick={() => alert('Funcionalidade de edição aberta!')}
+            onClick={() => ctx?.setModal?.({ open: true, message: t('config.editOpened') })}
           >
             Editar Perfil
           </button>
@@ -3070,7 +3429,7 @@ function Perfilmentor() {
             ) : (
               <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
             )}
-            <p style={{ fontSize: '0.8rem', color: '#999' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
               Identidade e fundos validados pela AngoStart.
             </p>
           </div>
@@ -3088,11 +3447,11 @@ function Perfilmentor() {
         {/* COLUNA DIREITA */}
         <div className="dashboard-card">
           <h3 className="dashboard-card-title">Biografia Profissional</h3>
-          <p style={{ lineHeight: '1.6', color: '#444' }}>
+          <p style={{ lineHeight: '1.6', color: 'var(--dm-text)' }}>
             {investidor.bio}
           </p>
 
-          <hr style={{ borderTop: '1px solid #eee', margin: '25px 0' }} />
+          <hr style={{ borderTop: '1px solid var(--dm-border)', margin: '25px 0' }} />
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
