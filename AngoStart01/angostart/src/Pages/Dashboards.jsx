@@ -3793,7 +3793,7 @@ function Investidores() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingProfile') + ' ' + inv.nome })}
+              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}
             >
               Saber Mais
             </button>
