@@ -5,6 +5,10 @@ import morgan from "morgan";
 import authRoutes from "./routes/authRoutes.js";
 import ideaRoutes from "./routes/ideaRoutes.js";
 import questionnaireRoutes from "./routes/questionnaireRoutes.js";
+import viabilityRoutes from "./routes/viabilityRoutes.js";
+import legalRoutes from "./routes/legalRoutes.js";
+import strategyRoutes from "./routes/strategyRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { env } from "./config/env.js";
 
@@ -24,9 +28,17 @@ app.get("/api/v1/health", (_req, res) => {
   res.json({ success: true, message: "API AngoStart online." });
 });
 
+app.get("/api/v1", (_req, res) => {
+  res.json({ success: true, message: "API AngoStart v1 online." });
+});
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/ideas", ideaRoutes);
 app.use("/api/v1/questionnaire", questionnaireRoutes);
+app.use("/api/v1/analysis", viabilityRoutes);
+app.use("/api/v1/legal", legalRoutes);
+app.use("/api/v1/strategy", strategyRoutes);
+app.use("/api/v1/subscription", subscriptionRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

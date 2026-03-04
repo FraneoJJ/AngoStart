@@ -21,5 +21,11 @@ router.put(
   requireRole("admin", "empreendedor"),
   ideaController.update
 );
+router.patch(
+  "/:id/status",
+  requireAuth,
+  requireRole("admin", "empreendedor"),
+  ideaController.updateStatus
+);
 
 export default router;

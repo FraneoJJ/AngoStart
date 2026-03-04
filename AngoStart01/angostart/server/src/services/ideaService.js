@@ -5,6 +5,7 @@ import {
   listIdeasByOwner,
   listMarketplaceIdeas,
   updateIdeaById,
+  updateIdeaStatusById,
 } from "../models/ideaModel.js";
 
 const ideaSchema = z.object({
@@ -57,4 +58,20 @@ export async function updateIdea(user, id, input) {
 
 export async function marketplaceIdeas() {
   return listMarketplaceIdeas();
+}
+
+const statusSchema = z.object({
+  status: z.enum(["submitted", "active", "archived"]),
+});
+
+export async function updateIdeaStatus(user, id, input) {
+  const current = await getIdeaById(id);
+  const isOwner = Number(current.created_by) === Number(user.sub);
+  const isAdmin = user.role === "admin";
+  if (!isOwner && !isAdmin) {
+    throw { status: 403, message: "Sem permissão para alterar status desta ideia." };
+  }
+
+  const data = statusSchema.parse(input);
+  return updateIdeaStatusById(Number(id), data.status);
 }

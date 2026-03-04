@@ -6,6 +6,16 @@ import {
   upsertAnswers,
 } from "../models/questionnaireModel.js";
 
+function safeJsonDecode(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 const generateSchema = z.object({
   ideaId: z.number().int().positive().optional(),
   context: z.object({
@@ -125,8 +135,8 @@ export async function generateSession(user, payload) {
 
   return {
     id: session.id,
-    context: JSON.parse(session.context_json),
-    questions: JSON.parse(session.questions_json),
+    context: safeJsonDecode(session.context_json, {}),
+    questions: safeJsonDecode(session.questions_json, []),
   };
 }
 
@@ -157,8 +167,8 @@ export async function getSession(sessionId) {
   const answers = await listAnswersBySessionId(Number(sessionId));
   return {
     id: session.id,
-    context: JSON.parse(session.context_json),
-    questions: JSON.parse(session.questions_json),
+    context: safeJsonDecode(session.context_json, {}),
+    questions: safeJsonDecode(session.questions_json, []),
     answers: answers.map((a) => ({
       questionKey: a.question_key,
       answerText: a.answer_text,

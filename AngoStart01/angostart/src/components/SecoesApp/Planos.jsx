@@ -1,8 +1,19 @@
 import React from 'react'
+const Planos = ({ onSelectPlan, currentPlanCode = "", loadingPlanCode = "" }) => {
+  const handleSelect = (planCode) => {
+    if (typeof onSelectPlan === "function") {
+      onSelectPlan(planCode);
+    }
+  };
 
-import { Link } from 'react-router-dom'
+  const buttonLabel = (planCode, defaultLabel) => {
+    if (loadingPlanCode === planCode) return "A atualizar...";
+    if (currentPlanCode === planCode) return "Plano atual";
+    return defaultLabel;
+  };
 
-const Planos = () => {
+  const isDisabled = (planCode) => loadingPlanCode === planCode || currentPlanCode === planCode;
+
   return (
       <section id="planos" className="section section-light">
     <div className="container">
@@ -30,8 +41,12 @@ const Planos = () => {
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Comunidade de empreendedores</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Suporte via email</li>
           </ul>
-          <button className="btn btn-outline btn-block mt-6 colorblue">
-            Começar Grátis
+          <button
+            className={currentPlanCode === "free" ? "btn btn-primary btn-block mt-6 colorblue" : "btn btn-outline btn-block mt-6 colorblue"}
+            onClick={() => handleSelect("free")}
+            disabled={isDisabled("free")}
+          >
+            {buttonLabel("free", "Começar Grátis")}
           </button>
         </div>
 
@@ -54,8 +69,12 @@ const Planos = () => {
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Matching com investidores</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Suporte prioritário</li>
           </ul>
-          <button className="btn btnPlano btn-block mt-6">
-            Escolher Pro
+          <button
+            className={currentPlanCode === "pro" ? "btn btn-primary btn-block mt-6" : "btn btnPlano btn-block mt-6"}
+            onClick={() => handleSelect("pro")}
+            disabled={isDisabled("pro")}
+          >
+            {buttonLabel("pro", "Escolher Pro")}
           </button>
         </div>
 
@@ -78,8 +97,12 @@ const Planos = () => {
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Gerente de conta dedicado</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="text-green-500 mr-2"><path d="M20 6L9 17l-5-5"/></svg> Suporte 24/7</li>
           </ul>
-          <button className="btn btn-outline btn-block mt-6 colorblue">
-            Escolher Premium
+          <button
+            className={currentPlanCode === "premium" ? "btn btn-primary btn-block mt-6 colorblue" : "btn btn-outline btn-block mt-6 colorblue"}
+            onClick={() => handleSelect("premium")}
+            disabled={isDisabled("premium")}
+          >
+            {buttonLabel("premium", "Escolher Premium")}
           </button>
         </div>
       </div>

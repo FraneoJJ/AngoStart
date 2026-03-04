@@ -43,12 +43,12 @@ export async function login(input) {
   const data = loginSchema.parse(input);
   const user = await findUserByEmail(data.email);
   if (!user) {
-    throw { status: 401, message: "Credenciais inválidas." };
+    throw { status: 404, message: "Usuário não existe." };
   }
 
   const ok = await bcrypt.compare(data.password, user.password_hash);
   if (!ok) {
-    throw { status: 401, message: "Credenciais inválidas." };
+    throw { status: 401, message: "Senha inválida." };
   }
 
   const token = signAccessToken({ sub: user.id, role: user.role, email: user.email });

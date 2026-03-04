@@ -139,3 +139,73 @@ Endpoints disponíveis:
   - Salva respostas do questionário.
 - `GET /api/v1/questionnaire/:sessionId`
   - Retorna sessão, perguntas e respostas já salvas.
+
+---
+
+## ⚖️ Módulo 6 - Orientação Legal Angola + AGT
+
+Endpoints disponíveis:
+
+- `GET /api/v1/legal/flow?track=empresa_angola|agt_regularizacao|propriedade_intelectual`
+  - Retorna etapas legais por trilha.
+- `GET /api/v1/legal/progress` (auth)
+  - Retorna progresso do checklist legal do usuário.
+- `POST /api/v1/legal/progress` (auth)
+  - Atualiza etapa do checklist legal.
+
+---
+
+## ✅ Módulo 7 - Checklist Estratégico Automático
+
+Endpoints disponíveis:
+
+- `GET /api/v1/strategy/checklist?track=validacao|operacao|crescimento`
+  - Gera checklist estratégico automático por trilha, com prioridade e justificativa.
+- `GET /api/v1/strategy/progress` (auth)
+  - Retorna progresso do checklist estratégico do usuário.
+- `POST /api/v1/strategy/progress` (auth)
+  - Atualiza etapa do checklist estratégico.
+
+---
+
+## 🏛 Módulo 8 - Orientação para Abertura de Empresa (Angola)
+
+Endpoints disponíveis:
+
+- `POST /api/v1/legal/company-guide` (auth)
+  - Gera recomendação legal de tipo societário (ENI/LDA/SA), custo, prazo e documentação.
+- `GET /api/v1/legal/company-guide/latest` (auth)
+  - Retorna a última orientação legal gerada pelo usuário.
+
+---
+
+## 🛒 Módulo 11 - Marketplace de Ideias
+
+Endpoints disponíveis:
+
+- `GET /api/v1/ideas/marketplace`
+  - Lista ideias publicadas/submetidas para vitrine do marketplace com score de viabilidade mais recente.
+- `GET /api/v1/ideas/mine` (auth)
+  - Lista ideias do empreendedor autenticado.
+- `PATCH /api/v1/ideas/:id/status` (auth empreendedor/admin)
+  - Publica/retira ideia do marketplace via status (`active`, `submitted`, `archived`).
+
+---
+
+## 💳 Módulo 12 - Assinaturas e Controle por Plano
+
+Endpoints disponíveis:
+
+- `GET /api/v1/subscription/plans`
+  - Lista catálogo de planos (`free`, `pro`, `premium`) e recursos.
+- `GET /api/v1/subscription/current` (auth)
+  - Retorna assinatura/plano atual do usuário.
+- `POST /api/v1/subscription/change` (auth)
+  - Altera plano atual do usuário (simulação local, pronto para Stripe).
+
+Controle por plano aplicado:
+
+- `dynamic_questionnaire` (Pro+)
+- `viability_analysis` (Pro+)
+- `strategy_checklist` (Pro+)
+- `legal_company_guide` (Premium)

@@ -695,6 +695,23 @@ body {
   color: var(--text-main);
 }
 
+/* Modo padrão: manter sidebar com fundo original (não branco) */
+body:not(.dark-theme) .dashboard-mobile-header,
+body:not(.dark-theme) .sidebar .sidebar-header,
+body:not(.dark-theme) .sidebar .sidebar-nav,
+body:not(.dark-theme) .sidebar .sidebar-footer {
+  background-color: var(--primary-800);
+}
+
+body:not(.dark-theme) .dashboard-mobile-header,
+body:not(.dark-theme) .sidebar .sidebar-header {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+body:not(.dark-theme) .sidebar .sidebar-footer {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
 .dashboard-card,
 .stat-card {
   background-color: var(--neutral-white);
@@ -772,6 +789,11 @@ body.dark-theme .sidebar-header {
   background-color: #1e293b;
   border-bottom-color: #334155;
   color: var(--text-main);
+}
+
+body.dark-theme .dashboard-mobile-header {
+  background-color: #1e293b;
+  border-bottom-color: #334155;
 }
 
 body.dark-theme .sidebar-footer {

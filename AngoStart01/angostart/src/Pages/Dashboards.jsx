@@ -1,16 +1,30 @@
 import React, { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
-import { createIdea } from "../services/ideasApi";
+import { createIdea, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
 import { generateQuestionnaire, saveQuestionnaireAnswers } from "../services/questionnaireApi";
+import { analyzeViability } from "../services/viabilityApi";
+import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
+import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
+import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
+import Planos from "../components/SecoesApp/Planos";
 
 const STORAGE_KEY = 'angostart_settings';
+
+function parseJsonSafe(raw, fallback) {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
 
 const translations = {
   pt: {
     nav: {
       section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Checklist Estratégico', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
     },
     common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
     config: {
@@ -40,7 +54,7 @@ const translations = {
   en: {
     nav: {
       section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Strategic Checklist', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
     },
     common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
     config: {
@@ -81,8 +95,11 @@ const navigationConfig = {
     { sectionKey: 'crescimento', items: [
       { id: 'mentoria', icon: 'users' },
       { id: 'investidores', icon: 'trending-up' },
+      { id: 'checklist-estrategico', icon: 'check-circle' },
+      { id: 'legalizacao', icon: 'briefcase' },
     ]},
     { sectionKey: 'configuracoes', items: [
+      { id: 'assinatura', icon: 'credit-card' },
       { id: 'perfil', icon: 'user' },
       { id: 'configuracoes', icon: 'settings' },
     ]},
@@ -98,6 +115,7 @@ const navigationConfig = {
       { id: 'analytics', icon: 'bar-chart' },
     ]},
     { sectionKey: 'configuracoes', items: [
+      { id: 'assinatura', icon: 'credit-card' },
       { id: 'perfil', icon: 'user' },
       { id: 'configuracoes', icon: 'settings' },
     ]},
@@ -113,6 +131,7 @@ const navigationConfig = {
       { id: 'mensagens', icon: 'user' },
     ]},
     { sectionKey: 'configuracoes', items: [
+      { id: 'assinatura', icon: 'credit-card' },
       { id: 'perfil', icon: 'user' },
       { id: 'configuracoes', icon: 'settings' },
     ]},
@@ -180,11 +199,10 @@ export default function Dashboard() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [idioma, setIdioma] = useState(() => {
-    try {
-      const s = localStorage.getItem(STORAGE_KEY);
-      return s ? (JSON.parse(s).idioma || 'pt') : 'pt';
-    } catch { return 'pt'; }
+    const s = parseJsonSafe(localStorage.getItem(STORAGE_KEY), null);
+    return s?.idioma || 'pt';
   });
   const [modal, setModal] = useState({ open: false, title: '', message: '' });
   const t = (key) => {
@@ -201,33 +219,11 @@ export default function Dashboard() {
     else document.body.classList.remove('dark-theme');
   }, []);
 
-
-  const users = [
-    {
-      email: "investidor@gmail.com",
-      password: "123456",
-      name: "Pedro Silva",
-      role: "investidor",
-    },
-    {
-      email: "empreendedor@gmail.com",
-      password: "123456",
-      name: "SPARCK",
-      role: "empreendedor",
-    },
-    {
-      email: "mentor@gmail.com",
-      password: "123456",
-      name: "Ana Tavares",
-      role: "mentor",
-    },
-    {
-      email: "admin@gmail.com",
-      password: "123456",
-      name: "Nzamba Nkunku",
-      role: "admin",
-    },
-  ];
+  const closeSidebarOnMobile = () => {
+    if (window.matchMedia("(max-width: 1024px)").matches) {
+      setIsSidebarOpen(false);
+    }
+  };
 
   async function handleLogin(e) {
     e?.preventDefault();
@@ -239,7 +235,8 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await res.json() : null;
 
       if (res.ok && data?.success && data?.token) {
         localStorage.setItem("angostart_token", data.token);
@@ -251,21 +248,12 @@ export default function Dashboard() {
         setError("");
         return;
       }
+      setError(data?.message || "Falha ao autenticar. Verifique seus dados.");
+      return;
     } catch {
-      // Fallback para modo demo local.
-    }
-
-    const found = users.find(
-      (u) => u.email === email && u.password === password
-    );
-
-    if (!found) {
-      setError("Email ou senha inválidos");
+      setError("Não foi possível conectar à API de autenticação.");
       return;
     }
-
-    setUser(found);
-    setError("");
   }
 
   function logout() {
@@ -282,6 +270,7 @@ function RenderInvestidorPage() {
     case 'meus-investimentos': return <Investimentos />;
     case 'propostas': return <Propostas />;
     case 'analytics': return <Analytics />;
+    case 'assinatura': return <AssinaturaPlano />;
     case 'perfil': return <InvestidorPerfil />;
     case 'configuracoes': return <Configuracoes />;
     default: return <Investidor />;
@@ -294,6 +283,9 @@ function RenderEmpreendedorPage() {
     case 'minhas-ideias': return <MinhasIdeias />;
     case 'mentoria': return <Mentoria />;
     case 'investidores': return <Investidores />;
+    case 'checklist-estrategico': return <ChecklistEstrategico />;
+    case 'legalizacao': return <LegalizacaoEmpresa />;
+    case 'assinatura': return <AssinaturaPlano />;
     case 'perfil': return <Perfilmentor />;
     case 'configuracoes': return <Configuracoes />;
     default: return <Empreendedor />;
@@ -306,6 +298,7 @@ function RenderMentorPage() {
     case 'mentorados': return <Mentorados/>;
     case 'agenda': return <Agenda/>;
     case 'mensagens': return < Mensagens/>;
+    case 'assinatura': return <AssinaturaPlano />;
     case 'perfil': return <Perfilmentor />;
     case 'configuracoes': return <Configuracoes />;
     default: return <Mentor />;
@@ -430,105 +423,135 @@ function RenderAdminPage() {
   }
 
   function Empreendedor() {
-    return(
-      <>
-    <div className="stats-grid">
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Ideias Submetidas</div>
-            <div className="stat-value">3</div>
-            <div className="stat-change">+1 este mês</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-primary">
-            {icons.lightbulb}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Score Médio IA</div>
-            <div className="stat-value">89.5</div>
-            <div className="stat-change">+5.2 pontos</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-success">
-            {icons['trending-up']}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Interesses Recebidos</div>
-            <div className="stat-value">35</div>
-            <div className="stat-change">+12 esta semana</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-secondary">
-            {icons.users}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Sessões de Mentoria</div>
-            <div className="stat-value">8</div>
-            <div className="stat-change">2 agendadas</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-info">
-            ${icons.clock}
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div className="dashboard-card">
-      <div className="dashboard-card-header">
-        <h3 className="dashboard-card-title">Minhas Ideias</h3>
-        <p className="dashboard-card-description">Acompanhe o status das suas ideias submetidas</p>
-      </div>
-      
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Ideia</th>
-            <th>Status</th>
-            <th>Score IA</th>
-            <th>Interesses</th>
-            <th>Data</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>App de Delivery para Mercados Locais</td>
-            <td><span className="badge badge-success">Aprovada</span></td>
-            <td>87</td>
-            <td>12</td>
-            <td>15/12/2024</td>
-          </tr>
-          <tr>
-            <td>Plataforma de Educação Online</td>
-            <td><span className="badge badge-warning">Em Análise</span></td>
-            <td>-</td>
-            <td>0</td>
-            <td>20/12/2024</td>
-          </tr>
-          <tr>
-            <td>Sistema de Gestão para PMEs</td>
-            <td><span className="badge badge-primary">Publicada</span></td>
-            <td>92</td>
-            <td>23</td>
-            <td>10/12/2024</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </>);
+    const ctx = useContext(AppContext);
+    const [loading, setLoading] = useState(true);
+    const [ideias, setIdeias] = useState([]);
 
+    useEffect(() => {
+      (async () => {
+        setLoading(true);
+        try {
+          const data = await getMyIdeas();
+          setIdeias(data || []);
+        } catch (err) {
+          ctx?.setModal?.({ open: true, message: `Falha ao carregar ideias submetidas: ${err.message}` });
+          setIdeias([]);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, []);
+
+    const total = ideias.length;
+    const publicadas = ideias.filter((i) => i.status === "active").length;
+    const emAnalise = ideias.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+    const arquivadas = ideias.filter((i) => i.status === "archived").length;
+
+    const statusLabel = (status) => {
+      if (status === "active") return "Publicada";
+      if (status === "submitted") return "Submetida";
+      if (status === "analyzing") return "Em Análise";
+      if (status === "archived") return "Arquivada";
+      return status || "-";
+    };
+
+    const statusBadge = (status) => {
+      if (status === "active") return "badge-success";
+      if (status === "submitted" || status === "analyzing") return "badge-warning";
+      return "badge-info";
+    };
+
+    const formatDate = (iso) => {
+      if (!iso) return "-";
+      const d = new Date(iso);
+      return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-PT");
+    };
+
+    return (
+      <>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Ideias Submetidas</div>
+                <div className="stat-value">{total}</div>
+                <div className="stat-change">Total no banco de dados</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-primary">{icons.lightbulb}</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Publicadas</div>
+                <div className="stat-value">{publicadas}</div>
+                <div className="stat-change">No marketplace</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-success">{icons["trending-up"]}</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Em Análise</div>
+                <div className="stat-value">{emAnalise}</div>
+                <div className="stat-change">Submetidas para revisão</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-secondary">{icons.users}</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Arquivadas</div>
+                <div className="stat-value">{arquivadas}</div>
+                <div className="stat-change">Fora do marketplace</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-info">{icons.clock}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="dashboard-card-header">
+            <h3 className="dashboard-card-title">Minhas Ideias (Banco de Dados)</h3>
+            <p className="dashboard-card-description">Ideias submetidas carregadas diretamente da API.</p>
+          </div>
+
+          {loading ? (
+            <p>A carregar ideias...</p>
+          ) : ideias.length === 0 ? (
+            <p>Sem ideias submetidas no banco para este utilizador.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Ideia</th>
+                  <th>Setor</th>
+                  <th>Status</th>
+                  <th>Cidade</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ideias.map((ideia) => (
+                  <tr key={ideia.id}>
+                    <td>{ideia.title}</td>
+                    <td>{ideia.sector || "-"}</td>
+                    <td><span className={`badge ${statusBadge(ideia.status)}`}>{statusLabel(ideia.status)}</span></td>
+                    <td>{ideia.city || "-"}</td>
+                    <td>{formatDate(ideia.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </>
+    );
   }
 
   function Mentor() {
@@ -855,10 +878,42 @@ return (
     <AppContext.Provider value={ctxValue}>
       <ConfirmModal />
       <div className="dashboard-page">
-        <header className="sidebar-header">
-          <h2>AngoStart</h2>
+        <header className="dashboard-mobile-header">
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            aria-label={isSidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
+            aria-expanded={isSidebarOpen}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {isSidebarOpen ? (
+                <path d="M18 6 6 18M6 6l12 12" />
+              ) : (
+                <>
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </>
+              )}
+            </svg>
+          </button>
+          <img src="/logo.png" alt="AngoStart" className="sidebar-logo" />
         </header>
-        <aside className="sidebar">
+        <aside className={`sidebar ${isSidebarOpen ? "active" : ""}`}>
+          <div className="sidebar-header">
+            <img src="/logo.png" alt="AngoStart" className="sidebar-logo" />
+            <button
+              type="button"
+              className="sidebar-close"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Fechar menu lateral"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <div className="sidebar-nav">
             {navigationConfig[user.role]?.map((group) => (
               <div key={group.sectionKey} className="nav-section">
@@ -869,7 +924,10 @@ return (
                   <div
                     key={item.id}
                     className={`nav-item ${currentPage === item.id ? "active" : ""}`}
-                    onClick={() => setCurrentPage(item.id)}
+                    onClick={() => {
+                      setCurrentPage(item.id);
+                      closeSidebarOnMobile();
+                    }}
                   >
                     <span className="nav-icon">{icons[item.icon]}</span>
                     <span className="nav-label">{t('nav.item.' + item.id)}</span>
@@ -890,6 +948,11 @@ return (
             <button className="btn-logout" onClick={logout}>{t('common.logout')}</button>
           </div>
         </aside>
+        <div
+          className={`sidebar-overlay ${isSidebarOpen ? "active" : ""}`}
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
         <main className="main-content">
           <div className="page-content">
             <RenderArea />
@@ -902,22 +965,65 @@ return (
 
 function Marketplace() {
   const ctx = useContext(AppContext);
-  const t = ctx?.t ?? (k => k);
-  const startups = [
-    { id: 1, name: "Kwanza Pay", sector: "Fintech", score: 94, ask: "25k - 50k", desc: "Solução de pagamentos móveis para mercados informais em Luanda.", location: "Luanda" },
-    { id: 2, name: "AgroFácil", sector: "AgriTech", score: 88, ask: "10k - 30k", desc: "Monitoramento de colheitas via satélite para pequenos produtores.", location: "Huambo" },
-    { id: 3, name: "EduAngo", sector: "EdTech", score: 82, ask: "15k - 20k", desc: "Plataforma de cursos técnicos offline para zonas remotas.", location: "Benguela" },
-    { id: 4, name: "Saúde Já", sector: "HealthTech", score: 91, ask: "50k+", desc: "Telemedicina conectando especialistas a postos de saúde provinciais.", location: "Cabinda" }
-  ];
+  const [loading, setLoading] = useState(true);
+  const [ideas, setIdeas] = useState([]);
+  const [sectorFilter, setSectorFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getMarketplaceIdeas();
+        setIdeas(data);
+      } catch (err) {
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar marketplace: ${err.message}` });
+        setIdeas([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const ideiasFiltradas = ideas.filter((idea) => {
+    const bySector = !sectorFilter || String(idea.sector || "").toLowerCase().includes(sectorFilter.toLowerCase());
+    const byCity = !cityFilter || String(idea.city || "").toLowerCase().includes(cityFilter.toLowerCase());
+    return bySector && byCity;
+  });
+
+  const formatCapital = (v) => Number(v || 0).toLocaleString("pt-PT");
+
   return (
     <div className="marketplace-wrapper">
       <div className="dashboard-card" style={{ marginBottom: '25px', padding: '20px' }}>
         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <label className="form-label">Filtrar por setor</label>
+            <input
+              className="form-input"
+              value={sectorFilter}
+              onChange={(e) => setSectorFilter(e.target.value)}
+              placeholder="Ex: Fintech"
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <label className="form-label">Filtrar por cidade</label>
+            <input
+              className="form-input"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              placeholder="Ex: Luanda"
+            />
+          </div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-        {startups.map(s => (
+        {loading ? (
+          <div className="dashboard-card"><p>A carregar ideias do marketplace...</p></div>
+        ) : ideiasFiltradas.length === 0 ? (
+          <div className="dashboard-card"><p>Sem ideias publicadas para os filtros atuais.</p></div>
+        ) : ideiasFiltradas.map((s) => (
           <div
             key={s.id}
             className="dashboard-card"
@@ -934,38 +1040,42 @@ function Marketplace() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                 <div style={{ width: 50, height: 50, background: 'var(--dm-bg)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--primary-600)' }}>
-                  {s.name.charAt(0)}
+                  {(s.title || "I").charAt(0)}
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>
-                    Score IA: {s.score}
+                    Score IA: {Number(s.viability_score || 0)}
                   </span>
                   <div style={{ fontSize: '0.75rem', color: 'var(--dm-text-muted)', marginTop: 5 }}>
-                    {s.location}, Angola
+                    {s.city || "-"}{s.region ? `, ${s.region}` : ""}
                   </div>
                 </div>
               </div>
 
-              <h3 style={{ margin: '0 0 10px 0' }}>{s.name}</h3>
+              <h3 style={{ margin: '0 0 10px 0' }}>{s.title}</h3>
               <span style={{ display: 'inline-block', padding: '2px 8px', background: 'var(--primary-100)', color: 'var(--primary-600)', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
-                {s.sector}
+                {s.sector || "Geral"}
               </span>
               <p style={{ fontSize: '0.9rem', color: 'var(--dm-text-muted)', lineHeight: 1.5, marginTop: 10 }}>
-                {s.desc}
+                {s.description || "Sem descrição."}
               </p>
             </div>
 
             <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--dm-text-muted)', textTransform: 'uppercase' }}>
-                  Ticket de Investimento
+                  Capital inicial
                 </span>
-                <strong style={{ color: '#10b981' }}>{s.ask}</strong>
+                <strong style={{ color: '#10b981' }}>{formatCapital(s.initial_capital)} AOA</strong>
               </div>
               <button
                 className="btn btn-primary"
                 style={{ padding: '8px 15px', fontSize: '0.85rem' }}
-                onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingDetails') + ' ' + s.name + '...' })}
+                onClick={() => ctx?.setModal?.({
+                  open: true,
+                  title: s.title,
+                  message: `Setor: ${s.sector || "-"} | Cidade: ${s.city || "-"} | Empreendedor: ${s.owner_name || "-"} | Status: ${s.status}`,
+                })}
               >
                 Ver mais
               </button>
@@ -1549,18 +1659,15 @@ function InvestidorPerfil() {
 }
 
 function loadSettings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { dark: false, notificacoes: true, idioma: 'pt' };
-    const s = JSON.parse(raw);
-    return {
-      dark: !!s.dark,
-      notificacoes: s.notificacoes !== false,
-      idioma: s.idioma === 'en' ? 'en' : 'pt',
-    };
-  } catch {
+  const raw = parseJsonSafe(localStorage.getItem(STORAGE_KEY), null);
+  if (!raw) {
     return { dark: false, notificacoes: true, idioma: 'pt' };
   }
+  return {
+    dark: !!raw.dark,
+    notificacoes: raw.notificacoes !== false,
+    idioma: raw.idioma === 'en' ? 'en' : 'pt',
+  };
 }
 
 function saveSettings(dark, notificacoes, idioma) {
@@ -2499,7 +2606,7 @@ function SubmeterIdeia() {
   };
 
   const salvarRascunhoLocal = () => {
-    const drafts = JSON.parse(localStorage.getItem("angostart_ideas_local") || "[]");
+    const drafts = parseJsonSafe(localStorage.getItem("angostart_ideas_local"), []);
     drafts.unshift({
       ...dados,
       id: Date.now(),
@@ -2533,17 +2640,18 @@ function SubmeterIdeia() {
       if (questionarioSessionId && Object.keys(questionarioRespostas).length > 0) {
         await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
       }
-      ctx?.setModal?.({ open: true, message: "Ideia enviada para a API com sucesso." });
+      await executarAnaliseViabilidade();
+      ctx?.setModal?.({ open: true, message: "Ideia enviada e analisada com sucesso." });
     } catch (err) {
       // Fallback para não quebrar o fluxo atual enquanto o login API ainda está em transição.
       salvarRascunhoLocal();
       ctx?.setModal?.({
         open: true,
-        message: `Não foi possível enviar para API agora (${err.message}). Salvamos localmente e seguimos com a análise.`,
+        message: `Não foi possível completar o fluxo na API (${err.message}). Salvamos localmente e seguimos com a análise simulada.`,
       });
+      simularAnaliseIA();
+      return;
     }
-
-    simularAnaliseIA();
   };
 
   const gerarQuestionarioIA = async () => {
@@ -2581,6 +2689,33 @@ function SubmeterIdeia() {
     } catch (err) {
       ctx?.setModal?.({ open: true, message: `Falha ao guardar respostas: ${err.message}` });
     }
+  };
+
+  const executarAnaliseViabilidade = async () => {
+    const report = await analyzeViability({
+      questionnaireSessionId: questionarioSessionId || undefined,
+      idea: {
+        title: dados.nome,
+        description: dados.descricao,
+        sector: dados.setor || "Geral",
+        city: dados.cidade,
+        region: dados.regiao,
+        initialCapital: Number(dados.capital || 0),
+        problem: dados.problema,
+        differentialText: dados.diferencial,
+        targetAudience: dados.publico,
+      },
+      questionnaireAnswers: questionarioRespostas,
+    });
+
+    setResultadoIA({
+      viabilidade: report.viabilityStatus === "viavel" ? "Viável" : "Inviável",
+      pontosFortes: report.strengths?.length ? report.strengths : ["Estrutura inicial adequada."],
+      pontosFracos: report.weaknesses?.length ? report.weaknesses : ["Sem riscos críticos identificados."],
+      melhorias: (report.adjustments || []).join(" ") || report.summary || "Continuar monitorando métricas de tração.",
+      score: Number(report.score || 0),
+    });
+    setEtapa(7);
   };
 
   const simularAnaliseIA = () => {
@@ -2863,40 +2998,64 @@ function SubmeterIdeia() {
   );
 }
 function MinhasIdeias() {
+  const ctx = useContext(AppContext);
   const [abaAtiva, setAbaAtiva] = useState('todas');
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(0);
+  const [ideias, setIdeias] = useState([]);
 
-  const ideias = [
-    {
-      id: 1,
-      nome: 'SolarPay Angola',
-      score: 92,
-      setor: 'Fintech',
-      status: 'Em Execução',
-      progresso: 65,
-      faseAtual: 'Desenvolvimento do MVP',
-      proximoPasso: 'Testes Beta com 50 usuários'
-    },
-    {
-      id: 2,
-      nome: 'AgroFácil',
-      score: 78,
-      setor: 'AgriTech',
-      status: 'Em Análise',
-      progresso: 0,
-    },
-    {
-      id: 3,
-      nome: 'EducaTech',
-      score: 85,
-      setor: 'Educação',
-      status: 'Em Execução',
-      progresso: 30,
-      faseAtual: 'Pesquisa de Mercado',
-      proximoPasso: 'Finalizar protótipo UI/UX'
+  const reloadIdeas = async () => {
+    setLoading(true);
+    try {
+      const data = await getMyIdeas();
+      setIdeias(data || []);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar suas ideias: ${err.message}` });
+      setIdeias([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const ideiasExecucao = ideias.filter(i => i.status === 'Em Execução');
+  useEffect(() => {
+    reloadIdeas();
+  }, []);
+
+  const handleToggleMarketplace = async (idea) => {
+    const nextStatus = idea.status === "active" ? "archived" : "active";
+    setSavingId(Number(idea.id));
+    try {
+      const updated = await updateIdeaStatus(idea.id, nextStatus);
+      setIdeias((prev) => prev.map((i) => (Number(i.id) === Number(idea.id) ? { ...i, ...updated } : i)));
+      ctx?.setModal?.({
+        open: true,
+        message: nextStatus === "active"
+          ? "Ideia publicada no marketplace com sucesso."
+          : "Ideia removida do marketplace.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar status da ideia." });
+    } finally {
+      setSavingId(0);
+    }
+  };
+
+  const statusLabel = (status) => {
+    if (status === "active") return "Publicado";
+    if (status === "submitted") return "Submetido";
+    if (status === "analyzing") return "Em análise";
+    if (status === "archived") return "Arquivado";
+    return status || "-";
+  };
+
+  const badgeClass = (status) => {
+    if (status === "active") return "badge-success";
+    if (status === "submitted" || status === "analyzing") return "badge-warning";
+    return "badge-info";
+  };
+
+  const ideiasExecucao = ideias.filter((i) => i.status === 'active');
+  const formatCapital = (v) => Number(v || 0).toLocaleString("pt-PT");
 
   return (
     <div style={{ padding: '10px' }}>
@@ -2933,40 +3092,47 @@ function MinhasIdeias() {
       {/* CONTEÚDO: TODAS AS SUBMISSÕES */}
       {abaAtiva === 'todas' && (
         <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Projeto</th>
-                <th>Setor</th>
-                <th>Score IA</th>
-                <th>Status</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ideias.map(ideia => (
-                <tr key={ideia.id}>
-                  <td><strong>{ideia.nome}</strong></td>
-                  <td><span className="badge badge-info">{ideia.setor}</span></td>
-                  <td>
-                    <span style={{ fontWeight: '700', color: ideia.score > 80 ? 'var(--success-500)' : 'var(--primary-600)' }}>
-                      {ideia.score}/100
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge ${ideia.status === 'Em Execução' ? 'badge-success' : 'badge-warning'}`}>
-                      {ideia.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn-logout" style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto' }}>
-                      Ver Detalhes
-                    </button>
-                  </td>
+          {loading ? (
+            <div style={{ padding: "20px" }}><p>A carregar suas ideias...</p></div>
+          ) : ideias.length === 0 ? (
+            <div style={{ padding: "20px" }}><p>Você ainda não submeteu ideias na API.</p></div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Projeto</th>
+                  <th>Setor</th>
+                  <th>Capital inicial</th>
+                  <th>Status</th>
+                  <th>Ação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ideias.map((ideia) => (
+                  <tr key={ideia.id}>
+                    <td><strong>{ideia.title}</strong></td>
+                    <td><span className="badge badge-info">{ideia.sector || "-"}</span></td>
+                    <td>{formatCapital(ideia.initial_capital)} AOA</td>
+                    <td>
+                      <span className={`badge ${badgeClass(ideia.status)}`}>
+                        {statusLabel(ideia.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className={ideia.status === "active" ? "btn-logout" : "btn btn-primary"}
+                        style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: savingId === Number(ideia.id) ? 0.6 : 1 }}
+                        onClick={() => handleToggleMarketplace(ideia)}
+                        disabled={savingId === Number(ideia.id)}
+                      >
+                        {ideia.status === "active" ? "Remover do marketplace" : "Publicar no marketplace"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -2977,35 +3143,41 @@ function MinhasIdeias() {
             <div key={ideia.id} className="dashboard-card" style={{ borderLeft: '6px solid var(--success-500)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{ideia.nome}</h3>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--neutral-500)' }}>{ideia.setor}</span>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{ideia.title}</h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--neutral-500)' }}>{ideia.sector || "Geral"}</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>Progresso Geral</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--primary-600)' }}>{ideia.progresso}%</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--neutral-500)' }}>Status</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--primary-600)' }}>{statusLabel(ideia.status)}</div>
                 </div>
               </div>
 
               {/* BARRA DE PROGRESSO */}
               <div style={{ width: '100%', height: '10px', background: 'var(--neutral-100)', borderRadius: '5px', marginBottom: '25px', overflow: 'hidden' }}>
-                <div style={{ width: `${ideia.progresso}%`, height: '100%', background: 'var(--success-500)', transition: 'width 1s ease-in-out' }}></div>
+                <div style={{ width: `100%`, height: '100%', background: 'var(--success-500)', transition: 'width 1s ease-in-out' }}></div>
               </div>
 
               {/* DETALHES DO DESENVOLVIMENTO */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={{ padding: '15px', background: 'var(--neutral-50)', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--neutral-500)', marginBottom: '5px' }}>FASE ATUAL</div>
-                  <div style={{ fontWeight: '600', color: 'var(--neutral-900)' }}>{ideia.faseAtual}</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--neutral-500)', marginBottom: '5px' }}>CIDADE</div>
+                  <div style={{ fontWeight: '600', color: 'var(--neutral-900)' }}>{ideia.city || "-"}</div>
                 </div>
                 <div style={{ padding: '15px', background: 'var(--primary-50)', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--primary-600)', marginBottom: '5px' }}>PRÓXIMO PASSO</div>
-                  <div style={{ fontWeight: '600', color: 'var(--primary-600)' }}>{ideia.proximoPasso}</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--primary-600)', marginBottom: '5px' }}>CAPITAL INICIAL</div>
+                  <div style={{ fontWeight: '600', color: 'var(--primary-600)' }}>{formatCapital(ideia.initial_capital)} AOA</div>
                 </div>
               </div>
 
               <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button className="btn-logout" style={{ width: 'auto', padding: '8px 20px' }}>Relatório Completo</button>
-                <button className="btn btn-primary" style={{ width: 'auto', padding: '8px 20px' }}>Atualizar Status</button>
+                <button
+                  className="btn-logout"
+                  style={{ width: 'auto', padding: '8px 20px', opacity: savingId === Number(ideia.id) ? 0.6 : 1 }}
+                  onClick={() => handleToggleMarketplace(ideia)}
+                  disabled={savingId === Number(ideia.id)}
+                >
+                  Remover do marketplace
+                </button>
               </div>
             </div>
           ))}
@@ -3014,6 +3186,484 @@ function MinhasIdeias() {
     </div>
   );
 }
+
+function AssinaturaPlano() {
+  const ctx = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
+  const [savingPlan, setSavingPlan] = useState("");
+  const [current, setCurrent] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const [, currentSub] = await Promise.all([
+          getSubscriptionPlans(),
+          getCurrentSubscription(),
+        ]);
+        setCurrent(currentSub || null);
+      } catch (err) {
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar assinatura: ${err.message}` });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleChangePlan = async (planCode) => {
+    setSavingPlan(planCode);
+    try {
+      const updated = await changeSubscriptionPlan({ planCode, billingCycle: "monthly" });
+      setCurrent(updated);
+      ctx?.setModal?.({ open: true, message: `Plano atualizado para ${updated.plan?.name || planCode}.` });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar plano." });
+    } finally {
+      setSavingPlan("");
+    }
+  };
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+        <h2 className="dashboard-card-title">Assinatura e Plano</h2>
+        <p className="dashboard-card-description">
+          Controle de acesso por plano para funcionalidades avançadas da plataforma.
+        </p>
+        {current && (
+          <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <span className="badge badge-primary">Plano atual: {(current.plan?.name || current.planCode || "Free").toUpperCase()}</span>
+            <span className="badge badge-info">Ciclo: {(current.billingCycle || "monthly").toUpperCase()}</span>
+            <span className="badge badge-success">Status: {(current.status || "active").toUpperCase()}</span>
+          </div>
+        )}
+      </div>
+      {loading ? (
+        <div className="dashboard-card"><p>A carregar planos...</p></div>
+      ) : (
+        <Planos
+          onSelectPlan={handleChangePlan}
+          currentPlanCode={current?.planCode || ""}
+          loadingPlanCode={savingPlan}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChecklistEstrategico() {
+  const ctx = useContext(AppContext);
+  const [track, setTrack] = useState("validacao");
+  const [steps, setSteps] = useState([]);
+  const [progressMap, setProgressMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState("");
+
+  const loadStrategicData = async (selectedTrack = track) => {
+    setLoading(true);
+    try {
+      const localIdeas = parseJsonSafe(localStorage.getItem("angostart_ideas_local"), []);
+      const latestIdea = Array.isArray(localIdeas) && localIdeas.length ? localIdeas[0] : {};
+      const context = {
+        sector: latestIdea?.setor || latestIdea?.sector || "",
+        city: latestIdea?.cidade || latestIdea?.city || "",
+        initialCapital: Number(latestIdea?.capitalInicial || latestIdea?.initialCapital || 0),
+        viabilityScore: Number(latestIdea?.resultadoIA?.pontuacao || 0),
+        hasMvp: Boolean((latestIdea?.diferencial || latestIdea?.differentialText || "").trim()),
+      };
+
+      const [flow, progress] = await Promise.all([
+        getStrategicChecklist(selectedTrack, context),
+        getStrategicProgress().catch(() => []),
+      ]);
+
+      setSteps(flow || []);
+      const map = {};
+      (progress || []).forEach((p) => {
+        map[p.stepKey] = p;
+      });
+      setProgressMap(map);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar checklist estratégico: ${err.message}` });
+      setSteps([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStrategicData(track);
+  }, [track]);
+
+  const toggleStep = async (stepKey, currentCompleted) => {
+    setSavingKey(stepKey);
+    try {
+      await updateStrategicProgress({
+        stepKey,
+        completed: !currentCompleted,
+        notes: progressMap[stepKey]?.notes || "",
+      });
+      setProgressMap((prev) => ({
+        ...prev,
+        [stepKey]: {
+          ...(prev[stepKey] || {}),
+          stepKey,
+          completed: !currentCompleted,
+          notes: prev[stepKey]?.notes || "",
+        },
+      }));
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar checklist estratégico." });
+    } finally {
+      setSavingKey("");
+    }
+  };
+
+  const progressCount = steps.filter((s) => progressMap[s.key]?.completed).length;
+  const progressPct = steps.length ? Math.round((progressCount / steps.length) * 100) : 0;
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+        <h2 className="dashboard-card-title">Checklist Estratégico Automático</h2>
+        <p className="dashboard-card-description">
+          Plano de execução inteligente com prioridades recomendadas para validação, operação e crescimento.
+        </p>
+        <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
+          <button className={`btn ${track === "validacao" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("validacao")} style={{ width: "auto" }}>
+            Validação
+          </button>
+          <button className={`btn ${track === "operacao" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("operacao")} style={{ width: "auto" }}>
+            Operação
+          </button>
+          <button className={`btn ${track === "crescimento" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("crescimento")} style={{ width: "auto" }}>
+            Crescimento
+          </button>
+        </div>
+      </div>
+
+      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <strong>Progresso estratégico</strong>
+          <span style={{ color: "var(--primary-600)", fontWeight: 700 }}>{progressPct}%</span>
+        </div>
+        <div style={{ width: "100%", height: "10px", borderRadius: "6px", background: "var(--neutral-100)", overflow: "hidden" }}>
+          <div style={{ width: `${progressPct}%`, height: "100%", background: "var(--success-500)" }} />
+        </div>
+        <p style={{ marginTop: "8px", fontSize: "0.85rem", color: "var(--neutral-500)" }}>
+          {progressCount} de {steps.length} etapas concluídas.
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gap: "12px" }}>
+        {loading ? (
+          <div className="dashboard-card"><p>A carregar checklist estratégico...</p></div>
+        ) : (
+          steps.map((step, idx) => {
+            const completed = !!progressMap[step.key]?.completed;
+            const priorityColor =
+              step.priority === "alta" ? "var(--error-500)" : step.priority === "media" ? "var(--warning-500)" : "var(--info-500)";
+            return (
+              <div key={step.key} className="dashboard-card" style={{ borderLeft: `5px solid ${completed ? "var(--success-500)" : priorityColor}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)", marginBottom: "4px" }}>
+                      ETAPA {idx + 1} - Prioridade {String(step.priority || "media").toUpperCase()}
+                    </div>
+                    <h4 style={{ margin: "0 0 6px 0" }}>{step.title}</h4>
+                    <p style={{ margin: "0 0 8px 0", color: "var(--neutral-600)" }}>{step.description}</p>
+                    <p style={{ margin: 0, color: "var(--primary-600)", fontSize: "0.9rem" }}>
+                      <strong>Porque agora:</strong> {step.whyNow}
+                    </p>
+                  </div>
+                  <button
+                    className={completed ? "btn-logout" : "btn btn-primary"}
+                    style={{ width: "auto", minWidth: "130px", opacity: savingKey === step.key ? 0.6 : 1 }}
+                    onClick={() => toggleStep(step.key, completed)}
+                    disabled={savingKey === step.key}
+                  >
+                    {completed ? "Concluída" : "Marcar feita"}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LegalizacaoEmpresa() {
+  const ctx = useContext(AppContext);
+  const [track, setTrack] = useState("empresa_angola");
+  const [steps, setSteps] = useState([]);
+  const [progressMap, setProgressMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState("");
+  const [generatingGuide, setGeneratingGuide] = useState(false);
+  const [companyGuide, setCompanyGuide] = useState(null);
+  const [guideForm, setGuideForm] = useState({
+    businessSector: "",
+    partnerCount: 1,
+    estimatedMonthlyRevenue: 0,
+    hasForeignPartner: false,
+    notes: "",
+  });
+
+  const loadLegalData = async (selectedTrack = track) => {
+    setLoading(true);
+    try {
+      const [flow, progress] = await Promise.all([
+        getLegalFlow(selectedTrack),
+        getLegalProgress().catch(() => []),
+      ]);
+      setSteps(flow || []);
+      const map = {};
+      (progress || []).forEach((p) => {
+        map[p.stepKey] = p;
+      });
+      setProgressMap(map);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar módulo legal: ${err.message}` });
+      setSteps([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLegalData(track);
+  }, [track]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const latest = await getLatestCompanyGuide();
+        if (latest) setCompanyGuide(latest);
+      } catch {
+        // Sem bloqueio de UX para histórico.
+      }
+    })();
+  }, []);
+
+  const toggleStep = async (stepKey, currentCompleted) => {
+    setSavingKey(stepKey);
+    try {
+      await updateLegalProgress({
+        stepKey,
+        completed: !currentCompleted,
+        notes: progressMap[stepKey]?.notes || "",
+      });
+      setProgressMap((prev) => ({
+        ...prev,
+        [stepKey]: {
+          ...(prev[stepKey] || {}),
+          stepKey,
+          completed: !currentCompleted,
+          notes: prev[stepKey]?.notes || "",
+        },
+      }));
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar checklist legal." });
+    } finally {
+      setSavingKey("");
+    }
+  };
+
+  const progressCount = steps.filter((s) => progressMap[s.key]?.completed).length;
+  const progressPct = steps.length ? Math.round((progressCount / steps.length) * 100) : 0;
+
+  const handleGenerateCompanyGuide = async () => {
+    setGeneratingGuide(true);
+    try {
+      const guide = await generateCompanyGuide({
+        businessSector: guideForm.businessSector,
+        partnerCount: Number(guideForm.partnerCount || 1),
+        estimatedMonthlyRevenue: Number(guideForm.estimatedMonthlyRevenue || 0),
+        hasForeignPartner: !!guideForm.hasForeignPartner,
+        notes: guideForm.notes,
+      });
+      setCompanyGuide(guide);
+      ctx?.setModal?.({ open: true, message: "Orientação legal da abertura de empresa gerada com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao gerar orientação legal." });
+    } finally {
+      setGeneratingGuide(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+        <h2 className="dashboard-card-title">Orientação Legal em Angola</h2>
+        <p className="dashboard-card-description">
+          Checklist estratégico para constituição, regularização na AGT e proteção de propriedade intelectual.
+        </p>
+        <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
+          <button className={`btn ${track === "empresa_angola" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("empresa_angola")} style={{ width: "auto" }}>
+            Constituição de Empresa
+          </button>
+          <button className={`btn ${track === "agt_regularizacao" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("agt_regularizacao")} style={{ width: "auto" }}>
+            Fluxo AGT
+          </button>
+          <button className={`btn ${track === "propriedade_intelectual" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("propriedade_intelectual")} style={{ width: "auto" }}>
+            Propriedade Intelectual
+          </button>
+        </div>
+      </div>
+
+      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+        <h3 className="dashboard-card-title" style={{ fontSize: "1.1rem" }}>Módulo 8 - Abertura de Empresa (Angola)</h3>
+        <p className="dashboard-card-description" style={{ marginBottom: "12px" }}>
+          Informe dados do negócio para receber recomendação de tipo societário, documentação e próximos passos legais.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+          <div>
+            <label className="form-label" style={{ marginBottom: "4px" }}>Setor do negócio</label>
+            <input
+              className="form-input"
+              style={{ paddingLeft: "8px" }}
+              placeholder="Ex: Comércio, Tecnologia, Saúde, Educação"
+              value={guideForm.businessSector}
+              onChange={(e) => setGuideForm((prev) => ({ ...prev, businessSector: e.target.value }))}
+            />
+            <small style={{ color: "var(--neutral-500)" }}>Informe a atividade principal da empresa para recomendar melhor o enquadramento legal.</small>
+          </div>
+          <div>
+            <label className="form-label" style={{ marginBottom: "4px" }}>Número total de sócios</label>
+            <input
+              className="form-input"
+              style={{ paddingLeft: "8px" }}
+              type="number"
+              min="1"
+              max="50"
+              step="1"
+              placeholder="Ex: 2"
+              value={guideForm.partnerCount}
+              onChange={(e) => setGuideForm((prev) => ({ ...prev, partnerCount: e.target.value }))}
+            />
+            <small style={{ color: "var(--neutral-500)" }}>Inclui você e todos os cofundadores/sócios.</small>
+          </div>
+          <div>
+            <label className="form-label" style={{ marginBottom: "4px" }}>Receita mensal estimada (AOA/Kz)</label>
+            <input
+              className="form-input"
+              style={{ paddingLeft: "8px" }}
+              type="number"
+              min="0"
+              step="1000"
+              placeholder="Ex: 500000"
+              value={guideForm.estimatedMonthlyRevenue}
+              onChange={(e) => setGuideForm((prev) => ({ ...prev, estimatedMonthlyRevenue: e.target.value }))}
+            />
+            <small style={{ color: "var(--neutral-500)" }}>Valor esperado de faturação por mês em kwanzas.</small>
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 2px" }}>
+            <input
+              type="checkbox"
+              checked={guideForm.hasForeignPartner}
+              onChange={(e) => setGuideForm((prev) => ({ ...prev, hasForeignPartner: e.target.checked }))}
+            />
+            Sócio estrangeiro
+          </label>
+        </div>
+
+        <textarea
+          className="form-input"
+          style={{ marginTop: "10px", paddingLeft: "8px" }}
+          rows={3}
+          placeholder="Notas adicionais (opcional)"
+          value={guideForm.notes}
+          onChange={(e) => setGuideForm((prev) => ({ ...prev, notes: e.target.value }))}
+        />
+
+        <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+          <button
+            className="btn btn-primary"
+            style={{ width: "auto", opacity: generatingGuide ? 0.7 : 1 }}
+            onClick={handleGenerateCompanyGuide}
+            disabled={generatingGuide}
+          >
+            {generatingGuide ? "A gerar..." : "Gerar orientação de abertura"}
+          </button>
+        </div>
+
+        {companyGuide && (
+          <div style={{ marginTop: "16px", borderTop: "1px solid var(--neutral-200)", paddingTop: "14px" }}>
+            <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "10px" }}>
+              <div className="badge badge-primary">Tipo recomendado: {companyGuide.recommendedType}</div>
+              <div className="badge badge-info">Prazo estimado: {companyGuide.estimatedOpeningDays} dias</div>
+              <div className="badge badge-warning">Custo estimado: {Number(companyGuide.estimatedCostAoa || 0).toLocaleString()} AOA</div>
+            </div>
+            <p style={{ margin: "0 0 8px 0", color: "var(--neutral-600)" }}>
+              <strong>Justificativas:</strong> {(companyGuide.reasons || []).join(" ")}
+            </p>
+            <p style={{ margin: "0 0 6px 0", fontWeight: 600 }}>Documentos principais</p>
+            <ul style={{ margin: "0 0 10px 18px", color: "var(--neutral-600)" }}>
+              {(companyGuide.requiredDocuments || []).map((doc) => (
+                <li key={doc}>{doc}</li>
+              ))}
+            </ul>
+            <p style={{ margin: "0 0 6px 0", fontWeight: 600 }}>Próximos passos</p>
+            <ul style={{ margin: "0 0 8px 18px", color: "var(--neutral-600)" }}>
+              {(companyGuide.nextActions || []).map((a) => (
+                <li key={a}>{a}</li>
+              ))}
+            </ul>
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--neutral-500)" }}>
+              {companyGuide.disclaimer}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <strong>Progresso do checklist</strong>
+          <span style={{ color: "var(--primary-600)", fontWeight: 700 }}>{progressPct}%</span>
+        </div>
+        <div style={{ width: "100%", height: "10px", borderRadius: "6px", background: "var(--neutral-100)", overflow: "hidden" }}>
+          <div style={{ width: `${progressPct}%`, height: "100%", background: "var(--success-500)" }} />
+        </div>
+        <p style={{ marginTop: "8px", fontSize: "0.85rem", color: "var(--neutral-500)" }}>
+          {progressCount} de {steps.length} etapas concluídas.
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gap: "12px" }}>
+        {loading ? (
+          <div className="dashboard-card"><p>A carregar fluxo legal...</p></div>
+        ) : (
+          steps.map((step, idx) => {
+            const completed = !!progressMap[step.key]?.completed;
+            return (
+              <div key={step.key} className="dashboard-card" style={{ borderLeft: `5px solid ${completed ? "var(--success-500)" : "var(--warning-500)"}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)", marginBottom: "4px" }}>ETAPA {idx + 1} - {step.agency}</div>
+                    <h4 style={{ margin: "0 0 6px 0" }}>{step.title}</h4>
+                    <p style={{ margin: 0, color: "var(--neutral-600)" }}>{step.description}</p>
+                  </div>
+                  <button
+                    className={completed ? "btn-logout" : "btn btn-primary"}
+                    style={{ width: "auto", minWidth: "130px", opacity: savingKey === step.key ? 0.6 : 1 }}
+                    onClick={() => toggleStep(step.key, completed)}
+                    disabled={savingKey === step.key}
+                  >
+                    {completed ? "Concluída" : "Marcar feita"}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Investidores() {
   const ctx = useContext(AppContext);
   const t = ctx?.t ?? (k => k);

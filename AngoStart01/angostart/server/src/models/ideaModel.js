@@ -80,12 +80,37 @@ export async function updateIdeaById(id, data) {
   return findIdeaById(id);
 }
 
+export async function updateIdeaStatusById(id, status) {
+  await pool.execute(
+    `UPDATE ideas
+     SET status = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [status, id]
+  );
+  return findIdeaById(id);
+}
+
 export async function listMarketplaceIdeas() {
   const [rows] = await pool.execute(
-    `SELECT id, title, description, sector, city, region, latitude, longitude,
-            initial_capital, status, created_at
-     FROM ideas
-     WHERE status IN ('submitted', 'active')
+    `SELECT i.id, i.title, i.description, i.sector, i.city, i.region, i.latitude, i.longitude,
+            i.initial_capital, i.status, i.created_at, u.name AS owner_name,
+            (
+              SELECT vr.score
+              FROM viability_reports vr
+              WHERE vr.idea_id = i.id
+              ORDER BY vr.created_at DESC
+              LIMIT 1
+            ) AS viability_score,
+            (
+              SELECT vr.viability_status
+              FROM viability_reports vr
+              WHERE vr.idea_id = i.id
+              ORDER BY vr.created_at DESC
+              LIMIT 1
+            ) AS viability_status
+     FROM ideas i
+     INNER JOIN users u ON u.id = i.created_by
+     WHERE i.status IN ('submitted', 'active')
      ORDER BY created_at DESC`
   );
   return rows;
