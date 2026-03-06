@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../style/auth.css';
+import { registerUser } from '../services/authApi';
 
 const CriarConta = () => {
   const navigate = useNavigate();
@@ -182,9 +183,10 @@ const CriarConta = () => {
   };
 
   const validateIdentityNumber = (number) => {
-    // BI angolano: 9 dígitos + 1 letra (ex: 123456789BA0)
-    const biRegex = /^[0-9]{9}[A-Z]{2}[0-9]$/;
-    return biRegex.test(number);
+    // BI angolano (formato mais usado): 9 dígitos + 2 letras + 3 dígitos (ex: 123456789LA042)
+    const normalized = String(number || '').trim().toUpperCase().replace(/\s+/g, '');
+    const biRegex = /^[0-9]{9}[A-Z]{2}[0-9]{3}$/;
+    return biRegex.test(normalized);
   };
 
   const handleContinue = () => {
@@ -250,7 +252,7 @@ const CriarConta = () => {
           return;
         }
         if (!validateIdentityNumber(formData.identityNumber)) {
-          showError('BI inválido. Formato: 123456789BA0');
+          showError('BI inválido. Formato: 123456789LA042');
           return;
         }
         if (!formData.birthDate) {
@@ -304,7 +306,7 @@ const CriarConta = () => {
           return;
         }
         if (!validateIdentityNumber(formData.identityNumber)) {
-          showError('BI inválido. Formato: 123456789BA0');
+          showError('BI inválido. Formato: 123456789LA042');
           return;
         }
         if (!formData.phone) {
@@ -378,56 +380,70 @@ const CriarConta = () => {
     setError({ show: false, message: '' });
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simular upload de arquivos
-      const documents = {};
-      if (uploadedFiles.biFront) documents.biFront = uploadedFiles.biFront.name;
-      if (uploadedFiles.cv) documents.cv = uploadedFiles.cv.name;
-      if (uploadedFiles.certificate) documents.certificate = uploadedFiles.certificate.name;
-      if (uploadedFiles.companyCertificate) documents.companyCertificate = uploadedFiles.companyCertificate.name;
-
-      // Gerar ID de verificação
-      const verificationId = 'VER-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-
-      const userData = {
-        ...formData,
-        ...documents,
+      const documents = {
+        biFrontDoc: uploadedFiles.biFront ? uploadedFiles.biFront.name : undefined,
+        cvDoc: uploadedFiles.cv ? uploadedFiles.cv.name : undefined,
+        certificateDoc: uploadedFiles.certificate ? uploadedFiles.certificate.name : undefined,
+        companyCertificateDoc: uploadedFiles.companyCertificate ? uploadedFiles.companyCertificate.name : undefined
+      };
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
         role: selectedRole,
-        isAuthenticated: selectedRole === 'empreendedor',
-        isVerified: selectedRole === 'empreendedor',
-        verificationId: selectedRole !== 'empreendedor' ? verificationId : null,
-        verificationStatus: selectedRole !== 'empreendedor' ? 'pending' : 'approved',
-        verificationDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        phone: formData.phone.replace(/\s/g, '')
+        profileData: {
+          phone: formData.phone.replace(/\s/g, ''),
+          businessName: formData.businessName,
+          businessSector: formData.businessSector,
+          businessStage: formData.businessStage,
+          businessLocation: formData.businessLocation,
+          identityNumber: formData.identityNumber,
+          birthDate: formData.birthDate,
+          province: formData.province,
+          expertiseArea: formData.expertiseArea,
+          experienceYears: formData.experienceYears,
+          company: formData.company,
+          currentRole: formData.currentRole,
+          linkedin: formData.linkedin,
+          investorType: formData.investorType,
+          profession: formData.profession,
+          incomeSource: formData.incomeSource,
+          investmentRange: formData.investmentRange,
+          companyName: formData.companyName,
+          companyNif: formData.companyNif,
+          companyRole: formData.companyRole,
+          hasInvestmentExperience: formData.hasInvestmentExperience,
+          investmentExperienceArea: formData.investmentExperienceArea,
+          linkedinOrWebsite: formData.linkedinOrWebsite,
+          acceptTerms: formData.acceptTerms,
+          declareTruth: formData.declareTruth,
+          ...documents
+        }
       };
 
-      // Remover dados sensíveis
-      const { password, confirmPassword, ...userDataToSave } = userData;
-      
-      localStorage.setItem('angostart_user', JSON.stringify(userDataToSave));
-      
+      const result = await registerUser(payload);
+      const verificationId = result?.verification?.id || null;
+
+      if (result?.token) {
+        localStorage.setItem('angostart_token', result.token);
+      }
+
       if (selectedRole === 'mentor' || selectedRole === 'investidor') {
         showSuccess(
-          '✅ Cadastro enviado com sucesso!\n\n' +
-          'Nossa equipa vai analisar os seus documentos e informações.\n' +
-          'Entraremos em contacto pelo número ' + formData.phone + ' nos próximos dias.\n\n' +
-          'ID de verificação: ' + verificationId
+          '✅ Cadastro concluído com sucesso!\n\n' +
+          'A sua conta foi criada e você já pode entrar no dashboard.\n' +
+          'ID de verificação: ' + (verificationId || 'Pendente')
         );
-        
-        setTimeout(() => {
-          navigate('/login');
-        }, 6000);
       } else {
         showSuccess('Conta criada com sucesso! Bem-vindo à AngoStart.');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
       }
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
       
     } catch (error) {
-      showError('Erro ao criar conta. Tente novamente.');
+      showError(error?.message || 'Erro ao criar conta. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -722,12 +738,12 @@ const CriarConta = () => {
           type="text"
           id="identityNumber"
           className="form-input"
-          placeholder="Ex: 123456789LA0"
+          placeholder="Ex: 123456789LA042"
           value={formData.identityNumber}
           onChange={handleInputChange}
           required
         />
-        <small className="form-hint">Formato BI: 9 números + 2 letras + 1 número</small>
+        <small className="form-hint">Formato BI Angola: 9 números + 2 letras + 3 números</small>
       </div>
 
       <div className="form-row">
@@ -953,7 +969,7 @@ const CriarConta = () => {
           type="text"
           id="identityNumber"
           className="form-input"
-          placeholder="Ex: 123456789BA0"
+          placeholder="Ex: 123456789LA042"
           value={formData.identityNumber}
           onChange={handleInputChange}
           required

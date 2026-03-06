@@ -219,6 +219,33 @@ export default function Dashboard() {
     else document.body.classList.remove('dark-theme');
   }, []);
 
+  useEffect(() => {
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+    const token = localStorage.getItem("angostart_token");
+    if (!token || user) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const contentType = res.headers.get("content-type") || "";
+        const data = contentType.includes("application/json") ? await res.json() : null;
+        if (res.ok && data?.success && data?.user) {
+          setUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            verificationStatus: data.user.verificationStatus || "approved",
+            verificationId: data.user.verificationId || null,
+          });
+        }
+      } catch {
+        // noop
+      }
+    })();
+  }, [user]);
+
   const closeSidebarOnMobile = () => {
     if (window.matchMedia("(max-width: 1024px)").matches) {
       setIsSidebarOpen(false);
@@ -241,9 +268,12 @@ export default function Dashboard() {
       if (res.ok && data?.success && data?.token) {
         localStorage.setItem("angostart_token", data.token);
         setUser({
+          id: data.user.id,
           name: data.user.name,
           email: data.user.email,
           role: data.user.role,
+          verificationStatus: data.user.verificationStatus || "approved",
+          verificationId: data.user.verificationId || null,
         });
         setError("");
         return;
@@ -262,6 +292,36 @@ export default function Dashboard() {
     setPassword("");
     localStorage.removeItem("angostart_token");
   }
+
+  const canShowVerificationNotice = user?.role === "mentor" || user?.role === "investidor";
+  const verificationMeta = {
+    pending: {
+      title: "Conta pendente de verificação",
+      text: "A sua conta já está ativa no dashboard, mas o perfil ainda está em análise da equipa.",
+      border: "#f59e0b",
+      bg: "#fffbeb",
+      titleColor: "#92400e",
+      textColor: "#78350f",
+    },
+    approved: {
+      title: "Conta verificada e aprovada",
+      text: "A sua conta foi aprovada pela equipa. Todas as funcionalidades do seu perfil estão liberadas.",
+      border: "#10b981",
+      bg: "#ecfdf5",
+      titleColor: "#065f46",
+      textColor: "#065f46",
+    },
+    rejected: {
+      title: "Conta rejeitada na verificação",
+      text: "A verificação foi rejeitada. Atualize os dados/documentos e contacte o suporte para nova análise.",
+      border: "#ef4444",
+      bg: "#fef2f2",
+      titleColor: "#991b1b",
+      textColor: "#7f1d1d",
+    },
+  };
+  const currentVerificationStatus = user?.verificationStatus || "pending";
+  const currentVerificationMeta = verificationMeta[currentVerificationStatus] || verificationMeta.pending;
 
 function RenderInvestidorPage() {
   switch(currentPage) {
@@ -955,6 +1015,24 @@ return (
         />
         <main className="main-content">
           <div className="page-content">
+            {canShowVerificationNotice && (
+              <div
+                className="dashboard-card"
+                style={{
+                  marginBottom: "16px",
+                  border: `1px solid ${currentVerificationMeta.border}`,
+                  background: currentVerificationMeta.bg,
+                }}
+              >
+                <div style={{ color: currentVerificationMeta.titleColor, fontWeight: 600, marginBottom: "6px" }}>
+                  {currentVerificationMeta.title}
+                </div>
+                <div style={{ color: currentVerificationMeta.textColor, fontSize: "0.9rem" }}>
+                  {currentVerificationMeta.text}
+                  {user?.verificationId ? ` ID: ${user.verificationId}.` : ""}
+                </div>
+              </div>
+            )}
             <RenderArea />
           </div>
         </main>

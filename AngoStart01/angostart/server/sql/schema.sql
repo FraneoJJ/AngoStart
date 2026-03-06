@@ -132,3 +132,68 @@ CREATE TABLE IF NOT EXISTS strategic_checklist_progress (
   CONSTRAINT fk_scp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_scp_idea FOREIGN KEY (idea_id) REFERENCES ideas(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS empreendedor_profiles (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  phone VARCHAR(30) NOT NULL,
+  business_name VARCHAR(180) NOT NULL,
+  business_sector VARCHAR(120) NOT NULL,
+  business_stage VARCHAR(120) NOT NULL,
+  business_location VARCHAR(120) NULL,
+  accept_terms TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ep_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS mentor_profiles (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  phone VARCHAR(30) NOT NULL,
+  identity_number VARCHAR(30) NOT NULL,
+  birth_date DATE NOT NULL,
+  province VARCHAR(120) NOT NULL,
+  expertise_area VARCHAR(120) NOT NULL,
+  experience_years INT NOT NULL,
+  company VARCHAR(180) NOT NULL,
+  current_role VARCHAR(180) NOT NULL,
+  linkedin VARCHAR(255) NULL,
+  bi_front_doc VARCHAR(255) NOT NULL,
+  cv_doc VARCHAR(255) NULL,
+  certificate_doc VARCHAR(255) NULL,
+  declare_truth TINYINT(1) NOT NULL DEFAULT 0,
+  accept_terms TINYINT(1) NOT NULL DEFAULT 0,
+  verification_id VARCHAR(40) NOT NULL,
+  verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_mp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS investidor_profiles (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL UNIQUE,
+  phone VARCHAR(30) NOT NULL,
+  identity_number VARCHAR(30) NOT NULL,
+  province VARCHAR(120) NOT NULL,
+  investor_type ENUM('individual', 'empresa') NOT NULL,
+  profession VARCHAR(180) NULL,
+  income_source VARCHAR(180) NULL,
+  investment_range VARCHAR(120) NULL,
+  company_name VARCHAR(180) NULL,
+  company_nif VARCHAR(40) NULL,
+  company_role VARCHAR(180) NULL,
+  has_investment_experience ENUM('sim', 'nao') NULL,
+  investment_experience_area VARCHAR(180) NULL,
+  linkedin_or_website VARCHAR(255) NULL,
+  bi_front_doc VARCHAR(255) NOT NULL,
+  company_certificate_doc VARCHAR(255) NULL,
+  declare_truth TINYINT(1) NOT NULL DEFAULT 0,
+  accept_terms TINYINT(1) NOT NULL DEFAULT 0,
+  verification_id VARCHAR(40) NOT NULL,
+  verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ip_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

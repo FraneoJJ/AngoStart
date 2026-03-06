@@ -26,12 +26,19 @@ export async function findUserPublicById(id) {
   return rows[0] || null;
 }
 
-export async function createUser({ name, email, passwordHash, role }) {
-  const [result] = await pool.execute(
+export async function createUser({ name, email, passwordHash, role }, db = pool) {
+  const [result] = await db.execute(
     `INSERT INTO users (name, email, password_hash, role)
      VALUES (?, ?, ?, ?)`,
     [name, email, passwordHash, role]
   );
 
-  return findUserPublicById(result.insertId);
+  const [rows] = await db.execute(
+    `SELECT id, name, email, role, created_at
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [result.insertId]
+  );
+  return rows[0] || null;
 }

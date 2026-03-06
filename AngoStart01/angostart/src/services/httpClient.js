@@ -3,7 +3,7 @@ export async function requestJson(url, options = {}) {
   try {
     response = await fetch(url, options);
   } catch {
-    throw new Error("Falha de conexão com a API.");
+    throw new Error("Falha de conexão com a API. Verifique se a API está ligada e se o CORS permite o endereço do frontend.");
   }
 
   const contentType = response.headers.get("content-type") || "";
