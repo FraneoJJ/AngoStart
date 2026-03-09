@@ -9,7 +9,9 @@ async function bootstrap() {
       console.log(`API rodando em http://localhost:${env.PORT}`);
     });
   } catch (err) {
-    console.error("Falha ao iniciar API:", err.message);
+    const details = err?.message || err?.code || JSON.stringify(err);
+    console.error("Falha ao iniciar API:", details);
+    if (err?.code) console.error("Código:", err.code);
     process.exit(1);
   }
 }

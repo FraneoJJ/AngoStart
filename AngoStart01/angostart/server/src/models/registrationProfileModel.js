@@ -18,6 +18,14 @@ export async function createEmpreendedorProfile(db, input) {
   return result.insertId;
 }
 
+export async function findEmpreendedorProfileByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT user_id FROM empreendedor_profiles WHERE user_id = ? LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
 export async function createMentorProfile(db, input) {
   const [result] = await db.execute(
     `INSERT INTO mentor_profiles
@@ -47,6 +55,14 @@ export async function createMentorProfile(db, input) {
     ]
   );
   return result.insertId;
+}
+
+export async function findMentorProfileByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT user_id FROM mentor_profiles WHERE user_id = ? LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
 }
 
 export async function createInvestidorProfile(db, input) {
@@ -83,6 +99,14 @@ export async function createInvestidorProfile(db, input) {
     ]
   );
   return result.insertId;
+}
+
+export async function findInvestidorProfileByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT user_id FROM investidor_profiles WHERE user_id = ? LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
 }
 
 export async function findVerificationByUserRole(userId, role) {

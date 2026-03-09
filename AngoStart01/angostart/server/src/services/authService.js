@@ -11,6 +11,9 @@ import {
   createEmpreendedorProfile,
   createInvestidorProfile,
   createMentorProfile,
+  findEmpreendedorProfileByUserId,
+  findInvestidorProfileByUserId,
+  findMentorProfileByUserId,
   findVerificationByUserRole,
 } from "../models/registrationProfileModel.js";
 import { signAccessToken } from "../utils/jwt.js";
@@ -58,13 +61,33 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6).max(120),
+  role: z.enum(USER_ROLES).optional(),
 });
 
-async function enrichUserWithVerification(user) {
+const switchRoleSchema = z.object({
+  role: z.enum(USER_ROLES),
+});
+
+async function listAvailableRoles(user) {
+  if (!user) return [];
+  const userId = Number(user.id);
+  const roles = new Set([user.role]);
+  if (await findEmpreendedorProfileByUserId(userId)) roles.add("empreendedor");
+  if (await findMentorProfileByUserId(userId)) roles.add("mentor");
+  if (await findInvestidorProfileByUserId(userId)) roles.add("investidor");
+  return Array.from(roles);
+}
+
+async function enrichUserWithVerification(user, activeRole = null) {
   if (!user) return user;
-  const verification = await findVerificationByUserRole(Number(user.id), user.role);
+  const selectedRole = activeRole || user.role;
+  const verification = await findVerificationByUserRole(Number(user.id), selectedRole);
+  const availableRoles = await listAvailableRoles(user);
   return {
     ...user,
+    primaryRole: user.role,
+    role: selectedRole,
+    availableRoles,
     verificationStatus: verification?.verification_status || "approved",
     verificationId: verification?.verification_id || null,
   };
@@ -73,10 +96,6 @@ async function enrichUserWithVerification(user) {
 export async function register(input) {
   const data = registerSchema.parse(input);
   const existing = await findUserByEmail(data.email);
-  if (existing) {
-    throw { status: 409, message: "Email já cadastrado." };
-  }
-
   const profile = data.profileData || {};
   const passwordHash = await bcrypt.hash(data.password, 10);
   const db = await pool.getConnection();
@@ -84,24 +103,33 @@ export async function register(input) {
   let verification = null;
   try {
     await db.beginTransaction();
-    user = await createUser(
-      {
-        name: data.name,
-        email: data.email,
-        passwordHash,
-        role: data.role,
-      },
-      db
-    );
 
-    if (!user) {
-      throw { status: 500, message: "Falha ao criar utilizador." };
+    if (!existing) {
+      user = await createUser(
+        {
+          name: data.name,
+          email: data.email,
+          passwordHash,
+          role: data.role,
+        },
+        db
+      );
+      if (!user) throw { status: 500, message: "Falha ao criar utilizador." };
+    } else {
+      const passwordOk = await bcrypt.compare(data.password, existing.password_hash);
+      if (!passwordOk) {
+        throw { status: 409, message: "Email já cadastrado. Use a senha da conta existente para adicionar novo perfil." };
+      }
+      user = await findUserPublicById(existing.id);
+      if (!user) throw { status: 500, message: "Utilizador existente não encontrado." };
     }
 
     if (data.role === "empreendedor") {
       if (!profile.phone || !profile.businessName || !profile.businessSector || !profile.businessStage) {
         throw { status: 400, message: "Dados do negócio incompletos para empreendedor." };
       }
+      const exists = await findEmpreendedorProfileByUserId(user.id);
+      if (exists) throw { status: 409, message: "Este utilizador já possui perfil de empreendedor." };
       await createEmpreendedorProfile(db, {
         userId: user.id,
         phone: profile.phone,
@@ -114,20 +142,11 @@ export async function register(input) {
     }
 
     if (data.role === "mentor") {
-      if (
-        !profile.phone ||
-        !profile.identityNumber ||
-        !profile.birthDate ||
-        !profile.province ||
-        !profile.expertiseArea ||
-        !profile.experienceYears ||
-        !profile.company ||
-        !profile.currentRole ||
-        !profile.biFrontDoc ||
-        (!profile.cvDoc && !profile.certificateDoc)
-      ) {
+      if (!profile.phone || !profile.identityNumber || !profile.birthDate || !profile.province || !profile.expertiseArea || !profile.experienceYears || !profile.company || !profile.currentRole || !profile.biFrontDoc || (!profile.cvDoc && !profile.certificateDoc)) {
         throw { status: 400, message: "Dados de mentor incompletos." };
       }
+      const exists = await findMentorProfileByUserId(user.id);
+      if (exists) throw { status: 409, message: "Este utilizador já possui perfil de mentor." };
       const verificationId = `VER-M-${Date.now().toString(36).toUpperCase()}`;
       await createMentorProfile(db, {
         userId: user.id,
@@ -151,27 +170,17 @@ export async function register(input) {
     }
 
     if (data.role === "investidor") {
-      if (
-        !profile.phone ||
-        !profile.identityNumber ||
-        !profile.province ||
-        !profile.investorType ||
-        !profile.biFrontDoc
-      ) {
+      if (!profile.phone || !profile.identityNumber || !profile.province || !profile.investorType || !profile.biFrontDoc) {
         throw { status: 400, message: "Dados de investidor incompletos." };
       }
-      if (
-        profile.investorType === "individual" &&
-        (!profile.profession || !profile.incomeSource || !profile.investmentRange)
-      ) {
+      if (profile.investorType === "individual" && (!profile.profession || !profile.incomeSource || !profile.investmentRange)) {
         throw { status: 400, message: "Perfil de investidor individual incompleto." };
       }
-      if (
-        profile.investorType === "empresa" &&
-        (!profile.companyName || !profile.companyNif || !profile.companyRole || !profile.companyCertificateDoc)
-      ) {
+      if (profile.investorType === "empresa" && (!profile.companyName || !profile.companyNif || !profile.companyRole || !profile.companyCertificateDoc)) {
         throw { status: 400, message: "Perfil de investidor empresa incompleto." };
       }
+      const exists = await findInvestidorProfileByUserId(user.id);
+      if (exists) throw { status: 409, message: "Este utilizador já possui perfil de investidor." };
       const verificationId = `VER-I-${Date.now().toString(36).toUpperCase()}`;
       await createInvestidorProfile(db, {
         userId: user.id,
@@ -205,10 +214,10 @@ export async function register(input) {
     db.release();
   }
 
-  const userWithVerification = await enrichUserWithVerification(user);
+  const userWithVerification = await enrichUserWithVerification(user, data.role);
   const token = signAccessToken({
     sub: userWithVerification.id,
-    role: userWithVerification.role,
+    role: data.role,
     email: userWithVerification.email,
   });
   return { user: userWithVerification, token, verification };
@@ -226,16 +235,31 @@ export async function login(input) {
     throw { status: 401, message: "Senha inválida." };
   }
 
-  const token = signAccessToken({ sub: user.id, role: user.role, email: user.email });
   const publicUser = await findUserPublicById(user.id);
-  const userWithVerification = await enrichUserWithVerification(publicUser);
+  const availableRoles = await listAvailableRoles(publicUser);
+  const selectedRole = data.role && availableRoles.includes(data.role) ? data.role : publicUser.role;
+  const token = signAccessToken({ sub: user.id, role: selectedRole, email: user.email });
+  const userWithVerification = await enrichUserWithVerification(publicUser, selectedRole);
   return { user: userWithVerification, token };
 }
 
-export async function getMe(userId) {
+export async function getMe(userId, activeRole = null) {
   const user = await findUserPublicById(userId);
   if (!user) {
     throw { status: 404, message: "Usuário não encontrado." };
   }
-  return enrichUserWithVerification(user);
+  return enrichUserWithVerification(user, activeRole || user.role);
+}
+
+export async function switchRole(authUser, input) {
+  const data = switchRoleSchema.parse(input);
+  const user = await findUserPublicById(Number(authUser.sub));
+  if (!user) throw { status: 404, message: "Usuário não encontrado." };
+  const availableRoles = await listAvailableRoles(user);
+  if (!availableRoles.includes(data.role)) {
+    throw { status: 403, message: "Este usuário não possui o papel solicitado." };
+  }
+  const userWithVerification = await enrichUserWithVerification(user, data.role);
+  const token = signAccessToken({ sub: user.id, role: data.role, email: user.email });
+  return { user: userWithVerification, token };
 }

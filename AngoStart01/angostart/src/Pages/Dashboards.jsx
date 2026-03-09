@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useMemo } from "react";
+import React, { useState, useEffect, createContext, useContext, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
 import { createIdea, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
@@ -7,6 +7,7 @@ import { analyzeViability } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
+import { getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
 import Planos from "../components/SecoesApp/Planos";
 
 const STORAGE_KEY = 'angostart_settings';
@@ -195,6 +196,9 @@ function ConfirmModal() {
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const [navBadges, setNavBadges] = useState({});
+  const [selectedRoleForSwitch, setSelectedRoleForSwitch] = useState("");
+  const [switchingRole, setSwitchingRole] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -211,7 +215,57 @@ export default function Dashboard() {
     for (const p of parts) v = v?.[p];
     return v != null ? v : key;
   };
-  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal }), [idioma, modal]);
+  const refreshNavBadges = useCallback(async (targetUser = user) => {
+    const role = targetUser?.role;
+    if (!role) return;
+
+    try {
+      if (role === "empreendedor") {
+        const ideas = await getMyIdeas();
+        const pendingSubmission = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        setNavBadges({
+          "submeter-ideia": pendingSubmission,
+          "minhas-ideias": ideas.length,
+        });
+        return;
+      }
+
+      if (role === "investidor") {
+        const marketplaceIdeas = await getMarketplaceIdeas();
+        const pendingProposals = marketplaceIdeas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        setNavBadges({
+          marketplace: marketplaceIdeas.length,
+          propostas: pendingProposals,
+        });
+        return;
+      }
+
+      if (role === "mentor") {
+        const marketplaceIdeas = await getMarketplaceIdeas();
+        const mentoringRequests = marketplaceIdeas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        setNavBadges({
+          sessoes: mentoringRequests,
+        });
+        return;
+      }
+
+      if (role === "admin") {
+        const marketplaceIdeas = await getMarketplaceIdeas();
+        const pendingReview = marketplaceIdeas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        setNavBadges({
+          ideias: pendingReview,
+        });
+        return;
+      }
+
+      setNavBadges({});
+    } catch {
+      // Não interrompe o dashboard se alguma contagem falhar.
+      setNavBadges({});
+    }
+  }, [user]);
+
+  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges }), [idioma, modal, refreshNavBadges]);
 
   useEffect(() => {
     const s = loadSettings();
@@ -236,15 +290,23 @@ export default function Dashboard() {
             name: data.user.name,
             email: data.user.email,
             role: data.user.role,
+            primaryRole: data.user.primaryRole || data.user.role,
+            availableRoles: data.user.availableRoles || [data.user.role],
             verificationStatus: data.user.verificationStatus || "approved",
             verificationId: data.user.verificationId || null,
           });
+          setSelectedRoleForSwitch(data.user.role);
         }
       } catch {
         // noop
       }
     })();
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.role) return;
+    refreshNavBadges(user);
+  }, [user?.id, user?.role, refreshNavBadges]);
 
   const closeSidebarOnMobile = () => {
     if (window.matchMedia("(max-width: 1024px)").matches) {
@@ -272,9 +334,12 @@ export default function Dashboard() {
           name: data.user.name,
           email: data.user.email,
           role: data.user.role,
+          primaryRole: data.user.primaryRole || data.user.role,
+          availableRoles: data.user.availableRoles || [data.user.role],
           verificationStatus: data.user.verificationStatus || "approved",
           verificationId: data.user.verificationId || null,
         });
+        setSelectedRoleForSwitch(data.user.role);
         setError("");
         return;
       }
@@ -288,9 +353,49 @@ export default function Dashboard() {
 
   function logout() {
     setUser(null);
+    setSelectedRoleForSwitch("");
     setEmail("");
     setPassword("");
     localStorage.removeItem("angostart_token");
+  }
+
+  async function handleSwitchRole() {
+    if (!user || !selectedRoleForSwitch || selectedRoleForSwitch === user.role) return;
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+    const token = localStorage.getItem("angostart_token");
+    if (!token) return;
+    setSwitchingRole(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/switch-role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: selectedRoleForSwitch }),
+      });
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await res.json() : null;
+      if (!res.ok || !data?.success || !data?.token || !data?.user) {
+        throw new Error(data?.message || "Falha ao trocar de papel.");
+      }
+      localStorage.setItem("angostart_token", data.token);
+      setUser({
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+        primaryRole: data.user.primaryRole || data.user.role,
+        availableRoles: data.user.availableRoles || [data.user.role],
+        verificationStatus: data.user.verificationStatus || "approved",
+        verificationId: data.user.verificationId || null,
+      });
+      setCurrentPage("dashboard");
+    } catch (err) {
+      setModal({ open: true, title: "Troca de papel", message: err.message || "Falha ao trocar de papel." });
+    } finally {
+      setSwitchingRole(false);
+    }
   }
 
   const canShowVerificationNotice = user?.role === "mentor" || user?.role === "investidor";
@@ -401,7 +506,7 @@ function RenderAdminPage() {
         <div className="stat-card-content">
           <div className="stat-info">
             <div className="stat-label">Valor Total Investido</div>
-            <div className="stat-value">$485K</div>
+            <div className="stat-value">Kz 485.000</div>
             <div className="stat-change">Portfolio total</div>
           </div>
           <div className="stat-icon-wrapper stat-icon-success">
@@ -458,21 +563,21 @@ function RenderAdminPage() {
             <td>TechEdu Angola</td>
             <td>EdTech</td>
             <td><span className="badge badge-success">92</span></td>
-            <td>$50K - $100K</td>
+            <td>Kz 50.000 - Kz 100.000</td>
             <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
           </tr>
           <tr>
             <td>AgriConnect</td>
             <td>AgriTech</td>
             <td><span className="badge badge-success">88</span></td>
-            <td>$30K - $75K</td>
+            <td>Kz 30.000 - Kz 75.000</td>
             <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
           </tr>
           <tr>
             <td>HealthPlus</td>
             <td>HealthTech</td>
             <td><span className="badge badge-success">85</span></td>
-            <td>$75K - $150K</td>
+            <td>Kz 75.000 - Kz 150.000</td>
             <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
           </tr>
         </tbody>
@@ -716,103 +821,121 @@ function RenderAdminPage() {
   }
 
   function Admin() {
-    return( <>
-    <div className="stats-grid">
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Usuários Totais</div>
-            <div className="stat-value">1,247</div>
-            <div className="stat-change">+87 este mês</div>
+    const ctx = useContext(AppContext);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      (async () => {
+        setLoading(true);
+        try {
+          const data = await getAdminUsers();
+          setUsers(data);
+        } catch (err) {
+          ctx?.setModal?.({ open: true, message: `Falha ao carregar usuários: ${err.message}` });
+          setUsers([]);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, []);
+
+    const totalUsers = users.length;
+    const totalEmpreendedores = users.filter((u) => u.role === "empreendedor").length;
+    const pendingApprovals = users.filter(
+      (u) => (u.role === "mentor" || u.role === "investidor") && u.verificationStatus === "pending"
+    ).length;
+    const approvedProfiles = users.filter(
+      (u) => (u.role === "mentor" || u.role === "investidor") && u.verificationStatus === "approved"
+    ).length;
+    const pendingList = users.filter(
+      (u) => (u.role === "mentor" || u.role === "investidor") && u.verificationStatus === "pending"
+    );
+
+    return (
+      <>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Usuários Totais</div>
+                <div className="stat-value">{totalUsers}</div>
+                <div className="stat-change">Dados em tempo real</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-primary">{icons.users}</div>
+            </div>
           </div>
-          <div className="stat-icon-wrapper stat-icon-primary">
-            {icons.users}
+
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Empreendedores</div>
+                <div className="stat-value">{totalEmpreendedores}</div>
+                <div className="stat-change">Cadastros ativos</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-success">{icons.lightbulb}</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Aprovações Pendentes</div>
+                <div className="stat-value">{pendingApprovals}</div>
+                <div className="stat-change">Mentores e investidores</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-secondary">{icons["check-circle"]}</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Perfis Aprovados</div>
+                <div className="stat-value">{approvedProfiles}</div>
+                <div className="stat-change">Validação concluída</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-info">{icons.award}</div>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Ideias Submetidas</div>
-            <div className="stat-value">543</div>
-            <div className="stat-change">+42 esta semana</div>
+
+        <div className="dashboard-card">
+          <div className="dashboard-card-header">
+            <h3 className="dashboard-card-title">Contas pendentes de aprovação</h3>
+            <p className="dashboard-card-description">Revisão de mentores e investidores.</p>
           </div>
-          <div className="stat-icon-wrapper stat-icon-success">
-            {icons.lightbulb}
-          </div>
+          {loading ? (
+            <p>A carregar usuários...</p>
+          ) : pendingList.length === 0 ? (
+            <p>Sem pendências neste momento.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Função</th>
+                  <th>Verificação</th>
+                  <th>ID Verificação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingList.map((u) => (
+                  <tr key={u.id}>
+                    <td><strong>{u.name}</strong></td>
+                    <td>{u.email}</td>
+                    <td><span className="badge badge-primary">{u.role}</span></td>
+                    <td><span className="badge badge-warning">Pendente</span></td>
+                    <td>{u.verificationId || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Aprovações Pendentes</div>
-            <div className="stat-value">8</div>
-            <div className="stat-change">Requerem atenção</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-secondary">
-            {icons['check-circle']}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Receita Mensal</div>
-            <div className="stat-value">$28.5K</div>
-            <div className="stat-change">+12% vs mês anterior</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-info">
-            {icons['dollar-sign']}
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div className="dashboard-card">
-      <div className="dashboard-card-header">
-        <h3 className="dashboard-card-title">Ideias Pendentes de Aprovação</h3>
-        <p className="dashboard-card-description">Ideias aguardando revisão</p>
-      </div>
-      
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Ideia</th>
-            <th>Empreendedor</th>
-            <th>Score IA</th>
-            <th>Data Submissão</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>App de Delivery Local</td>
-            <td>João Silva</td>
-            <td><span className="badge badge-success">87</span></td>
-            <td>20/01/2026</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Revisar</button></td>
-          </tr>
-          <tr>
-            <td>Plataforma de Freelancers</td>
-            <td>Ana Mendes</td>
-            <td><span className="badge badge-success">92</span></td>
-            <td>21/01/2026</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Revisar</button></td>
-          </tr>
-          <tr>
-            <td>E-commerce de Produtos Locais</td>
-            <td>Carlos Dias</td>
-            <td><span className="badge badge-warning">75</span></td>
-            <td>22/01/2026</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Revisar</button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </>);
+      </>
+    );
   }
 
   function RenderArea() {
@@ -981,6 +1104,11 @@ return (
                   {t('nav.section.' + group.sectionKey)}
                 </div>
                 {group.items.map((item) => (
+                  (() => {
+                    const badgeValue = Object.prototype.hasOwnProperty.call(navBadges, item.id)
+                      ? navBadges[item.id]
+                      : item.badge;
+                    return (
                   <div
                     key={item.id}
                     className={`nav-item ${currentPage === item.id ? "active" : ""}`}
@@ -991,8 +1119,10 @@ return (
                   >
                     <span className="nav-icon">{icons[item.icon]}</span>
                     <span className="nav-label">{t('nav.item.' + item.id)}</span>
-                    {item.badge != null && <span className="nav-badge">{item.badge}</span>}
+                    {badgeValue != null && <span className="nav-badge">{badgeValue}</span>}
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             ))}
@@ -1005,6 +1135,29 @@ return (
                 <div className="user-role">{user.role}</div>
               </div>
             </div>
+            {Array.isArray(user?.availableRoles) && user.availableRoles.length > 1 && (
+              <div style={{ marginBottom: "12px", display: "grid", gap: "8px" }}>
+                <select
+                  className="form-input"
+                  value={selectedRoleForSwitch || user.role}
+                  onChange={(e) => setSelectedRoleForSwitch(e.target.value)}
+                  style={{ padding: "8px 10px", borderRadius: "8px" }}
+                >
+                  {user.availableRoles.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={handleSwitchRole}
+                  disabled={switchingRole || !selectedRoleForSwitch || selectedRoleForSwitch === user.role}
+                  style={{ width: "100%" }}
+                >
+                  {switchingRole ? "A trocar..." : "Trocar perfil"}
+                </button>
+              </div>
+            )}
             <button className="btn-logout" onClick={logout}>{t('common.logout')}</button>
           </div>
         </aside>
@@ -1167,9 +1320,9 @@ function Marketplace() {
 function Investimentos() {
  
   const myPortfolio = [
-    { id: 1, startup: "Kwanza Pay", equity: "5%", invested: "$25,000", currentVal: "$45,000", status: "Em Crescimento", roi: "+80%" },
-    { id: 2, startup: "AgroFácil", equity: "10%", invested: "$15,000", currentVal: "$18,500", status: "Estável", roi: "+23%" },
-    { id: 3, startup: "TechEdu Angola", equity: "2%", invested: "$10,000", currentVal: "$9,000", status: "Risco", roi: "-10%" }
+    { id: 1, startup: "Kwanza Pay", equity: "5%", invested: "Kz 25.000", currentVal: "Kz 45.000", status: "Em Crescimento", roi: "+80%" },
+    { id: 2, startup: "AgroFácil", equity: "10%", invested: "Kz 15.000", currentVal: "Kz 18.500", status: "Estável", roi: "+23%" },
+    { id: 3, startup: "TechEdu Angola", equity: "2%", invested: "Kz 10.000", currentVal: "Kz 9.000", status: "Risco", roi: "-10%" }
   ];
 
   return (<>
@@ -1179,7 +1332,7 @@ function Investimentos() {
           <div className="stat-card-content" >
             <div className="stat-info">
               <div className="stat-label">Total Alocado</div>
-              <div className="stat-value">$50,000</div>
+              <div className="stat-value">Kz 50.000</div>
               <div className="stat-change">3 Startups ativas</div>
             </div>
             <div className="stat-icon-wrapper stat-icon-success">
@@ -1192,9 +1345,9 @@ function Investimentos() {
           <div className="stat-card-content">
             <div className="stat-info">
               <div className="stat-label">Valorização Total</div>
-              <div className="stat-value">$72,500</div>
+              <div className="stat-value">Kz 72.500</div>
               <div className="stat-change" style={{ color: '#10b981' }}>
-                ↑ $22,500 (45%)
+                ↑ Kz 22.500 (45%)
               </div>
             </div>
             <div className="stat-icon-wrapper stat-icon-primary">
@@ -1445,7 +1598,7 @@ function Propostas() {
                 textOverflow: 'ellipsis'
               }}
             >
-              Proposta de Equity: 5% por $25k
+              Proposta de Equity: 5% por Kz 25.000
             </p>
             <span className="badge badge-warning" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
               Pendente
@@ -1559,7 +1712,7 @@ function Propostas() {
           >
             <p style={{ margin: 0, fontSize: '0.9rem' }}>
               Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
-              25.000 USD para expansão em Benguela em troca de 5% de equity.
+              25.000 Kz para expansão em Benguela em troca de 5% de equity.
             </p>
             <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
               10:30 AM
@@ -1873,92 +2026,140 @@ function StatCard({ label, value, icon, color }) {
 }     
 function Usuarios() {
   const ctx = useContext(AppContext);
-  const t = ctx?.t ?? (k => k);
-  return ( <>
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingUserId, setSavingUserId] = useState(null);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const data = await getAdminUsers();
+      setUsers(data);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar usuários: ${err.message}` });
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleVerification = async (targetUserId, status) => {
+    setSavingUserId(targetUserId);
+    try {
+      const updated = await updateAdminUserVerification(targetUserId, status);
+      setUsers((prev) => prev.map((u) => (Number(u.id) === Number(targetUserId) ? updated : u)));
+      ctx?.setModal?.({
+        open: true,
+        message: status === "approved"
+          ? "Conta aprovada com sucesso."
+          : "Conta rejeitada com sucesso.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao atualizar verificação: ${err.message}` });
+    } finally {
+      setSavingUserId(null);
+    }
+  };
+
+  const roleLabel = (role) => {
+    if (role === "empreendedor") return "Empreendedor";
+    if (role === "investidor") return "Investidor";
+    if (role === "mentor") return "Mentor";
+    if (role === "admin") return "Admin";
+    return role;
+  };
+
+  const statusBadgeClass = (status) => {
+    if (status === "approved") return "badge-success";
+    if (status === "rejected") return "badge-warning";
+    return "badge-info";
+  };
+
+  const statusLabel = (status, role) => {
+    if (role === "admin" || role === "empreendedor") return "Ativo";
+    if (status === "approved") return "Aprovado";
+    if (status === "rejected") return "Rejeitado";
+    return "Pendente";
+  };
+
+  const canModerate = (role) => role === "mentor" || role === "investidor";
+
+  return (
+    <>
     <div className="dashboard-card">
       <div className="dashboard-card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <div>
           <h3 className="dashboard-card-title">Gerenciamento de Usuários</h3>
           <p className="dashboard-card-description">Visualize e gerencie todos os usuários cadastrados na plataforma.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => ctx?.setModal?.({ open: true, message: t('config.openNewUser') })}> + Novo Usuário</button>
+        <button className="btn btn-primary" onClick={loadUsers} disabled={loading}>Atualizar</button>
       </div>
       
       <div style={{marginTop: '20px'}}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Email</th>
-              <th>Função</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {generateUserTableRows()}
-          </tbody>
-        </table>
+        {loading ? (
+          <p>A carregar usuários...</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Função</th>
+                <th>Status</th>
+                <th>ID Verificação</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td><strong>{u.name}</strong></td>
+                  <td>{u.email}</td>
+                  <td>
+                    <span className="badge badge-primary">{roleLabel(u.role)}</span>
+                  </td>
+                  <td>
+                    <span className={`badge ${statusBadgeClass(u.verificationStatus)}`}>
+                      {statusLabel(u.verificationStatus, u.role)}
+                    </span>
+                  </td>
+                  <td>{u.verificationId || "-"}</td>
+                  <td style={{ display: "flex", gap: "0.5rem" }}>
+                    {canModerate(u.role) ? (
+                      <>
+                        <button
+                          className="btn btn-primary"
+                          type="button"
+                          disabled={savingUserId === u.id || u.verificationStatus === "approved"}
+                          onClick={() => handleVerification(u.id, "approved")}
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          className="btn btn-outline"
+                          type="button"
+                          style={{ color: "red" }}
+                          disabled={savingUserId === u.id || u.verificationStatus === "rejected"}
+                          onClick={() => handleVerification(u.id, "rejected")}
+                        >
+                          Rejeitar
+                        </button>
+                      </>
+                    ) : (
+                      <span style={{ color: "var(--neutral-500)" }}>Sem ação</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
-  </>);
-}
-function generateUserTableRows() {
-  const mockUsers = [
-    {
-      name: "João Empreendedor",
-      email: "empreendedor@angostart.com",
-      role: "Empreendedor",
-      status: "Ativo",
-    },
-    {
-      name: "Maria Investidora",
-      email: "investidor@angostart.com",
-      role: "Investidor",
-      status: "Ativo",
-    },
-    {
-      name: "Carlos Mentor",
-      email: "mentor@angostart.com",
-      role: "Mentor",
-      status: "Pendente",
-    },
-  ];
-
-  return (
-    <>
-      {mockUsers.map((u) => (
-        <tr key={u.email}>
-          <td>
-            <strong>{u.name}</strong>
-          </td>
-          <td>{u.email}</td>
-          <td>
-            <span className="badge badge-primary">
-              {u.role}
-            </span>
-          </td>
-          <td>
-            <span
-              className={`badge ${
-                u.status === "Ativo"
-                  ? "badge-success"
-                  : "badge-warning"
-              }`}
-            >
-              {u.status}
-            </span>
-          </td>
-          <td style={{ display: "flex", gap: "0.5rem" }}>
-            <button className="btn btn-outline">
-              Editar
-            </button>
-            <button className="btn btn-outline" style={{ color: "red" }}>
-              Bloquear
-            </button>
-          </td>
-        </tr>
-      ))}
     </>
   );
 }
@@ -2719,6 +2920,7 @@ function SubmeterIdeia() {
         await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
       }
       await executarAnaliseViabilidade();
+      await ctx?.refreshNavBadges?.();
       ctx?.setModal?.({ open: true, message: "Ideia enviada e analisada com sucesso." });
     } catch (err) {
       // Fallback para não quebrar o fluxo atual enquanto o login API ainda está em transição.
@@ -3105,6 +3307,7 @@ function MinhasIdeias() {
     try {
       const updated = await updateIdeaStatus(idea.id, nextStatus);
       setIdeias((prev) => prev.map((i) => (Number(i.id) === Number(idea.id) ? { ...i, ...updated } : i)));
+      await ctx?.refreshNavBadges?.();
       ctx?.setModal?.({
         open: true,
         message: nextStatus === "active"
@@ -3336,9 +3539,11 @@ function ChecklistEstrategico() {
   const [progressMap, setProgressMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const loadStrategicData = async (selectedTrack = track) => {
     setLoading(true);
+    setLoadError("");
     try {
       const localIdeas = parseJsonSafe(localStorage.getItem("angostart_ideas_local"), []);
       const latestIdea = Array.isArray(localIdeas) && localIdeas.length ? localIdeas[0] : {};
@@ -3362,7 +3567,7 @@ function ChecklistEstrategico() {
       });
       setProgressMap(map);
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: `Falha ao carregar checklist estratégico: ${err.message}` });
+      setLoadError(err.message || "Falha ao carregar checklist estratégico.");
       setSteps([]);
     } finally {
       setLoading(false);
@@ -3420,7 +3625,28 @@ function ChecklistEstrategico() {
         </div>
       </div>
 
-      <div className="dashboard-card" style={{ marginBottom: "20px" }}>
+      {loadError && (
+        <div className="dashboard-card" style={{ marginBottom: "20px", border: "1px solid #f59e0b", background: "#fffbeb" }}>
+          <div style={{ color: "#92400e", fontWeight: 700, marginBottom: "6px" }}>
+            Não foi possível carregar o checklist estratégico
+          </div>
+          <div style={{ color: "#78350f", fontSize: "0.9rem", marginBottom: "10px" }}>
+            {loadError}
+          </div>
+          {String(loadError).toLowerCase().includes("plano atual não inclui este recurso") && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: "auto" }}
+              onClick={() => setCurrentPage("assinatura")}
+            >
+              Atualizar plano
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="dashboard-card" style={{ marginBottom: "20px", opacity: loadError ? 0.65 : 1 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
           <strong>Progresso estratégico</strong>
           <span style={{ color: "var(--primary-600)", fontWeight: 700 }}>{progressPct}%</span>
@@ -3436,6 +3662,8 @@ function ChecklistEstrategico() {
       <div style={{ display: "grid", gap: "12px" }}>
         {loading ? (
           <div className="dashboard-card"><p>A carregar checklist estratégico...</p></div>
+        ) : loadError ? (
+          <div className="dashboard-card"><p>Checklist indisponível para o plano atual.</p></div>
         ) : (
           steps.map((step, idx) => {
             const completed = !!progressMap[step.key]?.completed;
@@ -3936,7 +4164,7 @@ function Mentoria() {
                 textOverflow: 'ellipsis'
               }}
             >
-              Proposta de Equity: 5% por $25k...
+              Proposta de Equity: 5% por Kz 25.000...
             </p>
             <span className="badge badge-warning" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
               Pendente
@@ -4022,7 +4250,7 @@ function Mentoria() {
           >
             <p style={{ margin: 0, fontSize: '0.9rem' }}>
               Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
-              25.000 USD para expansão em Benguela em troca de 5% de equity.
+              25.000 Kz para expansão em Benguela em troca de 5% de equity.
             </p>
             <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
               10:30 AM

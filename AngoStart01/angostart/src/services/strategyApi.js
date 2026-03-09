@@ -1,7 +1,16 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
 import { requestJson } from "./httpClient";
 
+function getRequiredToken() {
+  const token = localStorage.getItem("angostart_token");
+  if (!token) {
+    throw new Error("Sem token. Faça login novamente.");
+  }
+  return token;
+}
+
 export async function getStrategicChecklist(track = "validacao", context = {}) {
+  const token = getRequiredToken();
   const params = new URLSearchParams({
     track,
     sector: context.sector || "",
@@ -10,13 +19,14 @@ export async function getStrategicChecklist(track = "validacao", context = {}) {
     viabilityScore: String(Number(context.viabilityScore || 0)),
     hasMvp: context.hasMvp ? "true" : "false",
   });
-  const data = await requestJson(`${API_BASE}/strategy/checklist?${params.toString()}`);
+  const data = await requestJson(`${API_BASE}/strategy/checklist?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return data.steps;
 }
 
 export async function getStrategicProgress() {
-  const token = localStorage.getItem("angostart_token");
-  if (!token) return [];
+  const token = getRequiredToken();
 
   const data = await requestJson(`${API_BASE}/strategy/progress`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -25,10 +35,7 @@ export async function getStrategicProgress() {
 }
 
 export async function updateStrategicProgress(payload) {
-  const token = localStorage.getItem("angostart_token");
-  if (!token) {
-    throw new Error("Sem token para guardar progresso estratégico.");
-  }
+  const token = getRequiredToken();
 
   await requestJson(`${API_BASE}/strategy/progress`, {
     method: "POST",
