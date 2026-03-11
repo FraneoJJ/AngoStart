@@ -2664,7 +2664,7 @@ function Relatorio() {
       <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px'}}>
         <div className="dashboard-card">
           <h3 className="dashboard-card-title">Distribuição de Usuários</h3>
-          <p className="dashboard-card-description">Divisão por tipo de perfil</p>
+          <p className="dashboard-card-description">Divisão por tipo de perfil no mês selecionado</p>
           
           <div style={{marginTop: '20px'}}>
             <div style={{marginBottom: '15px'}}>
@@ -3303,6 +3303,11 @@ function SubmeterIdeia() {
   };
 
   const enviarParaAnalise = async () => {
+    if (!dados.nome || !dados.descricao || !dados.setor || !dados.cidade || !dados.regiao) {
+      ctx?.setModal?.({ open: true, message: "Preencha os campos obrigatórios das fases anteriores antes de submeter." });
+      return;
+    }
+
     const lat = Number(dados.lat || 0);
     const lng = Number(dados.lng || 0);
     const payload = {
@@ -3321,23 +3326,44 @@ function SubmeterIdeia() {
       status: "submitted",
     };
 
+    setAnalisando(true);
     try {
-      await createIdea(payload);
-      if (questionarioSessionId && Object.keys(questionarioRespostas).length > 0) {
-        await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
+      const createdIdea = await createIdea(payload);
+      let activeSessionId = questionarioSessionId;
+
+      if (!activeSessionId) {
+        const generatedSession = await generateQuestionnaire({
+          ideaId: Number(createdIdea?.id) || undefined,
+          context: {
+            sector: dados.setor,
+            city: dados.cidade,
+            region: dados.regiao,
+            initialCapital: Number(dados.capital || 0),
+            problem: dados.problema,
+            differentialText: dados.diferencial,
+            targetAudience: dados.publico,
+          },
+        });
+        activeSessionId = generatedSession?.id || null;
+        setQuestionarioSessionId(activeSessionId);
+        setQuestionarioPerguntas(generatedSession?.questions || []);
       }
-      await executarAnaliseViabilidade();
+
+      if (activeSessionId && Object.keys(questionarioRespostas).length > 0) {
+        await saveQuestionnaireAnswers(activeSessionId, questionarioRespostas);
+      }
+
+      await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
       await ctx?.refreshNavBadges?.();
       ctx?.setModal?.({ open: true, message: "Ideia enviada e analisada com sucesso." });
     } catch (err) {
-      // Fallback para não quebrar o fluxo atual enquanto o login API ainda está em transição.
       salvarRascunhoLocal();
       ctx?.setModal?.({
         open: true,
-        message: `Não foi possível completar o fluxo na API (${err.message}). Salvamos localmente e seguimos com a análise simulada.`,
+        message: `Não foi possível completar o fluxo na API (${err.message}). O rascunho foi salvo localmente.`,
       });
-      simularAnaliseIA();
-      return;
+    } finally {
+      setAnalisando(false);
     }
   };
 
@@ -3345,13 +3371,15 @@ function SubmeterIdeia() {
     setGerandoQuestionario(true);
     try {
       const session = await generateQuestionnaire({
-        sector: dados.setor,
-        city: dados.cidade,
-        region: dados.regiao,
-        initialCapital: Number(dados.capital || 0),
-        problem: dados.problema,
-        differentialText: dados.diferencial,
-        targetAudience: dados.publico,
+        context: {
+          sector: dados.setor,
+          city: dados.cidade,
+          region: dados.regiao,
+          initialCapital: Number(dados.capital || 0),
+          problem: dados.problema,
+          differentialText: dados.diferencial,
+          targetAudience: dados.publico,
+        },
       });
       setQuestionarioSessionId(session.id);
       setQuestionarioPerguntas(session.questions || []);
@@ -3378,9 +3406,10 @@ function SubmeterIdeia() {
     }
   };
 
-  const executarAnaliseViabilidade = async () => {
+  const executarAnaliseViabilidade = async (ideaId, sessionId) => {
     const report = await analyzeViability({
-      questionnaireSessionId: questionarioSessionId || undefined,
+      ideaId: ideaId || undefined,
+      questionnaireSessionId: sessionId || questionarioSessionId || undefined,
       idea: {
         title: dados.nome,
         description: dados.descricao,
@@ -3405,22 +3434,6 @@ function SubmeterIdeia() {
     setEtapa(7);
   };
 
-  const simularAnaliseIA = () => {
-    setAnalisando(true);
-    // Simulando o tempo de processamento da IA
-    setTimeout(() => {
-      setResultadoIA({
-        viabilidade: "Alta",
-        pontosFortes: ["Setor em crescimento", "Solução escalável", "Capital inicial sólido"],
-        pontosFracos: ["Concorrência estabelecida", "Dependência de logística"],
-        melhorias: "Focar na validação do MVP com usuários reais antes da expansão em larga escala.",
-        score: 85
-      });
-      setAnalisando(false);
-      setEtapa(7); // Vai para a tela de resultado
-    }, 3000);
-  };
-
   // --- RENDERS DAS FASES ---
 
   const renderFase1 = () => (
@@ -3437,6 +3450,19 @@ function SubmeterIdeia() {
           <option value="Fintech">Fintech</option>
           <option value="Agrotech">Agrotech</option>
           <option value="Educação">Educação</option>
+          <option value="Saúde">Saúde</option>
+          <option value="Comércio e Retalho">Comércio e Retalho</option>
+          <option value="Logística e Transportes">Logística e Transportes</option>
+          <option value="Energia e Águas">Energia e Águas</option>
+          <option value="Construção e Imobiliário">Construção e Imobiliário</option>
+          <option value="Pescas e Aquicultura">Pescas e Aquicultura</option>
+          <option value="Indústria e Transformação">Indústria e Transformação</option>
+          <option value="Petróleo e Gás">Petróleo e Gás</option>
+          <option value="Mineração">Mineração</option>
+          <option value="Turismo e Hotelaria">Turismo e Hotelaria</option>
+          <option value="Tecnologia e Software">Tecnologia e Software</option>
+          <option value="Telecomunicações">Telecomunicações</option>
+          <option value="Serviços Profissionais">Serviços Profissionais</option>
         </select>
       </div>
       <div className="form-group">

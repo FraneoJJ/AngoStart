@@ -138,7 +138,8 @@ export async function getReportSummaryByMonth(startDate, endDate) {
   const [[users]] = await pool.execute(
     `SELECT COUNT(*) AS total
      FROM users
-     WHERE created_at >= ? AND created_at < ?`,
+     WHERE created_at >= ? AND created_at < ?
+       AND role IN ('empreendedor', 'investidor', 'mentor')`,
     [startDate, endDate]
   );
   return {
@@ -147,14 +148,20 @@ export async function getReportSummaryByMonth(startDate, endDate) {
   };
 }
 
-export async function getReportRoleDistribution() {
-  const [[empreendedores]] = await pool.execute(`SELECT COUNT(*) AS total FROM empreendedor_profiles`);
-  const [[investidores]] = await pool.execute(`SELECT COUNT(*) AS total FROM investidor_profiles`);
-  const [[mentores]] = await pool.execute(`SELECT COUNT(*) AS total FROM mentor_profiles`);
+export async function getReportRoleDistributionByMonth(startDate, endDate) {
+  const [rows] = await pool.execute(
+    `SELECT role, COUNT(*) AS total
+     FROM users
+     WHERE created_at >= ? AND created_at < ?
+       AND role IN ('empreendedor', 'investidor', 'mentor')
+     GROUP BY role`,
+    [startDate, endDate]
+  );
+  const map = new Map(rows.map((r) => [r.role, Number(r.total || 0)]));
   return {
-    empreendedores: Number(empreendedores?.total || 0),
-    investidores: Number(investidores?.total || 0),
-    mentores: Number(mentores?.total || 0),
+    empreendedores: map.get("empreendedor") || 0,
+    investidores: map.get("investidor") || 0,
+    mentores: map.get("mentor") || 0,
   };
 }
 

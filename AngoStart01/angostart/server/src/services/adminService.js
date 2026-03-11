@@ -3,7 +3,7 @@ import {
   findInvestorByUserId,
   findUserRoleById,
   getReportActivityByMonth,
-  getReportRoleDistribution,
+  getReportRoleDistributionByMonth,
   getReportSummaryByMonth,
   listInvestorsWithProfiles,
   listAvailableReportMonths,
@@ -189,7 +189,7 @@ export async function getPerformanceReport(selectedMonth = "") {
 
   const [summary, distribution, activity] = await Promise.all([
     getReportSummaryByMonth(range.startDate, range.endDate),
-    getReportRoleDistribution(),
+    getReportRoleDistributionByMonth(range.startDate, range.endDate),
     getReportActivityByMonth(range.startDate, range.endDate),
   ]);
 
