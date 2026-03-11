@@ -109,3 +109,88 @@ export async function findInvestorByUserId(userId) {
   );
   return rows[0] || null;
 }
+
+export async function listAvailableReportMonths() {
+  const [rows] = await pool.execute(
+    `SELECT DISTINCT month_key
+     FROM (
+       SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key FROM users
+       UNION ALL
+       SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key FROM ideas
+       UNION ALL
+       SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key FROM mentor_profiles
+       UNION ALL
+       SELECT DATE_FORMAT(created_at, '%Y-%m') AS month_key FROM investidor_profiles
+     ) m
+     WHERE month_key IS NOT NULL
+     ORDER BY month_key DESC`
+  );
+  return rows.map((r) => r.month_key);
+}
+
+export async function getReportSummaryByMonth(startDate, endDate) {
+  const [[ideas]] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM ideas
+     WHERE created_at >= ? AND created_at < ?`,
+    [startDate, endDate]
+  );
+  const [[users]] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM users
+     WHERE created_at >= ? AND created_at < ?`,
+    [startDate, endDate]
+  );
+  return {
+    ideasInMonth: Number(ideas?.total || 0),
+    newSignups: Number(users?.total || 0),
+  };
+}
+
+export async function getReportRoleDistribution() {
+  const [[empreendedores]] = await pool.execute(`SELECT COUNT(*) AS total FROM empreendedor_profiles`);
+  const [[investidores]] = await pool.execute(`SELECT COUNT(*) AS total FROM investidor_profiles`);
+  const [[mentores]] = await pool.execute(`SELECT COUNT(*) AS total FROM mentor_profiles`);
+  return {
+    empreendedores: Number(empreendedores?.total || 0),
+    investidores: Number(investidores?.total || 0),
+    mentores: Number(mentores?.total || 0),
+  };
+}
+
+export async function getReportActivityByMonth(startDate, endDate) {
+  const [[mentoringSessions]] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM mentor_profiles
+     WHERE created_at >= ? AND created_at < ?`,
+    [startDate, endDate]
+  );
+
+  const [[investmentsDone]] = await pool.execute(
+    `SELECT COUNT(*) AS total
+     FROM investidor_profiles
+     WHERE created_at >= ? AND created_at < ?`,
+    [startDate, endDate]
+  );
+
+  const [[statusCounts]] = await pool.execute(
+    `SELECT
+      SUM(CASE WHEN verification_status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+      SUM(CASE WHEN verification_status IN ('approved', 'rejected', 'pending') THEN 1 ELSE 0 END) AS total_count
+     FROM (
+       SELECT verification_status FROM mentor_profiles
+       UNION ALL
+       SELECT verification_status FROM investidor_profiles
+     ) x`
+  );
+
+  const approved = Number(statusCounts?.approved_count || 0);
+  const total = Number(statusCounts?.total_count || 0);
+  const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
+
+  return {
+    mentoringSessions: Number(mentoringSessions?.total || 0),
+    investmentsDone: Number(investmentsDone?.total || 0),
+    approvalRate,
+  };
+}

@@ -6,6 +6,12 @@ const router = Router();
 
 router.get("/users", requireAuth, requireRole("admin"), adminController.users);
 router.get(
+  "/reports/performance",
+  requireAuth,
+  requireRole("admin"),
+  adminController.performanceReport
+);
+router.get(
   "/investors",
   requireAuth,
   requireRole("empreendedor", "admin"),

@@ -2,7 +2,11 @@ import { z } from "zod";
 import {
   findInvestorByUserId,
   findUserRoleById,
+  getReportActivityByMonth,
+  getReportRoleDistribution,
+  getReportSummaryByMonth,
   listInvestorsWithProfiles,
+  listAvailableReportMonths,
   listUsersWithProfiles,
   updateInvestidorVerificationStatus,
   updateMentorVerificationStatus,
@@ -148,4 +152,54 @@ export async function getInvestorDetailsForEntrepreneur(investorUserId) {
     throw { status: 404, message: "Investidor não encontrado." };
   }
   return normalizeInvestor(row);
+}
+
+function monthLabel(monthKey) {
+  const [year, month] = String(monthKey || "").split("-");
+  const months = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
+  const monthIdx = Number(month) - 1;
+  if (!year || Number.isNaN(monthIdx) || monthIdx < 0 || monthIdx > 11) return monthKey;
+  return `${months[monthIdx]} ${year}`;
+}
+
+function monthRange(monthKey) {
+  const [yearRaw, monthRaw] = String(monthKey || "").split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!year || !month || month < 1 || month > 12) return null;
+  const startDate = `${yearRaw}-${String(month).padStart(2, "0")}-01 00:00:00`;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const endDate = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01 00:00:00`;
+  return { startDate, endDate };
+}
+
+export async function getPerformanceReport(selectedMonth = "") {
+  const months = await listAvailableReportMonths();
+  const fallbackMonth = months[0] || new Date().toISOString().slice(0, 7);
+  const referenceMonth = selectedMonth && months.includes(selectedMonth) ? selectedMonth : fallbackMonth;
+  const monthOptions = months.length > 0 ? months : [referenceMonth];
+  const range = monthRange(referenceMonth);
+  if (!range) {
+    throw { status: 400, message: "Mês de referência inválido." };
+  }
+
+  const [summary, distribution, activity] = await Promise.all([
+    getReportSummaryByMonth(range.startDate, range.endDate),
+    getReportRoleDistribution(),
+    getReportActivityByMonth(range.startDate, range.endDate),
+  ]);
+
+  return {
+    referenceMonth,
+    referenceLabel: monthLabel(referenceMonth),
+    availableMonths: monthOptions.map((m) => ({ value: m, label: monthLabel(m) })),
+    summary,
+    distribution,
+    activity,
+    collectedAt: new Date().toISOString(),
+  };
 }

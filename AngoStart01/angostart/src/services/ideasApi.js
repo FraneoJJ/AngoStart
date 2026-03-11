@@ -34,6 +34,17 @@ export async function getMyIdeas() {
   return data.ideas || [];
 }
 
+export async function getIdeaById(ideaId) {
+  const token = localStorage.getItem("angostart_token");
+  if (!token) {
+    throw new Error("Sem token. Faça login para ver os detalhes da ideia.");
+  }
+  const data = await requestJson(`${API_BASE}/ideas/${encodeURIComponent(ideaId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data.idea || null;
+}
+
 export async function updateIdeaStatus(ideaId, status) {
   const token = localStorage.getItem("angostart_token");
   if (!token) {

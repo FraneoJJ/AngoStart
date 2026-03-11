@@ -39,3 +39,13 @@ export async function investorById(req, res, next) {
     next(err);
   }
 }
+
+export async function performanceReport(req, res, next) {
+  try {
+    const month = String(req.query?.month || "");
+    const report = await adminService.getPerformanceReport(month);
+    res.status(200).json({ success: true, report });
+  } catch (err) {
+    next(err);
+  }
+}

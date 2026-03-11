@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
-import { createIdea, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
+import { createIdea, getIdeaById, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
 import { generateQuestionnaire, saveQuestionnaireAnswers } from "../services/questionnaireApi";
 import { analyzeViability } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
@@ -10,6 +10,9 @@ import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } 
 import { getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import { updateMyProfile } from "../services/authApi";
+import { getPerformanceReport } from "../services/reportApi";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import Planos from "../components/SecoesApp/Planos";
 
 const STORAGE_KEY = 'angostart_settings';
@@ -943,7 +946,7 @@ function RenderAdminPage() {
                   <th>Email</th>
                   <th>Função</th>
                   <th>Verificação</th>
-                  <th>ID Verificação</th>
+                  <th>Ver</th>
                 </tr>
               </thead>
               <tbody>
@@ -953,7 +956,16 @@ function RenderAdminPage() {
                     <td>{u.email}</td>
                     <td><span className="badge badge-primary">{u.role}</span></td>
                     <td><span className="badge badge-warning">Pendente</span></td>
-                    <td>{u.verificationId || "-"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ width: "auto", padding: "6px 12px" }}
+                        onClick={() => setCurrentPage("usuarios")}
+                      >
+                        Ver
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1133,7 +1145,7 @@ return (
                   (() => {
                     const badgeValue = Object.prototype.hasOwnProperty.call(navBadges, item.id)
                       ? navBadges[item.id]
-                      : item.badge;
+                      : null;
                     return (
                   <div
                     key={item.id}
@@ -2163,6 +2175,7 @@ function Usuarios() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState(null);
+  const [aboutUser, setAboutUser] = useState(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -2222,29 +2235,81 @@ function Usuarios() {
 
   const canModerate = (role) => role === "mentor" || role === "investidor";
 
+  const profileFieldLabel = (key) => {
+    const labels = {
+      phone: "Telefone",
+      businessName: "Nome do negócio",
+      business_name: "Nome do negócio",
+      businessSector: "Setor do negócio",
+      business_sector: "Setor do negócio",
+      businessStage: "Fase do negócio",
+      business_stage: "Fase do negócio",
+      businessLocation: "Local do negócio",
+      business_location: "Local do negócio",
+      identityNumber: "Número de identificação",
+      identity_number: "Número de identificação",
+      birthDate: "Data de nascimento",
+      birth_date: "Data de nascimento",
+      province: "Província",
+      expertiseArea: "Área de especialidade",
+      expertise_area: "Área de especialidade",
+      experienceYears: "Anos de experiência",
+      experience_years: "Anos de experiência",
+      company: "Empresa",
+      currentRole: "Função atual",
+      current_role: "Função atual",
+      investorType: "Tipo de investidor",
+      investor_type: "Tipo de investidor",
+      profession: "Profissão",
+      incomeSource: "Fonte de renda",
+      income_source: "Fonte de renda",
+      investmentRange: "Faixa de investimento",
+      investment_range: "Faixa de investimento",
+      companyName: "Nome da empresa",
+      company_name: "Nome da empresa",
+      companyNif: "NIF da empresa",
+      company_nif: "NIF da empresa",
+      companyRole: "Cargo na empresa",
+      company_role: "Cargo na empresa",
+      hasInvestmentExperience: "Tem experiência com investimento",
+      has_investment_experience: "Tem experiência com investimento",
+      investmentExperienceArea: "Área da experiência em investimento",
+      investment_experience_area: "Área da experiência em investimento",
+      linkedin: "LinkedIn",
+      linkedinOrWebsite: "LinkedIn ou website",
+      linkedin_or_website: "LinkedIn ou website",
+      verificationStatus: "Status de verificação",
+      verification_status: "Status de verificação",
+    };
+    return labels[key] || key;
+  };
+
+  const openAbout = (u) => {
+    setAboutUser(u);
+  };
+
   return (
     <>
-    <div className="dashboard-card">
-      <div className="dashboard-card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+    <div className="dashboard-card admin-users-card" style={{ maxWidth: "100%", overflow: "hidden" }}>
+      <div className="dashboard-card-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: "12px", flexWrap: "wrap"}}>
         <div>
           <h3 className="dashboard-card-title">Gerenciamento de Usuários</h3>
           <p className="dashboard-card-description">Visualize e gerencie todos os usuários cadastrados na plataforma.</p>
         </div>
-        <button className="btn btn-primary" onClick={loadUsers} disabled={loading}>Atualizar</button>
+        <button className="btn btn-primary admin-users-btn admin-users-refresh" onClick={loadUsers} disabled={loading}>Atualizar</button>
       </div>
       
-      <div style={{marginTop: '20px'}}>
+      <div className="admin-users-content">
         {loading ? (
           <p>A carregar usuários...</p>
         ) : (
-          <table className="data-table">
+          <div className="admin-users-table-wrapper" style={{ width: "100%", overflowX: "auto" }}>
+          <table className="data-table admin-users-table" style={{ minWidth: "620px" }}>
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Email</th>
                 <th>Função</th>
                 <th>Status</th>
-                <th>ID Verificação</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -2252,7 +2317,6 @@ function Usuarios() {
               {users.map((u) => (
                 <tr key={u.id}>
                   <td><strong>{u.name}</strong></td>
-                  <td>{u.email}</td>
                   <td>
                     <span className="badge badge-primary">{roleLabel(u.role)}</span>
                   </td>
@@ -2261,12 +2325,18 @@ function Usuarios() {
                       {statusLabel(u.verificationStatus, u.role)}
                     </span>
                   </td>
-                  <td>{u.verificationId || "-"}</td>
-                  <td style={{ display: "flex", gap: "0.5rem" }}>
+                  <td className="admin-users-actions">
+                    <button
+                      className="btn btn-outline admin-users-btn"
+                      type="button"
+                      onClick={() => openAbout(u)}
+                    >
+                      Sobre
+                    </button>
                     {canModerate(u.role) ? (
                       <>
                         <button
-                          className="btn btn-primary"
+                          className="btn btn-primary admin-users-btn"
                           type="button"
                           disabled={savingUserId === u.id || u.verificationStatus === "approved"}
                           onClick={() => handleVerification(u.id, "approved")}
@@ -2274,7 +2344,7 @@ function Usuarios() {
                           Aprovar
                         </button>
                         <button
-                          className="btn btn-outline"
+                          className="btn btn-outline admin-users-btn"
                           type="button"
                           style={{ color: "red" }}
                           disabled={savingUserId === u.id || u.verificationStatus === "rejected"}
@@ -2291,21 +2361,102 @@ function Usuarios() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
+
+    {aboutUser && (
+      <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setAboutUser(null)}>
+        <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(860px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
+          <h3 style={{ marginTop: 0 }}>Dados do utilizador</h3>
+          <div style={{ display: "grid", gap: "10px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+              <div className="dashboard-card"><strong>Nome</strong><div>{aboutUser.name || "-"}</div></div>
+              <div className="dashboard-card"><strong>Email</strong><div>{aboutUser.email || "-"}</div></div>
+              <div className="dashboard-card"><strong>Função</strong><div>{roleLabel(aboutUser.role)}</div></div>
+              <div className="dashboard-card"><strong>Status</strong><div>{statusLabel(aboutUser.verificationStatus, aboutUser.role)}</div></div>
+              <div className="dashboard-card">
+                <strong>Password</strong>
+                <div style={{ marginTop: "6px", letterSpacing: "2px" }}>•••••••• (protegida)</div>
+              </div>
+            </div>
+            <div className="dashboard-card">
+              <strong>Dados de perfil</strong>
+              <div style={{ marginTop: "8px", display: "grid", gap: "6px", fontSize: "0.92rem" }}>
+                {Object.entries(aboutUser.profile || {}).length === 0 ? (
+                  <span>Sem dados de perfil disponíveis.</span>
+                ) : (
+                  Object.entries(aboutUser.profile || {}).map(([k, v]) => (
+                    <div key={k}><strong>{profileFieldLabel(k)}:</strong> {v == null || v === "" ? "-" : String(v)}</div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn btn-primary" style={{ width: "auto" }} onClick={() => setAboutUser(null)}>Fechar</button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
 function Ideias() {
+  const ctx = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
+  const [ideas, setIdeas] = useState([]);
+  const [selectedIdea, setSelectedIdea] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const all = await getMarketplaceIdeas();
+        const pending = (all || []).filter((i) => i.status === "submitted" || i.status === "analyzing");
+        setIdeas(pending);
+      } catch (err) {
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar ideias pendentes: ${err.message}` });
+        setIdeas([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const formatDate = (iso) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-PT");
+  };
+
+  const openIdeaReview = async (ideaId) => {
+    setLoadingDetails(true);
+    try {
+      const idea = await getIdeaById(ideaId);
+      setSelectedIdea(idea);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar detalhes da ideia: ${err.message}` });
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   return (<>
     <div className="dashboard-card">
       <div className="dashboard-card-header">
         <h3 className="dashboard-card-title">Ideias Pendentes de Aprovação</h3>
         <p className="dashboard-card-description">Ideias aguardando revisão</p>
       </div>
-      
-      <table className="data-table">
+      {loading ? (
+        <p>A carregar ideias...</p>
+      ) : ideas.length === 0 ? (
+        <p>Não há ideias pendentes no momento.</p>
+      ) : (
+      <div style={{ width: "100%", overflowX: "auto" }}>
+      <table className="data-table" style={{ minWidth: "760px" }}>
         <thead>
           <tr>
             <th>Ideia</th>
@@ -2316,63 +2467,182 @@ function Ideias() {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>App de Delivery Local</td>
-            <td>João Silva</td>
-            <td><span className="badge badge-success">87</span></td>
-            <td>20/01/2026</td>
-            <td><button className="btn btn-primary" style={{padding: '0.5rem 1rem', fontSize: '0.875rem'}}>Revisar</button></td>
-          </tr>
-          <tr>
-            <td>Plataforma de Freelancers</td>
-            <td>Ana Mendes</td>
-            <td><span className="badge badge-success">92</span></td>
-            <td>21/01/2026</td>
-            <td><button className="btn btn-primary" style={{padding: '0.5rem 1rem', fontSize: '0.875rem'}}>Revisar</button></td>
-          </tr>
-          <tr>
-            <td>E-commerce de Produtos Locais</td>
-            <td>Carlos Dias</td>
-            <td><span className="badge badge-warning">75</span></td>
-            <td>22/01/2026</td>
-            <td><button className="btn btn-primary" style={{padding: '0.5rem 1rem', fontSize: '0.875rem'}}>Revisar</button></td>
-          </tr>
+          {ideas.map((idea) => (
+            <tr key={idea.id}>
+              <td>{idea.title}</td>
+              <td>{idea.owner_name || "-"}</td>
+              <td><span className={`badge ${Number(idea.viability_score || 0) >= 80 ? "badge-success" : "badge-warning"}`}>{idea.viability_score ?? "-"}</span></td>
+              <td>{formatDate(idea.created_at)}</td>
+              <td>
+                <button
+                  className="btn btn-primary"
+                  style={{padding: '0.5rem 1rem', fontSize: '0.875rem', width: 'auto'}}
+                  onClick={() => openIdeaReview(idea.id)}
+                  disabled={loadingDetails}
+                >
+                  {loadingDetails ? "A carregar..." : "Revisar"}
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
+      </div>
+      )}
     </div>
+
+    {selectedIdea && (
+      <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setSelectedIdea(null)}>
+        <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(860px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
+          <h3 style={{ marginTop: 0 }}>Análise da ideia</h3>
+          <div style={{ display: "grid", gap: "10px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+              <div className="dashboard-card"><strong>Título</strong><div>{selectedIdea.title || "-"}</div></div>
+              <div className="dashboard-card"><strong>Empreendedor</strong><div>{selectedIdea.owner_name || "-"}</div></div>
+              <div className="dashboard-card"><strong>Email</strong><div>{selectedIdea.owner_email || "-"}</div></div>
+              <div className="dashboard-card"><strong>Status</strong><div>{selectedIdea.status || "-"}</div></div>
+              <div className="dashboard-card"><strong>Score IA</strong><div>{selectedIdea.viability_score ?? "-"}</div></div>
+              <div className="dashboard-card"><strong>Data</strong><div>{formatDate(selectedIdea.created_at)}</div></div>
+            </div>
+            <div className="dashboard-card">
+              <strong>Detalhes da ideia</strong>
+              <div style={{ marginTop: "8px", display: "grid", gap: "6px", fontSize: "0.92rem" }}>
+                <div><strong>Setor:</strong> {selectedIdea.sector || "-"}</div>
+                <div><strong>Cidade:</strong> {selectedIdea.city || "-"}</div>
+                <div><strong>Região:</strong> {selectedIdea.region || "-"}</div>
+                <div><strong>Capital inicial:</strong> {Number(selectedIdea.initial_capital || 0).toLocaleString("pt-PT")} AOA</div>
+                <div><strong>Descrição:</strong> {selectedIdea.description || "-"}</div>
+                <div><strong>Problema:</strong> {selectedIdea.problem || "-"}</div>
+                <div><strong>Diferencial:</strong> {selectedIdea.differential_text || "-"}</div>
+                <div><strong>Público-alvo:</strong> {selectedIdea.target_audience || "-"}</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn btn-primary" style={{ width: "auto" }} onClick={() => setSelectedIdea(null)}>Fechar</button>
+          </div>
+        </div>
+      </div>
+    )}
   </>);
 }
 function Relatorio() {
   const ctx = useContext(AppContext);
-  const t = ctx?.t ?? (k => k);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [report, setReport] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState("");
+
+  const loadReport = useCallback(async (monthValue = "") => {
+    setLoading(true);
+    try {
+      const data = await getPerformanceReport(monthValue);
+      setReport(data);
+      if (!monthValue && data?.referenceMonth) {
+        setSelectedMonth(data.referenceMonth);
+      }
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar relatório: ${err.message}` });
+    } finally {
+      setLoading(false);
+    }
+  }, [ctx]);
+
+  useEffect(() => {
+    loadReport("");
+  }, [loadReport]);
+
+  const handleMonthChange = async (e) => {
+    const month = e.target.value;
+    setSelectedMonth(month);
+    await loadReport(month);
+  };
+
+  const exportReportPdf = async () => {
+    if (!report) return;
+    setExporting(true);
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("Relatório de Performance - AngoStart", 14, 18);
+      doc.setFontSize(11);
+      doc.text(`Mês de referência: ${report.referenceLabel || "-"}`, 14, 27);
+      doc.text(`Coleta: ${new Date(report.collectedAt || Date.now()).toLocaleString("pt-PT")}`, 14, 34);
+
+      autoTable(doc, {
+        startY: 42,
+        head: [["Métrica", "Valor"]],
+        body: [
+          ["Ideias no mês", String(report.summary?.ideasInMonth ?? 0)],
+          ["Novos cadastros", String(report.summary?.newSignups ?? 0)],
+          ["Empreendedores", String(report.distribution?.empreendedores ?? 0)],
+          ["Investidores", String(report.distribution?.investidores ?? 0)],
+          ["Mentores", String(report.distribution?.mentores ?? 0)],
+          ["Sessões de mentoria", String(report.activity?.mentoringSessions ?? 0)],
+          ["Investimentos feitos", String(report.activity?.investmentsDone ?? 0)],
+          ["Taxa de aprovação", `${report.activity?.approvalRate ?? 0}%`],
+        ],
+      });
+
+      const safeMonth = (report.referenceMonth || "mes").replace("-", "_");
+      doc.save(`relatorio_performance_${safeMonth}.pdf`);
+      ctx?.setModal?.({ open: true, message: "Relatório exportado em PDF com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao exportar PDF: ${err.message}` });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const totalDistribution =
+    Number(report?.distribution?.empreendedores || 0) +
+    Number(report?.distribution?.investidores || 0) +
+    Number(report?.distribution?.mentores || 0);
+  const pct = (value) => (totalDistribution > 0 ? Math.max(6, Math.round((Number(value || 0) / totalDistribution) * 100)) : 0);
+
   return (<>
     <div className="reports-container">
       <div className="dashboard-card" style={{marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px', flexWrap: 'wrap'}}>
         <div>
           <h3 style={{margin: '0'}}>Análise de Performance</h3>
           <p style={{margin: '0', color: 'var(--dm-text-muted)', fontSize: '0.9rem'}}>Relatórios detalhados da plataforma</p>
+          <p style={{margin: '6px 0 0', color: 'var(--neutral-500)', fontSize: '0.8rem'}}>
+            Mês de referência dos dados: {report?.referenceLabel || "-"}
+          </p>
         </div>
-        <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+        <div style={{display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap'}}>
           <label>Mês de Referência:</label>
-          <select id="monthFilter" className="input-field" style={{padding: '5px 10px ', borderRadius: '5px', border: '1px solid var(--dm-border)'}}>
-            <option value="janeiro-2026">Janeiro 2026</option>
-            <option value="dezembro-2025">Dezembro 2025</option>
-            <option value="novembro-2025">Novembro 2025</option>
+          <select
+            id="monthFilter"
+            className="input-field"
+            value={selectedMonth}
+            onChange={handleMonthChange}
+            style={{padding: '5px 10px', borderRadius: '5px', border: '1px solid var(--dm-border)', minWidth: '170px'}}
+          >
+            {(report?.availableMonths || []).map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
           </select>
-          <button className="btn btn-primary"  onClick={() => ctx?.setModal?.({ open: true, message: t('config.reportExported') })} style={{padding: '5px 15px'}}>Exportar PDF</button>
+          <button className="btn btn-primary" onClick={exportReportPdf} disabled={exporting || loading} style={{padding: '5px 15px', width: 'auto'}}>
+            {exporting ? "A exportar..." : "Exportar PDF"}
+          </button>
         </div>
       </div>
 
+      {loading ? (
+        <div className="dashboard-card"><p>A carregar relatório...</p></div>
+      ) : (
+      <>
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-card-content">
             <div className="stat-info">
               <div className="stat-label">Ideias no Mês</div>
-              <div className="stat-value" id="totalIdeas">142</div>
-              <div className="stat-change" style={{color: '#10b981'}}>↑ 12% vs mês passado</div>
+              <div className="stat-value">{report?.summary?.ideasInMonth ?? 0}</div>
+              <div className="stat-change">Coletado no mês selecionado</div>
             </div>
             <div className="stat-icon-wrapper stat-icon-primary">
-              ${icons.lightbulb}
+              {icons.lightbulb}
             </div>
           </div>
         </div>
@@ -2381,11 +2651,11 @@ function Relatorio() {
           <div className="stat-card-content">
             <div className="stat-info">
               <div className="stat-label">Novos Cadastros</div>
-              <div className="stat-value">87</div>
-              <div className="stat-change">Total este mês</div>
+              <div className="stat-value">{report?.summary?.newSignups ?? 0}</div>
+              <div className="stat-change">Total no mês selecionado</div>
             </div>
             <div className="stat-icon-wrapper stat-icon-info">
-              ${icons.user}
+              {icons.user}
             </div>
           </div>
         </div>
@@ -2400,30 +2670,30 @@ function Relatorio() {
             <div style={{marginBottom: '15px'}}>
               <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '5px'}}>
                 <span>Empreendedores</span>
-                <strong>650</strong>
+                <strong>{report?.distribution?.empreendedores ?? 0}</strong>
               </div>
               <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
-                <div style={{width: '65%', background: 'var(--primary-color, #2563eb)', height: '100%', borderRadius: '5px'}}></div>
+                <div style={{width: `${pct(report?.distribution?.empreendedores)}%`, background: 'var(--primary-color, #2563eb)', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
 
             <div style={{marginBottom: '15px'}}>
               <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '5px'}}>
                 <span>Investidores</span>
-                <strong>120</strong>
+                <strong>{report?.distribution?.investidores ?? 0}</strong>
               </div>
               <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
-                <div style={{width: '25%', background: '#10b981', height: '100%', borderRadius: '5px'}}></div>
+                <div style={{width: `${pct(report?.distribution?.investidores)}%`, background: '#10b981', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
 
             <div style={{marginBottom: '15px'}}>
               <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '5px'}}>
                 <span>Mentores</span>
-                <strong>45</strong>
+                <strong>{report?.distribution?.mentores ?? 0}</strong>
               </div>
               <div style={{width: '100%', background: 'var(--dm-bg)', height: '10px', borderRadius: '5px'}}>
-                <div style={{width: '15%', background: '#f59e0b', height: '100%', borderRadius: '5px'}}></div>
+                <div style={{width: `${pct(report?.distribution?.mentores)}%`, background: '#f59e0b', height: '100%', borderRadius: '5px'}}></div>
               </div>
             </div>
           </div>
@@ -2435,20 +2705,22 @@ function Relatorio() {
             <ul style={{listStyle: 'none', padding: '0'}}>
               <li style={{padding: '10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Sessões de Mentoria</span>
-                <strong>28</strong>
+                <strong>{report?.activity?.mentoringSessions ?? 0}</strong>
               </li>
               <li style={{padding:' 10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Investimentos Feitos</span>
-                <strong>14</strong>
+                <strong>{report?.activity?.investmentsDone ?? 0}</strong>
               </li>
               <li style={{padding: '10px 0', borderBottom: '1px solid var(--dm-border)', display: 'flex', justifyContent: 'space-between'}}>
                 <span>Taxa de Aprovação</span>
-                <strong>78%</strong>
+                <strong>{report?.activity?.approvalRate ?? 0}%</strong>
               </li>
             </ul>
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   </>);
 }

@@ -966,6 +966,103 @@ body.dark-theme .btn-logout:hover {
   .investors-grid .dashboard-card {
     padding: 20px 14px !important;
   }
+
+  .admin-users-card {
+    margin-left: -6px;
+    margin-right: -6px;
+  }
+
+  .admin-users-table-wrapper {
+    margin-left: -6px;
+    margin-right: -6px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .admin-users-table {
+    min-width: 700px !important;
+  }
+}
+
+.admin-users-card {
+  padding: 16px !important;
+}
+
+.admin-users-content {
+  margin-top: 14px;
+}
+
+.admin-users-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-users-password {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-users-btn {
+  width: auto !important;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  line-height: 1.1;
+}
+
+.admin-users-refresh {
+  min-width: 96px;
+}
+
+.admin-users-eye-btn {
+  width: auto !important;
+  min-width: 32px;
+  padding: 4px 7px;
+}
+
+/* Garantir leitura completa em telas pequenas:
+   se o conteúdo passar da área visível, o utilizador consegue rolar */
+.main-content,
+.page-content {
+  min-width: 0;
+}
+
+.page-content > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .page-content {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-content .dashboard-card {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page-content table {
+    min-width: max-content;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-users-card {
+    padding: 10px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .admin-users-actions .admin-users-btn {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+  }
 }
 
 /* Switch (slider) no escuro */
