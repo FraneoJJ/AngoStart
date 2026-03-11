@@ -16,6 +16,9 @@ import {
   findMentorProfileByUserId,
   findProfileDataByUserRole,
   findVerificationByUserRole,
+  updateEmpreendedorProfileByUserId,
+  updateInvestidorProfileByUserId,
+  updateMentorProfileByUserId,
 } from "../models/registrationProfileModel.js";
 import { signAccessToken } from "../utils/jwt.js";
 
@@ -67,6 +70,10 @@ const loginSchema = z.object({
 
 const switchRoleSchema = z.object({
   role: z.enum(USER_ROLES),
+});
+
+const updateProfileSchema = z.object({
+  profileData: profileSchema,
 });
 
 async function listAvailableRoles(user) {
@@ -265,4 +272,54 @@ export async function switchRole(authUser, input) {
   const userWithVerification = await enrichUserWithVerification(user, data.role);
   const token = signAccessToken({ sub: user.id, role: data.role, email: user.email });
   return { user: userWithVerification, token };
+}
+
+export async function updateMyProfile(authUser, input) {
+  const data = updateProfileSchema.parse(input || {});
+  const role = authUser?.role;
+  const userId = Number(authUser?.sub);
+  const profile = data.profileData || {};
+
+  if (!userId || !role) throw { status: 401, message: "Sessão inválida." };
+
+  if (role === "empreendedor") {
+    await updateEmpreendedorProfileByUserId(userId, {
+      phone: profile.phone,
+      businessName: profile.businessName,
+      businessSector: profile.businessSector,
+      businessStage: profile.businessStage,
+      businessLocation: profile.businessLocation,
+    });
+  } else if (role === "mentor") {
+    await updateMentorProfileByUserId(userId, {
+      phone: profile.phone,
+      province: profile.province,
+      expertiseArea: profile.expertiseArea,
+      experienceYears: profile.experienceYears,
+      company: profile.company,
+      currentRole: profile.currentRole,
+      linkedin: profile.linkedin,
+    });
+  } else if (role === "investidor") {
+    await updateInvestidorProfileByUserId(userId, {
+      phone: profile.phone,
+      province: profile.province,
+      investorType: profile.investorType,
+      profession: profile.profession,
+      incomeSource: profile.incomeSource,
+      investmentRange: profile.investmentRange,
+      companyName: profile.companyName,
+      companyNif: profile.companyNif,
+      companyRole: profile.companyRole,
+      hasInvestmentExperience: profile.hasInvestmentExperience,
+      investmentExperienceArea: profile.investmentExperienceArea,
+      linkedinOrWebsite: profile.linkedinOrWebsite,
+    });
+  } else {
+    throw { status: 400, message: "Este tipo de conta não possui perfil editável." };
+  }
+
+  const user = await findUserPublicById(userId);
+  const userWithVerification = await enrichUserWithVerification(user, role);
+  return { user: userWithVerification };
 }

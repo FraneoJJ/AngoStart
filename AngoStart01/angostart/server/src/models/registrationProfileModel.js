@@ -109,6 +109,95 @@ export async function findInvestidorProfileByUserId(userId) {
   return rows[0] || null;
 }
 
+export async function updateEmpreendedorProfileByUserId(userId, input) {
+  const [result] = await pool.execute(
+    `UPDATE empreendedor_profiles
+     SET
+       phone = ?,
+       business_name = ?,
+       business_sector = ?,
+       business_stage = ?,
+       business_location = ?,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?`,
+    [
+      input.phone || null,
+      input.businessName || null,
+      input.businessSector || null,
+      input.businessStage || null,
+      input.businessLocation || null,
+      userId,
+    ]
+  );
+  return result.affectedRows;
+}
+
+export async function updateMentorProfileByUserId(userId, input) {
+  const [result] = await pool.execute(
+    `UPDATE mentor_profiles
+     SET
+       phone = ?,
+       province = ?,
+       expertise_area = ?,
+       experience_years = ?,
+       company = ?,
+       current_role = ?,
+       linkedin = ?,
+       verification_status = 'pending',
+       updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?`,
+    [
+      input.phone || null,
+      input.province || null,
+      input.expertiseArea || null,
+      input.experienceYears != null ? Number(input.experienceYears) : null,
+      input.company || null,
+      input.currentRole || null,
+      input.linkedin || null,
+      userId,
+    ]
+  );
+  return result.affectedRows;
+}
+
+export async function updateInvestidorProfileByUserId(userId, input) {
+  const [result] = await pool.execute(
+    `UPDATE investidor_profiles
+     SET
+       phone = ?,
+       province = ?,
+       investor_type = ?,
+       profession = ?,
+       income_source = ?,
+       investment_range = ?,
+       company_name = ?,
+       company_nif = ?,
+       company_role = ?,
+       has_investment_experience = ?,
+       investment_experience_area = ?,
+       linkedin_or_website = ?,
+       verification_status = 'pending',
+       updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?`,
+    [
+      input.phone || null,
+      input.province || null,
+      input.investorType || null,
+      input.profession || null,
+      input.incomeSource || null,
+      input.investmentRange || null,
+      input.companyName || null,
+      input.companyNif || null,
+      input.companyRole || null,
+      input.hasInvestmentExperience || null,
+      input.investmentExperienceArea || null,
+      input.linkedinOrWebsite || null,
+      userId,
+    ]
+  );
+  return result.affectedRows;
+}
+
 export async function findVerificationByUserRole(userId, role) {
   if (role === "mentor") {
     const [rows] = await dbQuery(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useMemo, useCallback } from "react";
+import React, { useState, useEffect, createContext, useContext, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
 import { createIdea, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
@@ -9,6 +9,7 @@ import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } 
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
 import { getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
+import { updateMyProfile } from "../services/authApi";
 import Planos from "../components/SecoesApp/Planos";
 
 const STORAGE_KEY = 'angostart_settings';
@@ -199,6 +200,8 @@ function ConfirmModal() {
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [navBadges, setNavBadges] = useState({});
+  const [dismissedVerificationNotice, setDismissedVerificationNotice] = useState(false);
+  const profileRefreshRef = useRef("");
   const [selectedRoleForSwitch, setSelectedRoleForSwitch] = useState("");
   const [switchingRole, setSwitchingRole] = useState(false);
   const [email, setEmail] = useState("");
@@ -229,6 +232,26 @@ export default function Dashboard() {
     verificationId: apiUser.verificationId || null,
     profileData: apiUser.profileData || {},
   });
+  const refreshCurrentUser = useCallback(async () => {
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+    const token = localStorage.getItem("angostart_token");
+    if (!token) return null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await res.json() : null;
+      if (res.ok && data?.success && data?.user) {
+        const mapped = mapAuthenticatedUser(data.user);
+        setUser(mapped);
+        return mapped;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
   const refreshNavBadges = useCallback(async (targetUser = user) => {
     const role = targetUser?.role;
     if (!role) return;
@@ -279,7 +302,7 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, currentUser: user }), [idioma, modal, refreshNavBadges, user]);
+  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, refreshCurrentUser, currentUser: user }), [idioma, modal, refreshNavBadges, refreshCurrentUser, user]);
 
   useEffect(() => {
     const s = loadSettings();
@@ -288,30 +311,29 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
-    const token = localStorage.getItem("angostart_token");
-    if (!token || user) return;
+    if (user) return;
     (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const contentType = res.headers.get("content-type") || "";
-        const data = contentType.includes("application/json") ? await res.json() : null;
-        if (res.ok && data?.success && data?.user) {
-          setUser(mapAuthenticatedUser(data.user));
-          setSelectedRoleForSwitch(data.user.role);
-        }
-      } catch {
-        // noop
-      }
+      const mapped = await refreshCurrentUser();
+      if (mapped?.role) setSelectedRoleForSwitch(mapped.role);
     })();
-  }, [user]);
+  }, [user, refreshCurrentUser]);
 
   useEffect(() => {
     if (!user?.role) return;
     refreshNavBadges(user);
   }, [user?.id, user?.role, refreshNavBadges]);
+
+  useEffect(() => {
+    if (currentPage !== "perfil") {
+      profileRefreshRef.current = "";
+      return;
+    }
+    if (!user?.id || !user?.role) return;
+    const refreshKey = `${user.id}:${user.role}:perfil`;
+    if (profileRefreshRef.current === refreshKey) return;
+    profileRefreshRef.current = refreshKey;
+    refreshCurrentUser();
+  }, [currentPage, user?.id, user?.role, refreshCurrentUser]);
 
   const closeSidebarOnMobile = () => {
     if (window.matchMedia("(max-width: 1024px)").matches) {
@@ -414,6 +436,23 @@ export default function Dashboard() {
   };
   const currentVerificationStatus = user?.verificationStatus || "pending";
   const currentVerificationMeta = verificationMeta[currentVerificationStatus] || verificationMeta.pending;
+  const verificationNoticeDismissKey = user ? `angostart_verif_notice_${user.id}_${user.role}_${currentVerificationStatus}` : "";
+
+  useEffect(() => {
+    if (!verificationNoticeDismissKey) {
+      setDismissedVerificationNotice(false);
+      return;
+    }
+    const dismissed = localStorage.getItem(verificationNoticeDismissKey) === "1";
+    setDismissedVerificationNotice(dismissed);
+  }, [verificationNoticeDismissKey]);
+
+  const dismissVerificationNotice = () => {
+    if (verificationNoticeDismissKey) {
+      localStorage.setItem(verificationNoticeDismissKey, "1");
+    }
+    setDismissedVerificationNotice(true);
+  };
 
 function RenderInvestidorPage() {
   switch(currentPage) {
@@ -1155,7 +1194,7 @@ return (
         />
         <main className="main-content">
           <div className="page-content">
-            {canShowVerificationNotice && (
+            {canShowVerificationNotice && !dismissedVerificationNotice && (
               <div
                 className="dashboard-card"
                 style={{
@@ -1169,7 +1208,11 @@ return (
                 </div>
                 <div style={{ color: currentVerificationMeta.textColor, fontSize: "0.9rem" }}>
                   {currentVerificationMeta.text}
-                  {user?.verificationId ? ` ID: ${user.verificationId}.` : ""}
+                </div>
+                <div style={{ marginTop: "10px", display: "flex", justifyContent: "flex-end" }}>
+                  <button type="button" className="btn btn-primary" style={{ width: "auto", padding: "6px 16px" }} onClick={dismissVerificationNotice}>
+                    OK
+                  </button>
                 </div>
               </div>
             )}
@@ -1775,9 +1818,47 @@ function InvestidorPerfil() {
   const t = ctx?.t ?? (k => k);
   const user = ctx?.currentUser || null;
   const p = user?.profileData || {};
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    phone: "",
+    province: "",
+    investorType: "individual",
+    profession: "",
+    incomeSource: "",
+    investmentRange: "",
+    companyName: "",
+    companyNif: "",
+    companyRole: "",
+    hasInvestmentExperience: "",
+    investmentExperienceArea: "",
+    linkedinOrWebsite: "",
+  });
+  useEffect(() => {
+    setEditForm({
+      phone: p.phone || "",
+      province: p.province || "",
+      investorType: p.investor_type || p.investorType || "individual",
+      profession: p.profession || "",
+      incomeSource: p.income_source || p.incomeSource || "",
+      investmentRange: p.investment_range || p.investmentRange || "",
+      companyName: p.company_name || p.companyName || "",
+      companyNif: p.company_nif || p.companyNif || "",
+      companyRole: p.company_role || p.companyRole || "",
+      hasInvestmentExperience: p.has_investment_experience || p.hasInvestmentExperience || "",
+      investmentExperienceArea: p.investment_experience_area || p.investmentExperienceArea || "",
+      linkedinOrWebsite: p.linkedin_or_website || p.linkedinOrWebsite || "",
+    });
+  }, [user?.id, user?.role, user?.verificationStatus, p.phone, p.province, p.investor_type, p.investorType, p.profession, p.income_source, p.incomeSource, p.investment_range, p.investmentRange, p.company_name, p.companyName, p.company_nif, p.companyNif, p.company_role, p.companyRole, p.has_investment_experience, p.hasInvestmentExperience, p.investment_experience_area, p.investmentExperienceArea, p.linkedin_or_website, p.linkedinOrWebsite]);
   const investorType = p.investor_type || p.investorType || "";
   const status = user?.verificationStatus || "pending";
-  const isVerified = status === "approved";
+  const verificationLabel = status === "approved" ? "✔ Conta Verificada" : status === "rejected" ? "Conta rejeitada" : "Conta em verificação";
+  const verificationColor = status === "approved" ? "#10b981" : status === "rejected" ? "#ef4444" : "#f59e0b";
+  const verificationText = status === "approved"
+    ? "Identidade validada pela AngoStart."
+    : status === "rejected"
+      ? "A verificação foi rejeitada. Atualize os documentos para nova análise."
+      : "Conta em análise pela equipe de validação.";
   const headerTitle = investorType === "empresa" ? "Investidor Empresa" : "Investidor Individual";
   const profileHighlights = [
     p.investment_range || p.investmentRange ? `Faixa de investimento: ${p.investment_range || p.investmentRange}` : null,
@@ -1791,6 +1872,32 @@ function InvestidorPerfil() {
     p.company_name || p.companyName ? `Empresa: ${p.company_name || p.companyName}.` : null,
     p.company_role || p.companyRole ? `Função: ${p.company_role || p.companyRole}.` : null,
   ].filter(Boolean).join(" ");
+
+  const handleEditChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const submitProfileEdit = async () => {
+    setSavingEdit(true);
+    try {
+      await updateMyProfile({ profileData: editForm });
+      await ctx?.refreshCurrentUser?.();
+      setIsEditOpen(false);
+      ctx?.setModal?.({
+        open: true,
+        title: "Perfil atualizado",
+        message: "Os seus dados foram atualizados. A sua conta será verificada novamente pela nossa equipa.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha ao editar perfil",
+        message: err.message || "Não foi possível atualizar os dados do perfil.",
+      });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -1813,7 +1920,7 @@ function InvestidorPerfil() {
 
           <button
             className="btn btn-primary"
-            onClick={() => ctx?.setModal?.({ open: true, message: t('config.editOpened') })}
+            onClick={() => setIsEditOpen(true)}
           >
             Editar Perfil
           </button>
@@ -1828,13 +1935,9 @@ function InvestidorPerfil() {
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
-            {isVerified ? (
-              <div style={{ color: '#10b981', fontWeight: 600 }}>✔ Conta Verificada</div>
-            ) : (
-              <div style={{ color: '#f59e0b', fontWeight: 600 }}>Conta em verificação</div>
-            )}
+            <div style={{ color: verificationColor, fontWeight: 600 }}>{verificationLabel}</div>
             <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
-              {isVerified ? "Identidade validada pela AngoStart." : "Conta em análise pela equipe de validação."}
+              {verificationText}
             </p>
           </div>
 
@@ -1870,6 +1973,52 @@ function InvestidorPerfil() {
           </div>
         </div>
       </div>
+
+      {isEditOpen && (
+        <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setIsEditOpen(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(820px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
+            <h3 style={{ marginTop: 0 }}>Editar dados do perfil</h3>
+            <p style={{ marginTop: 0, color: "var(--dm-text-muted)", fontSize: "0.9rem" }}>
+              Atualize as informações abaixo e clique em <strong>Confirmar e Editar</strong>.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "12px" }}>
+              <div><label className="form-label">Telefone</label><input className="form-input" value={editForm.phone} onChange={(e) => handleEditChange("phone", e.target.value)} /></div>
+              <div><label className="form-label">Província</label><input className="form-input" value={editForm.province} onChange={(e) => handleEditChange("province", e.target.value)} /></div>
+              <div>
+                <label className="form-label">Tipo de investidor</label>
+                <select className="form-input" value={editForm.investorType} onChange={(e) => handleEditChange("investorType", e.target.value)}>
+                  <option value="individual">Individual</option>
+                  <option value="empresa">Empresa</option>
+                </select>
+              </div>
+              <div><label className="form-label">Profissão</label><input className="form-input" value={editForm.profession} onChange={(e) => handleEditChange("profession", e.target.value)} /></div>
+              <div><label className="form-label">Fonte de renda</label><input className="form-input" value={editForm.incomeSource} onChange={(e) => handleEditChange("incomeSource", e.target.value)} /></div>
+              <div><label className="form-label">Faixa de investimento</label><input className="form-input" value={editForm.investmentRange} onChange={(e) => handleEditChange("investmentRange", e.target.value)} /></div>
+              <div><label className="form-label">Empresa</label><input className="form-input" value={editForm.companyName} onChange={(e) => handleEditChange("companyName", e.target.value)} /></div>
+              <div><label className="form-label">NIF</label><input className="form-input" value={editForm.companyNif} onChange={(e) => handleEditChange("companyNif", e.target.value)} /></div>
+              <div><label className="form-label">Cargo</label><input className="form-input" value={editForm.companyRole} onChange={(e) => handleEditChange("companyRole", e.target.value)} /></div>
+              <div>
+                <label className="form-label">Experiência com investimento</label>
+                <select className="form-input" value={editForm.hasInvestmentExperience} onChange={(e) => handleEditChange("hasInvestmentExperience", e.target.value)}>
+                  <option value="">Selecione</option>
+                  <option value="sim">Sim</option>
+                  <option value="nao">Não</option>
+                </select>
+              </div>
+              <div><label className="form-label">Área de experiência</label><input className="form-input" value={editForm.investmentExperienceArea} onChange={(e) => handleEditChange("investmentExperienceArea", e.target.value)} /></div>
+              <div><label className="form-label">LinkedIn / Website</label><input className="form-input" value={editForm.linkedinOrWebsite} onChange={(e) => handleEditChange("linkedinOrWebsite", e.target.value)} /></div>
+            </div>
+
+            <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setIsEditOpen(false)} disabled={savingEdit}>Cancelar</button>
+              <button className="btn btn-primary" style={{ width: "auto" }} onClick={submitProfileEdit} disabled={savingEdit}>
+                {savingEdit ? "A guardar..." : "Confirmar e Editar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -4391,7 +4540,13 @@ function Perfilmentor() {
   const isMentor = user?.role === "mentor";
   const isEmpreendedor = user?.role === "empreendedor";
   const status = user?.verificationStatus || "approved";
-  const isVerified = status === "approved";
+  const verificationLabel = status === "approved" ? "✔ Conta Verificada" : status === "rejected" ? "Conta rejeitada" : "Conta em verificação";
+  const verificationColor = status === "approved" ? "#10b981" : status === "rejected" ? "#ef4444" : "#f59e0b";
+  const verificationText = status === "approved"
+    ? (isMentor ? "Validação de identidade e documentos profissionais." : "Conta ativa para gestão de ideias e crescimento.")
+    : status === "rejected"
+      ? "A verificação foi rejeitada. Atualize os documentos para nova análise."
+      : "Conta em análise pela equipe de validação.";
 
   const roleTitle = isMentor ? "Mentor" : "Empreendedor";
   const location = p.province || p.business_location || p.businessLocation || "Angola";
@@ -4449,13 +4604,9 @@ function Perfilmentor() {
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
-            {isVerified ? (
-              <div style={{ color: '#10b981', fontWeight: 600 }}>✔ Conta Verificada</div>
-            ) : (
-              <div style={{ color: '#f59e0b', fontWeight: 600 }}>Conta em verificação</div>
-            )}
+            <div style={{ color: verificationColor, fontWeight: 600 }}>{verificationLabel}</div>
             <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
-              {isMentor ? "Validação de identidade e documentos profissionais." : "Conta ativa para gestão de ideias e crescimento."}
+              {verificationText}
             </p>
           </div>
 
