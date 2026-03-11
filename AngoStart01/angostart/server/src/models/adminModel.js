@@ -49,3 +49,63 @@ export async function updateInvestidorVerificationStatus(userId, status) {
     [status, userId]
   );
 }
+
+export async function listInvestorsWithProfiles() {
+  const [rows] = await pool.execute(
+    `SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.created_at,
+      ip.phone,
+      ip.identity_number,
+      ip.province,
+      ip.investor_type,
+      ip.profession,
+      ip.income_source,
+      ip.investment_range,
+      ip.company_name,
+      ip.company_nif,
+      ip.company_role,
+      ip.has_investment_experience,
+      ip.investment_experience_area,
+      ip.linkedin_or_website,
+      ip.verification_status,
+      ip.verification_id
+    FROM users u
+    INNER JOIN investidor_profiles ip ON ip.user_id = u.id
+    ORDER BY u.created_at DESC, u.id DESC`
+  );
+  return rows;
+}
+
+export async function findInvestorByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.created_at,
+      ip.phone,
+      ip.identity_number,
+      ip.province,
+      ip.investor_type,
+      ip.profession,
+      ip.income_source,
+      ip.investment_range,
+      ip.company_name,
+      ip.company_nif,
+      ip.company_role,
+      ip.has_investment_experience,
+      ip.investment_experience_area,
+      ip.linkedin_or_website,
+      ip.verification_status,
+      ip.verification_id
+    FROM users u
+    INNER JOIN investidor_profiles ip ON ip.user_id = u.id
+    WHERE u.id = ?
+    LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}

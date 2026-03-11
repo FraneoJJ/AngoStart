@@ -8,6 +8,7 @@ import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGui
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
 import { getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
+import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import Planos from "../components/SecoesApp/Planos";
 
 const STORAGE_KEY = 'angostart_settings';
@@ -25,7 +26,7 @@ const translations = {
   pt: {
     nav: {
       section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Checklist Estratégico', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
     },
     common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
     config: {
@@ -55,7 +56,7 @@ const translations = {
   en: {
     nav: {
       section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Strategic Checklist', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
     },
     common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
     config: {
@@ -182,10 +183,11 @@ function ConfirmModal() {
   const { modal, setModal, t } = ctx;
   const close = () => setModal({ ...modal, open: false });
   return (
-    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)' }}>
+    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '10px 0' }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)', margin: '10px 0', maxHeight: 'calc(100vh - 20px)', overflowY: 'auto' }}>
         {modal.title && <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{modal.title}</h3>}
-        <p style={{ margin: 0, color: 'var(--dm-text)', fontSize: '0.95rem' }}>{modal.message}</p>
+        {modal.message && <p style={{ margin: modal.content ? '0 0 12px 0' : 0, color: 'var(--dm-text)', fontSize: '0.95rem' }}>{modal.message}</p>}
+        {modal.content ? <div>{modal.content}</div> : null}
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-primary" onClick={close}>{t ? t('common.close') : 'Fechar'}</button>
         </div>
@@ -215,6 +217,18 @@ export default function Dashboard() {
     for (const p of parts) v = v?.[p];
     return v != null ? v : key;
   };
+
+  const mapAuthenticatedUser = (apiUser) => ({
+    id: apiUser.id,
+    name: apiUser.name,
+    email: apiUser.email,
+    role: apiUser.role,
+    primaryRole: apiUser.primaryRole || apiUser.role,
+    availableRoles: apiUser.availableRoles || [apiUser.role],
+    verificationStatus: apiUser.verificationStatus || "approved",
+    verificationId: apiUser.verificationId || null,
+    profileData: apiUser.profileData || {},
+  });
   const refreshNavBadges = useCallback(async (targetUser = user) => {
     const role = targetUser?.role;
     if (!role) return;
@@ -265,7 +279,7 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges }), [idioma, modal, refreshNavBadges]);
+  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, currentUser: user }), [idioma, modal, refreshNavBadges, user]);
 
   useEffect(() => {
     const s = loadSettings();
@@ -285,16 +299,7 @@ export default function Dashboard() {
         const contentType = res.headers.get("content-type") || "";
         const data = contentType.includes("application/json") ? await res.json() : null;
         if (res.ok && data?.success && data?.user) {
-          setUser({
-            id: data.user.id,
-            name: data.user.name,
-            email: data.user.email,
-            role: data.user.role,
-            primaryRole: data.user.primaryRole || data.user.role,
-            availableRoles: data.user.availableRoles || [data.user.role],
-            verificationStatus: data.user.verificationStatus || "approved",
-            verificationId: data.user.verificationId || null,
-          });
+          setUser(mapAuthenticatedUser(data.user));
           setSelectedRoleForSwitch(data.user.role);
         }
       } catch {
@@ -329,16 +334,7 @@ export default function Dashboard() {
 
       if (res.ok && data?.success && data?.token) {
         localStorage.setItem("angostart_token", data.token);
-        setUser({
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role,
-          primaryRole: data.user.primaryRole || data.user.role,
-          availableRoles: data.user.availableRoles || [data.user.role],
-          verificationStatus: data.user.verificationStatus || "approved",
-          verificationId: data.user.verificationId || null,
-        });
+        setUser(mapAuthenticatedUser(data.user));
         setSelectedRoleForSwitch(data.user.role);
         setError("");
         return;
@@ -380,16 +376,7 @@ export default function Dashboard() {
         throw new Error(data?.message || "Falha ao trocar de papel.");
       }
       localStorage.setItem("angostart_token", data.token);
-      setUser({
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        role: data.user.role,
-        primaryRole: data.user.primaryRole || data.user.role,
-        availableRoles: data.user.availableRoles || [data.user.role],
-        verificationStatus: data.user.verificationStatus || "approved",
-        verificationId: data.user.verificationId || null,
-      });
+      setUser(mapAuthenticatedUser(data.user));
       setCurrentPage("dashboard");
     } catch (err) {
       setModal({ open: true, title: "Troca de papel", message: err.message || "Falha ao trocar de papel." });
@@ -1553,6 +1540,7 @@ function Propostas() {
   const t = ctx?.t ?? (k => k);
   return (
     <div
+      className="responsive-split-layout"
       style={{
         display: 'grid',
         gridTemplateColumns: '350px 1fr',
@@ -1785,44 +1773,41 @@ function Propostas() {
 function InvestidorPerfil() {
   const ctx = useContext(AppContext);
   const t = ctx?.t ?? (k => k);
-  const investidor = {
-    nome: 'Maria Investidora',
-    titulo: 'Investidora Anjo',
-    local: 'Luanda, Angola',
-    verificado: true,
-    tese: [
-      'Foco em Fintech e EdTech',
-      'Tickets de 10k a 50k',
-      'Busca por impacto social',
-      'Zonas: Luanda e Huambo'
-    ],
-    bio: `
-      Especialista em finanças com mais de 15 anos de experiência no setor bancário angolano.
-      Atualmente focada em apoiar empreendedores locais que resolvem problemas de inclusão
-      financeira e digitalização de processos tradicionais.
-    `,
-    contato: {
-      email: 'maria.invest@exemplo.ao',
-      telefone: '+244 9XX XXX XXX',
-      linkedin: 'https://linkedin.com/in/maria-inv',
-      website: 'www.meufundo.ao'
-    }
-  };
+  const user = ctx?.currentUser || null;
+  const p = user?.profileData || {};
+  const investorType = p.investor_type || p.investorType || "";
+  const status = user?.verificationStatus || "pending";
+  const isVerified = status === "approved";
+  const headerTitle = investorType === "empresa" ? "Investidor Empresa" : "Investidor Individual";
+  const profileHighlights = [
+    p.investment_range || p.investmentRange ? `Faixa de investimento: ${p.investment_range || p.investmentRange}` : null,
+    p.investment_experience_area || p.investmentExperienceArea ? `Área de experiência: ${p.investment_experience_area || p.investmentExperienceArea}` : null,
+    p.income_source || p.incomeSource ? `Fonte de renda: ${p.income_source || p.incomeSource}` : null,
+    p.has_investment_experience || p.hasInvestmentExperience ? `Experiência com investimento: ${p.has_investment_experience || p.hasInvestmentExperience}` : null,
+  ].filter(Boolean);
+
+  const profileBio = [
+    p.profession ? `Profissão: ${p.profession}.` : null,
+    p.company_name || p.companyName ? `Empresa: ${p.company_name || p.companyName}.` : null,
+    p.company_role || p.companyRole ? `Função: ${p.company_role || p.companyRole}.` : null,
+  ].filter(Boolean).join(" ");
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       
       {/* HEADER PERFIL */}
       <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
-        <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
+        <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--dm-bg)' }} />
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)' }}>
+            {String(user?.name || "I").charAt(0)}
+          </div>
 
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
+            <h2 style={{ margin: 0 }}>{user?.name || "Investidor"}</h2>
             <p style={{ margin: '5px 0 0', color: 'var(--dm-text-muted)' }}>
-              {investidor.titulo} • {investidor.local}
+              {headerTitle} • {p.province || "Angola"}
             </p>
           </div>
 
@@ -1843,20 +1828,20 @@ function InvestidorPerfil() {
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
-            {investidor.verificado ? (
+            {isVerified ? (
               <div style={{ color: '#10b981', fontWeight: 600 }}>✔ Conta Verificada</div>
             ) : (
-              <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
+              <div style={{ color: '#f59e0b', fontWeight: 600 }}>Conta em verificação</div>
             )}
             <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
-              Identidade e fundos validados pela AngoStart.
+              {isVerified ? "Identidade validada pela AngoStart." : "Conta em análise pela equipe de validação."}
             </p>
           </div>
 
           <div className="dashboard-card">
-            <h4>Tese de Investimento</h4>
+            <h4>Preferências de Investimento</h4>
             <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', lineHeight: '1.6' }}>
-              {investidor.tese.map((item, index) => (
+              {(profileHighlights.length ? profileHighlights : ["Sem preferências registradas no perfil."]).map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
@@ -1867,7 +1852,7 @@ function InvestidorPerfil() {
         <div className="dashboard-card">
           <h3 className="dashboard-card-title">Biografia Profissional</h3>
           <p style={{ lineHeight: '1.6', color: 'var(--dm-text)' }}>
-            {investidor.bio}
+            {profileBio || "Sem biografia registrada. Complete o perfil para melhorar sua apresentação."}
           </p>
 
           <hr style={{ borderTop: '1px solid var(--dm-border)', margin: '25px 0' }} />
@@ -1875,13 +1860,13 @@ function InvestidorPerfil() {
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <Info label="E-mail" value={investidor.contato.email} />
-            <Info label="Telefone" value={investidor.contato.telefone} />
+            <Info label="E-mail" value={user?.email || "-"} />
+            <Info label="Telefone" value={p.phone || "-"} />
             <Info
               label="LinkedIn"
-              value={<a href={investidor.contato.linkedin} style={{ color: '#2563eb' }}>Ver perfil</a>}
+              value={p.linkedin_or_website || p.linkedinOrWebsite ? <a href={p.linkedin_or_website || p.linkedinOrWebsite} style={{ color: '#2563eb' }}>Ver perfil</a> : "-"}
             />
-            <Info label="Website" value={investidor.contato.website} />
+            <Info label="NIF da empresa" value={p.company_nif || p.companyNif || "-"} />
           </div>
         </div>
       </div>
@@ -2591,7 +2576,7 @@ function Agenda() {
         <p className="dashboard-card-description">Gerencie seus horários e sessões de mentoria.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '25px', alignItems: 'start' }}>
+      <div className="responsive-split-layout" style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '25px', alignItems: 'start' }}>
         
         {/* LADO ESQUERDO: TIMELINE DE HORÁRIOS */}
         <div className="dashboard-card" style={{ padding: '20px' }}>
@@ -2701,6 +2686,7 @@ function Agenda() {
 function Mensagens() {
   return (
     <div
+      className="responsive-split-layout"
       style={{
         display: 'grid',
         gridTemplateColumns: '320px 1fr',
@@ -3567,7 +3553,7 @@ function ChecklistEstrategico() {
       });
       setProgressMap(map);
     } catch (err) {
-      setLoadError(err.message || "Falha ao carregar checklist estratégico.");
+      setLoadError(err.message || "Falha ao carregar plano de ação.");
       setSteps([]);
     } finally {
       setLoading(false);
@@ -3596,7 +3582,7 @@ function ChecklistEstrategico() {
         },
       }));
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar checklist estratégico." });
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar plano de ação." });
     } finally {
       setSavingKey("");
     }
@@ -3608,9 +3594,9 @@ function ChecklistEstrategico() {
   return (
     <div style={{ padding: "10px" }}>
       <div className="dashboard-card" style={{ marginBottom: "20px" }}>
-        <h2 className="dashboard-card-title">Checklist Estratégico Automático</h2>
+        <h2 className="dashboard-card-title">Plano de Ação do Negócio</h2>
         <p className="dashboard-card-description">
-          Plano de execução inteligente com prioridades recomendadas para validação, operação e crescimento.
+          Siga estas tarefas por ordem para organizar, lançar e fazer crescer o seu negócio.
         </p>
         <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap" }}>
           <button className={`btn ${track === "validacao" ? "btn-primary" : "btn-outline"}`} onClick={() => setTrack("validacao")} style={{ width: "auto" }}>
@@ -3628,7 +3614,7 @@ function ChecklistEstrategico() {
       {loadError && (
         <div className="dashboard-card" style={{ marginBottom: "20px", border: "1px solid #f59e0b", background: "#fffbeb" }}>
           <div style={{ color: "#92400e", fontWeight: 700, marginBottom: "6px" }}>
-            Não foi possível carregar o checklist estratégico
+            Não foi possível carregar o plano de ação
           </div>
           <div style={{ color: "#78350f", fontSize: "0.9rem", marginBottom: "10px" }}>
             {loadError}
@@ -3648,7 +3634,7 @@ function ChecklistEstrategico() {
 
       <div className="dashboard-card" style={{ marginBottom: "20px", opacity: loadError ? 0.65 : 1 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-          <strong>Progresso estratégico</strong>
+          <strong>Progresso do plano</strong>
           <span style={{ color: "var(--primary-600)", fontWeight: 700 }}>{progressPct}%</span>
         </div>
         <div style={{ width: "100%", height: "10px", borderRadius: "6px", background: "var(--neutral-100)", overflow: "hidden" }}>
@@ -3661,9 +3647,9 @@ function ChecklistEstrategico() {
 
       <div style={{ display: "grid", gap: "12px" }}>
         {loading ? (
-          <div className="dashboard-card"><p>A carregar checklist estratégico...</p></div>
+          <div className="dashboard-card"><p>A carregar plano de ação...</p></div>
         ) : loadError ? (
-          <div className="dashboard-card"><p>Checklist indisponível para o plano atual.</p></div>
+          <div className="dashboard-card"><p>Plano de ação indisponível para o plano atual.</p></div>
         ) : (
           steps.map((step, idx) => {
             const completed = !!progressMap[step.key]?.completed;
@@ -3674,12 +3660,12 @@ function ChecklistEstrategico() {
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)", marginBottom: "4px" }}>
-                      ETAPA {idx + 1} - Prioridade {String(step.priority || "media").toUpperCase()}
+                      PASSO {idx + 1} - Prioridade {String(step.priority || "media").toUpperCase()}
                     </div>
                     <h4 style={{ margin: "0 0 6px 0" }}>{step.title}</h4>
                     <p style={{ margin: "0 0 8px 0", color: "var(--neutral-600)" }}>{step.description}</p>
                     <p style={{ margin: 0, color: "var(--primary-600)", fontSize: "0.9rem" }}>
-                      <strong>Porque agora:</strong> {step.whyNow}
+                      <strong>Por que fazer agora:</strong> {step.whyNow}
                     </p>
                   </div>
                   <button
@@ -3974,55 +3960,118 @@ function Investidores() {
   const ctx = useContext(AppContext);
   const t = ctx?.t ?? (k => k);
   const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [investidores, setInvestidores] = useState([]);
+  const [loadingDetailsId, setLoadingDetailsId] = useState(0);
 
-  const investidores = [
-    {
-      id: 1,
-      nome: 'Ricardo Santos',
-      tipo: 'Investidor Anjo',
-      areas: ['Fintech', 'Educação'],
-      imagem: 'https://i.pravatar.cc/150?u=ricardo',
-      descricao: 'Focado em startups de tecnologia com impacto social em Angola.'
-    },
-    {
-      id: 2,
-      nome: 'Beatriz Costa',
-      tipo: 'Venture Capital',
-      areas: ['AgriTech', 'Saúde'],
-      imagem: '',
-      descricao: 'Busco projetos escaláveis no setor do agronegócio e saúde digital.'
-    },
-    {
-      id: 3,
-      nome: 'Mário Varela',
-      tipo: 'Investidor Privado',
-      areas: ['Energia', 'Logística'],
-      imagem: '',
-      descricao: 'Interesse em infraestrutura e soluções logísticas para o mercado africano.'
-    },
-    {
-      id: 4,
-      nome: 'Helena Matos',
-      tipo: 'Aceleradora',
-      areas: ['Todas as áreas'],
-      imagem: '',
-      descricao: 'Apoio no desenvolvimento de MVPs e entrada no mercado.'
-    }
-  ];
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getAvailableInvestors();
+        setInvestidores(
+          (data || []).map((inv) => ({
+            id: Number(inv.id),
+            nome: inv.name || "-",
+            tipo: inv.profile?.investorType === "empresa" ? "Investidor Empresa" : "Investidor Individual",
+            areas: inv.profile?.investmentExperienceArea
+              ? [String(inv.profile.investmentExperienceArea)]
+              : ["Sem área definida"],
+            imagem: "",
+            descricao: inv.profile?.profession
+              ? `Profissão: ${inv.profile.profession}`
+              : "Investidor cadastrado na plataforma.",
+            verificationStatus: inv.verificationStatus || "pending",
+          }))
+        );
+      } catch (err) {
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar investidores: ${err.message}` });
+        setInvestidores([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  const filtrados = investidores.filter(inv => 
-    inv.nome.toLowerCase().includes(busca.toLowerCase())
+  const filtrados = investidores.filter((inv) =>
+    String(inv.nome || "").toLowerCase().includes(busca.toLowerCase())
   );
+
+  const getVerificationLabel = (status) => {
+    if (status === "approved") return "Aprovado";
+    if (status === "rejected") return "Rejeitado";
+    return "Pendente";
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-PT");
+  };
+
+  const handleOpenInvestorDetails = async (investorId) => {
+    setLoadingDetailsId(Number(investorId));
+    try {
+      const inv = await getInvestorById(investorId);
+      if (!inv) throw new Error("Investidor não encontrado.");
+      const p = inv.profile || {};
+      ctx?.setModal?.({
+        open: true,
+        title: `Perfil de ${inv.name || "investidor"}`,
+        content: (
+          <div style={{ display: "grid", gap: "10px" }}>
+            <div style={{ display: "grid", gap: "8px", background: "var(--neutral-50)", border: "1px solid var(--neutral-200)", borderRadius: "10px", padding: "12px", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)" }}>
+              <div style={{ fontWeight: 700, color: "var(--primary-600)" }}>Dados principais</div>
+              <div style={{ display: "grid", gap: "6px", color: "var(--neutral-700)", fontSize: "0.9rem" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>{icons.user}<span><strong>Nome:</strong> {inv.name || "-"}</span></div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>{icons.inbox}<span><strong>Email:</strong> {inv.email || "-"}</span></div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>{icons["dollar-sign"]}<span><strong>Tipo:</strong> {p.investorType || "-"}</span></div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>{icons.calendar}<span><strong>Cadastro:</strong> {formatDate(inv.createdAt)}</span></div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gap: "8px", background: "var(--neutral-50)", border: "1px solid var(--neutral-200)", borderRadius: "10px", padding: "12px", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)" }}>
+              <div style={{ fontWeight: 700, color: "var(--primary-600)" }}>Perfil profissional</div>
+              <div style={{ display: "grid", gap: "6px", color: "var(--neutral-700)", fontSize: "0.9rem" }}>
+                <div><strong>Telefone:</strong> {p.phone || "-"}</div>
+                <div><strong>Província:</strong> {p.province || "-"}</div>
+                <div><strong>Profissão:</strong> {p.profession || "-"}</div>
+                <div><strong>Fonte de renda:</strong> {p.incomeSource || "-"}</div>
+                <div><strong>Faixa de investimento:</strong> {p.investmentRange || "-"}</div>
+                <div><strong>Área de experiência:</strong> {p.investmentExperienceArea || "-"}</div>
+                <div><strong>LinkedIn/Site:</strong> {p.linkedinOrWebsite || "-"}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gap: "8px", background: "var(--neutral-50)", border: "1px solid var(--neutral-200)", borderRadius: "10px", padding: "12px", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)" }}>
+              <div style={{ fontWeight: 700, color: "var(--primary-600)" }}>Dados de empresa e validação</div>
+              <div style={{ display: "grid", gap: "6px", color: "var(--neutral-700)", fontSize: "0.9rem" }}>
+                <div><strong>Empresa:</strong> {p.companyName || "-"}</div>
+                <div><strong>Cargo:</strong> {p.companyRole || "-"}</div>
+                <div><strong>NIF:</strong> {p.companyNif || "-"}</div>
+                <div><strong>Experiência com investimento:</strong> {p.hasInvestmentExperience || "-"}</div>
+                <div><strong>Status de verificação:</strong> {getVerificationLabel(inv.verificationStatus)}</div>
+              </div>
+            </div>
+          </div>
+        ),
+      });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar dados do investidor: ${err.message}` });
+    } finally {
+      setLoadingDetailsId(0);
+    }
+  };
 
   return (
     <div style={{ padding: '10px' }}>
       {/* HEADER E BUSCA */}
-      <div className="dashboard-card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="dashboard-card investors-header" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 className="dashboard-card-title">Investidores Disponíveis</h2>
           <p className="dashboard-card-description">Conecte-se com parceiros que podem impulsionar sua ideia.</p>
         </div>
-        <div style={{ width: '300px' }}>
+        <div className="investors-search">
           <input 
             type="text" 
             className="form-input" 
@@ -4034,12 +4083,17 @@ function Investidores() {
       </div>
 
       {/* GRID DE INVESTIDORES */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-        gap: '25px' 
+      {loading ? (
+        <div className="dashboard-card">
+          <p>A carregar investidores cadastrados...</p>
+        </div>
+      ) : (
+      <div className="investors-grid" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '25px'
       }}>
-        {filtrados.map(inv => (
+        {filtrados.map((inv) => (
           <div key={inv.id} className="dashboard-card" style={{ 
             textAlign: 'center', 
             padding: '30px 20px',
@@ -4060,7 +4114,13 @@ function Investidores() {
               marginBottom: '15px',
               border: '4px solid var(--primary-50)'
             }}>
-              <img src={inv.imagem} alt={inv.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {inv.imagem ? (
+                <img src={inv.imagem} alt={inv.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--primary-600)', background: 'var(--primary-100)' }}>
+                  {String(inv.nome || "I").charAt(0)}
+                </div>
+              )}
             </div>
 
             {/* NOME E TIPO */}
@@ -4099,16 +4159,18 @@ function Investidores() {
             <button 
               className="btn btn-primary" 
               style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => alert(`Abrindo perfil detalhado de ${inv.nome}`)}
+              onClick={() => handleOpenInvestorDetails(inv.id)}
+              disabled={loadingDetailsId === Number(inv.id)}
             >
-              Saber Mais
+              {loadingDetailsId === Number(inv.id) ? "A carregar..." : "Saber Mais"}
             </button>
           </div>
         ))}
       </div>
+      )}
 
       {/* CASO NÃO ENCONTRE NADA */}
-      {filtrados.length === 0 && (
+      {!loading && filtrados.length === 0 && (
         <div style={{ textAlign: 'center', padding: '50px' }}>
           <p style={{ color: 'var(--neutral-500)' }}>Nenhum investidor encontrado com esse nome.</p>
         </div>
@@ -4119,6 +4181,7 @@ function Investidores() {
 function Mentoria() {
   return (
     <div
+      className="responsive-split-layout"
       style={{
         display: 'grid',
         gridTemplateColumns: '350px 1fr',
@@ -4323,43 +4386,49 @@ function Mentoria() {
 function Perfilmentor() {
   const ctx = useContext(AppContext);
   const t = ctx?.t ?? (k => k);
-  const investidor = {
-    nome: 'Alenxandre Dala',
-    titulo: 'Mentor ',
-    local: 'Luanda, Angola',
-    verificado: true,
-    tese: [
-      'Foco em Fintech e EdTech',
-      'Tickets de 10k a 50k',
-      'Busca por impacto social',
-      'Zonas: Luanda e Huambo'
-    ],
-    bio: `
-      Especialista em finanças com mais de 15 anos de experiência no setor bancário angolano.
-      Atualmente focada em apoiar empreendedores locais que resolvem problemas de inclusão
-      financeira e digitalização de processos tradicionais.
-    `,
-    contato: {
-      email: 'alexandre.dala.mentor@exemplo.ao',
-      telefone: '+244 9XX XXX XXX',
-      linkedin: 'https://linkedin.com/in/alexandre-inv',
-    }
-  };
+  const user = ctx?.currentUser || null;
+  const p = user?.profileData || {};
+  const isMentor = user?.role === "mentor";
+  const isEmpreendedor = user?.role === "empreendedor";
+  const status = user?.verificationStatus || "approved";
+  const isVerified = status === "approved";
+
+  const roleTitle = isMentor ? "Mentor" : "Empreendedor";
+  const location = p.province || p.business_location || p.businessLocation || "Angola";
+  const profileHighlights = isMentor
+    ? [
+        p.expertise_area || p.expertiseArea ? `Especialidade: ${p.expertise_area || p.expertiseArea}` : null,
+        p.experience_years || p.experienceYears ? `Anos de experiência: ${p.experience_years || p.experienceYears}` : null,
+        p.company ? `Empresa: ${p.company}` : null,
+        p.current_role || p.currentRole ? `Função atual: ${p.current_role || p.currentRole}` : null,
+      ].filter(Boolean)
+    : [
+        p.business_name || p.businessName ? `Nome do negócio: ${p.business_name || p.businessName}` : null,
+        p.business_sector || p.businessSector ? `Setor: ${p.business_sector || p.businessSector}` : null,
+        p.business_stage || p.businessStage ? `Fase: ${p.business_stage || p.businessStage}` : null,
+        p.business_location || p.businessLocation ? `Local: ${p.business_location || p.businessLocation}` : null,
+      ].filter(Boolean);
+
+  const profileBio = isMentor
+    ? `Mentor com foco em ${p.expertise_area || p.expertiseArea || "desenvolvimento de negócios"}.`
+    : `Empreendedor a desenvolver o negócio ${p.business_name || p.businessName || "em fase inicial"}.`;
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       
       {/* HEADER PERFIL */}
       <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
-        <div style={{ height: '120px', background: 'linear-gradient(90deg, #2563eb, #4f46e5)' }} />
+        <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--dm-bg)' }} />
+          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)' }}>
+            {String(user?.name || "U").charAt(0)}
+          </div>
 
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0 }}>{investidor.nome}</h2>
+            <h2 style={{ margin: 0 }}>{user?.name || "Utilizador"}</h2>
             <p style={{ margin: '5px 0 0', color: 'var(--dm-text-muted)' }}>
-              {investidor.titulo} • {investidor.local}
+              {roleTitle} • {location}
             </p>
           </div>
 
@@ -4380,20 +4449,20 @@ function Perfilmentor() {
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
-            {investidor.verificado ? (
+            {isVerified ? (
               <div style={{ color: '#10b981', fontWeight: 600 }}>✔ Conta Verificada</div>
             ) : (
-              <div style={{ color: '#ef4444', fontWeight: 600 }}>Não verificada</div>
+              <div style={{ color: '#f59e0b', fontWeight: 600 }}>Conta em verificação</div>
             )}
             <p style={{ fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
-              Identidade e fundos validados pela AngoStart.
+              {isMentor ? "Validação de identidade e documentos profissionais." : "Conta ativa para gestão de ideias e crescimento."}
             </p>
           </div>
 
           <div className="dashboard-card">
-            <h4>Tese de Investimento</h4>
+            <h4>{isMentor ? "Resumo Profissional" : "Resumo do Negócio"}</h4>
             <ul style={{ paddingLeft: '20px', fontSize: '0.9rem', lineHeight: '1.6' }}>
-              {investidor.tese.map((item, index) => (
+              {(profileHighlights.length ? profileHighlights : ["Sem dados suficientes no perfil."]).map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
@@ -4402,9 +4471,9 @@ function Perfilmentor() {
 
         {/* COLUNA DIREITA */}
         <div className="dashboard-card">
-          <h3 className="dashboard-card-title">Biografia Profissional</h3>
+          <h3 className="dashboard-card-title">{isMentor ? "Biografia Profissional" : "Descrição do Perfil"}</h3>
           <p style={{ lineHeight: '1.6', color: 'var(--dm-text)' }}>
-            {investidor.bio}
+            {profileBio}
           </p>
 
           <hr style={{ borderTop: '1px solid var(--dm-border)', margin: '25px 0' }} />
@@ -4412,13 +4481,13 @@ function Perfilmentor() {
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <Info label="E-mail" value={investidor.contato.email} />
-            <Info label="Telefone" value={investidor.contato.telefone} />
+            <Info label="E-mail" value={user?.email || "-"} />
+            <Info label="Telefone" value={p.phone || "-"} />
             <Info
               label="LinkedIn"
-              value={<a href={investidor.contato.linkedin} style={{ color: '#2563eb' }}>Ver perfil</a>}
+              value={p.linkedin ? <a href={p.linkedin} style={{ color: '#2563eb' }}>Ver perfil</a> : "-"}
             />
-            <Info label="Website" value={investidor.contato.website} />
+            <Info label={isEmpreendedor ? "Setor" : "Empresa"} value={isEmpreendedor ? (p.business_sector || p.businessSector || "-") : (p.company || "-")} />
           </div>
         </div>
       </div>

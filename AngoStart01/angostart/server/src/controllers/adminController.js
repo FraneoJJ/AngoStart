@@ -21,3 +21,21 @@ export async function updateVerification(req, res, next) {
     next(err);
   }
 }
+
+export async function investors(req, res, next) {
+  try {
+    const data = await adminService.listInvestorsForEntrepreneur();
+    res.status(200).json({ success: true, investors: data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function investorById(req, res, next) {
+  try {
+    const investor = await adminService.getInvestorDetailsForEntrepreneur(req.params.id);
+    res.status(200).json({ success: true, investor });
+  } catch (err) {
+    next(err);
+  }
+}

@@ -930,6 +930,44 @@ body.dark-theme .btn-logout:hover {
   color: var(--text-main);
 }
 
+/* ===== DASHBOARD RESPONSIVO ===== */
+.investors-search {
+  width: 300px;
+}
+
+@media (max-width: 1024px) {
+  .responsive-split-layout {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .responsive-split-layout > .dashboard-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .investors-header {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px;
+  }
+
+  .investors-search {
+    width: 100%;
+  }
+
+  .investors-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .investors-grid .dashboard-card {
+    padding: 20px 14px !important;
+  }
+}
+
 /* Switch (slider) no escuro */
 body.dark-theme .slider {
   background-color: #475569;

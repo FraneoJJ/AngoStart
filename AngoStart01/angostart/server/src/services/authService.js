@@ -14,6 +14,7 @@ import {
   findEmpreendedorProfileByUserId,
   findInvestidorProfileByUserId,
   findMentorProfileByUserId,
+  findProfileDataByUserRole,
   findVerificationByUserRole,
 } from "../models/registrationProfileModel.js";
 import { signAccessToken } from "../utils/jwt.js";
@@ -82,6 +83,7 @@ async function enrichUserWithVerification(user, activeRole = null) {
   if (!user) return user;
   const selectedRole = activeRole || user.role;
   const verification = await findVerificationByUserRole(Number(user.id), selectedRole);
+  const profileData = await findProfileDataByUserRole(Number(user.id), selectedRole);
   const availableRoles = await listAvailableRoles(user);
   return {
     ...user,
@@ -90,6 +92,7 @@ async function enrichUserWithVerification(user, activeRole = null) {
     availableRoles,
     verificationStatus: verification?.verification_status || "approved",
     verificationId: verification?.verification_id || null,
+    profileData: profileData || {},
   };
 }
 

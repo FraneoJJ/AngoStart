@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
+  findInvestorByUserId,
   findUserRoleById,
+  listInvestorsWithProfiles,
   listUsersWithProfiles,
   updateInvestidorVerificationStatus,
   updateMentorVerificationStatus,
@@ -101,4 +103,49 @@ export async function setUserVerification(userId, payload) {
   const users = await listUsersWithProfiles();
   const updated = users.find((row) => Number(row.id) === targetUserId);
   return updated ? normalizeUser(updated) : null;
+}
+
+function normalizeInvestor(row) {
+  return {
+    id: Number(row.id),
+    name: row.name,
+    email: row.email,
+    role: "investidor",
+    createdAt: row.created_at,
+    verificationStatus: row.verification_status || "pending",
+    verificationId: row.verification_id || null,
+    profile: {
+      phone: row.phone || null,
+      identityNumber: row.identity_number || null,
+      province: row.province || null,
+      investorType: row.investor_type || null,
+      profession: row.profession || null,
+      incomeSource: row.income_source || null,
+      investmentRange: row.investment_range || null,
+      companyName: row.company_name || null,
+      companyNif: row.company_nif || null,
+      companyRole: row.company_role || null,
+      hasInvestmentExperience: row.has_investment_experience || null,
+      investmentExperienceArea: row.investment_experience_area || null,
+      linkedinOrWebsite: row.linkedin_or_website || null,
+    },
+  };
+}
+
+export async function listInvestorsForEntrepreneur() {
+  const rows = await listInvestorsWithProfiles();
+  return rows.map(normalizeInvestor);
+}
+
+export async function getInvestorDetailsForEntrepreneur(investorUserId) {
+  const targetId = Number(investorUserId);
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw { status: 400, message: "ID de investidor inválido." };
+  }
+
+  const row = await findInvestorByUserId(targetId);
+  if (!row) {
+    throw { status: 404, message: "Investidor não encontrado." };
+  }
+  return normalizeInvestor(row);
 }

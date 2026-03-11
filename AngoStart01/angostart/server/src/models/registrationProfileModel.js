@@ -135,6 +135,72 @@ export async function findVerificationByUserRole(userId, role) {
   return { verification_status: "approved", verification_id: null };
 }
 
+export async function findProfileDataByUserRole(userId, role) {
+  if (role === "empreendedor") {
+    const [rows] = await dbQuery(
+      `SELECT
+        phone,
+        business_name,
+        business_sector,
+        business_stage,
+        business_location
+       FROM empreendedor_profiles
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
+
+  if (role === "mentor") {
+    const [rows] = await dbQuery(
+      `SELECT
+        phone,
+        identity_number,
+        birth_date,
+        province,
+        expertise_area,
+        experience_years,
+        company,
+        current_role,
+        linkedin,
+        verification_status
+       FROM mentor_profiles
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
+
+  if (role === "investidor") {
+    const [rows] = await dbQuery(
+      `SELECT
+        phone,
+        identity_number,
+        province,
+        investor_type,
+        profession,
+        income_source,
+        investment_range,
+        company_name,
+        company_nif,
+        company_role,
+        has_investment_experience,
+        investment_experience_area,
+        linkedin_or_website,
+        verification_status
+       FROM investidor_profiles
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
+
+  return null;
+}
+
 function dbQuery(sql, params) {
   return pool.execute(sql, params);
 }
