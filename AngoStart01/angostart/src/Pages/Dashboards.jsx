@@ -185,7 +185,12 @@ function ConfirmModal() {
   const ctx = useContext(AppContext);
   if (!ctx || !ctx.modal.open) return null;
   const { modal, setModal, t } = ctx;
-  const close = () => setModal({ ...modal, open: false });
+  const close = () => {
+    if (typeof modal.onClose === "function") {
+      modal.onClose();
+    }
+    setModal({ ...modal, open: false, onClose: undefined });
+  };
   return (
     <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '10px 0' }}>
       <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)', margin: '10px 0', maxHeight: 'calc(100vh - 20px)', overflowY: 'auto' }}>
@@ -216,7 +221,7 @@ export default function Dashboard() {
     const s = parseJsonSafe(localStorage.getItem(STORAGE_KEY), null);
     return s?.idioma || 'pt';
   });
-  const [modal, setModal] = useState({ open: false, title: '', message: '' });
+  const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: undefined });
   const t = (key) => {
     const parts = key.split('.');
     let v = translations[idioma] || translations.pt;
@@ -3238,24 +3243,28 @@ function Mensagens() {
 
 function SubmeterIdeia() {
   const ctx = useContext(AppContext);
+  const initialDados = {
+    nome: "", descricao: "", setor: "",
+    cidade: "", localizacao: "",
+    regiao: "",
+    lat: "",
+    lng: "",
+    capital: "",
+    problema: "", diferencial: "", publico: "",
+    arquivos: null,
+  };
   const [etapa, setEtapa] = useState(1);
   const [analisando, setAnalisando] = useState(false);
   const [resultadoIA, setResultadoIA] = useState(null);
+  const [mensagemFluxo, setMensagemFluxo] = useState("");
+  const [ultimaIdeiaId, setUltimaIdeiaId] = useState(null);
+  const [publicandoMarketplace, setPublicandoMarketplace] = useState(false);
   const [questionarioSessionId, setQuestionarioSessionId] = useState(null);
   const [questionarioPerguntas, setQuestionarioPerguntas] = useState([]);
   const [questionarioRespostas, setQuestionarioRespostas] = useState({});
   const [gerandoQuestionario, setGerandoQuestionario] = useState(false);
 
-  const [dados, setDados] = useState({
-    nome: '', descricao: '', setor: '',
-    cidade: '', localizacao: '',
-    regiao: '',
-    lat: '',
-    lng: '',
-    capital: '',
-    problema: '', diferencial: '', publico: '',
-    arquivos: null
-  });
+  const [dados, setDados] = useState(initialDados);
 
   const proximaEtapa = () => setEtapa(etapa + 1);
   const etapaAnterior = () => setEtapa(etapa - 1);
@@ -3302,6 +3311,84 @@ function SubmeterIdeia() {
     localStorage.setItem("angostart_ideas_local", JSON.stringify(drafts));
   };
 
+  const isPlanFeatureBlocked = (error) =>
+    String(error?.message || "").toLowerCase().includes("não inclui este recurso");
+
+  const reiniciarSubmissao = () => {
+    setDados(initialDados);
+    setResultadoIA(null);
+    setMensagemFluxo("");
+    setUltimaIdeiaId(null);
+    setQuestionarioSessionId(null);
+    setQuestionarioPerguntas([]);
+    setQuestionarioRespostas({});
+    setEtapa(1);
+  };
+
+  const gerarPlanoNegocioPdf = () => {
+    if (!resultadoIA) return;
+    const doc = new jsPDF();
+    let y = 20;
+    const lineHeight = 8;
+
+    const writeSection = (title, content) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(title, 14, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      const lines = Array.isArray(content)
+        ? content.map((item) => `- ${item}`).join("\n")
+        : String(content || "");
+      const wrapped = doc.splitTextToSize(lines || "-", 182);
+      doc.text(wrapped, 14, y);
+      y += wrapped.length * lineHeight + 4;
+      if (y > 265) {
+        doc.addPage();
+        y = 20;
+      }
+    };
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Plano de Negocio - AngoStart IA", 14, y);
+    y += 10;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Projeto: ${dados.nome || "-"}`, 14, y);
+    y += 6;
+    doc.text(`Setor: ${dados.setor || "-"}`, 14, y);
+    y += 6;
+    doc.text(`Localizacao: ${dados.cidade || "-"} / ${dados.regiao || "-"}`, 14, y);
+    y += 10;
+
+    writeSection("Score Geral", `${resultadoIA.score}/100`);
+    writeSection("Pontos Fortes", resultadoIA.pontosFortes);
+    writeSection("Riscos Identificados", resultadoIA.riscosIdentificados);
+    writeSection("Analise Financeira", resultadoIA.analiseFinanceira);
+    writeSection("Projecao Financeira", resultadoIA.projecaoFinanceira);
+    writeSection("Acoes Recomendadas", resultadoIA.acoesRecomendadas);
+    writeSection("Proximo Passo Recomendado", resultadoIA.proximoPassoRecomendado);
+
+    const nomeArquivo = `plano-negocio-${(dados.nome || "angostart").replace(/\s+/g, "-").toLowerCase()}.pdf`;
+    doc.save(nomeArquivo);
+  };
+
+  const publicarNoMarketplace = async () => {
+    if (!ultimaIdeiaId) {
+      ctx?.setModal?.({ open: true, message: "Nenhuma ideia disponível para publicar." });
+      return;
+    }
+    setPublicandoMarketplace(true);
+    try {
+      await updateIdeaStatus(ultimaIdeiaId, "active");
+      ctx?.setModal?.({ open: true, message: "Ideia publicada no marketplace com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao publicar no marketplace." });
+    } finally {
+      setPublicandoMarketplace(false);
+    }
+  };
+
   const enviarParaAnalise = async () => {
     if (!dados.nome || !dados.descricao || !dados.setor || !dados.cidade || !dados.regiao) {
       ctx?.setModal?.({ open: true, message: "Preencha os campos obrigatórios das fases anteriores antes de submeter." });
@@ -3329,33 +3416,66 @@ function SubmeterIdeia() {
     setAnalisando(true);
     try {
       const createdIdea = await createIdea(payload);
+      setUltimaIdeiaId(Number(createdIdea?.id) || null);
       let activeSessionId = questionarioSessionId;
+      let questionarioIndisponivel = false;
+      let analiseIndisponivel = false;
 
       if (!activeSessionId) {
-        const generatedSession = await generateQuestionnaire({
-          ideaId: Number(createdIdea?.id) || undefined,
-          context: {
-            sector: dados.setor,
-            city: dados.cidade,
-            region: dados.regiao,
-            initialCapital: Number(dados.capital || 0),
-            problem: dados.problema,
-            differentialText: dados.diferencial,
-            targetAudience: dados.publico,
-          },
-        });
-        activeSessionId = generatedSession?.id || null;
-        setQuestionarioSessionId(activeSessionId);
-        setQuestionarioPerguntas(generatedSession?.questions || []);
+        try {
+          const generatedSession = await generateQuestionnaire({
+            ideaId: Number(createdIdea?.id) || undefined,
+            context: {
+              sector: dados.setor,
+              city: dados.cidade,
+              region: dados.regiao,
+              initialCapital: Number(dados.capital || 0),
+              problem: dados.problema,
+              differentialText: dados.diferencial,
+              targetAudience: dados.publico,
+            },
+          });
+          activeSessionId = generatedSession?.id || null;
+          setQuestionarioSessionId(activeSessionId);
+          setQuestionarioPerguntas(generatedSession?.questions || []);
+        } catch (err) {
+          if (isPlanFeatureBlocked(err)) {
+            questionarioIndisponivel = true;
+          } else {
+            throw err;
+          }
+        }
       }
 
       if (activeSessionId && Object.keys(questionarioRespostas).length > 0) {
         await saveQuestionnaireAnswers(activeSessionId, questionarioRespostas);
       }
 
-      await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
-      await ctx?.refreshNavBadges?.();
-      ctx?.setModal?.({ open: true, message: "Ideia enviada e analisada com sucesso." });
+      try {
+        await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
+      } catch (err) {
+        if (isPlanFeatureBlocked(err)) {
+          analiseIndisponivel = true;
+          setEtapa(1);
+        } else {
+          throw err;
+        }
+      }
+
+      if (!analiseIndisponivel) {
+        setEtapa(7);
+      }
+      if (analiseIndisponivel) {
+        ctx?.setModal?.({
+          open: true,
+          message:
+            "Ideia submetida com sucesso. A análise de viabilidade por IA não está disponível no seu plano atual.",
+        });
+      } else if (questionarioIndisponivel) {
+        setMensagemFluxo("Ideia enviada e analisada com sucesso. O questionário dinâmico não está disponível no seu plano atual.");
+      } else {
+        setMensagemFluxo("Ideia enviada e analisada com sucesso.");
+      }
     } catch (err) {
       salvarRascunhoLocal();
       ctx?.setModal?.({
@@ -3426,12 +3546,27 @@ function SubmeterIdeia() {
 
     setResultadoIA({
       viabilidade: report.viabilityStatus === "viavel" ? "Viável" : "Inviável",
+      origemAnalise:
+        report.analysisSource === "google_ai_studio"
+          ? "Google AI Studio (Gemini)"
+          : "Análise Local (Fallback)",
+      notaAnalise: report.analysisNote || "",
       pontosFortes: report.strengths?.length ? report.strengths : ["Estrutura inicial adequada."],
-      pontosFracos: report.weaknesses?.length ? report.weaknesses : ["Sem riscos críticos identificados."],
-      melhorias: (report.adjustments || []).join(" ") || report.summary || "Continuar monitorando métricas de tração.",
+      riscosIdentificados: report.identifiedRisks?.length
+        ? report.identifiedRisks
+        : (report.weaknesses?.length ? report.weaknesses : ["Sem riscos críticos identificados."]),
+      analiseFinanceira: report.financialAnalysis || "Dados insuficientes para análise financeira detalhada.",
+      projecaoFinanceira: report.financialProjection || "Preencher ticket médio e custos para projeção mais precisa.",
+      acoesRecomendadas: report.recommendedActions?.length
+        ? report.recommendedActions
+        : (report.adjustments?.length ? report.adjustments : ["Executar validação com 10 clientes reais."]),
+      proximoPassoRecomendado:
+        report.nextRecommendedStep ||
+        report.summary ||
+        "Definir plano de validação com metas semanais.",
+      pontuacaoFatores: report.factorScores || {},
       score: Number(report.score || 0),
     });
-    setEtapa(7);
   };
 
   // --- RENDERS DAS FASES ---
@@ -3618,12 +3753,19 @@ function SubmeterIdeia() {
 
   const renderResultado = () => (
     <div className="dashboard-card" style={{ textAlign: 'center', animation: 'fadeIn 0.5s' }}>
+      {mensagemFluxo && (
+        <p style={{ marginBottom: '12px', color: 'var(--success-500)', fontWeight: 600 }}>{mensagemFluxo}</p>
+      )}
       <div style={{ fontSize: '3rem' }}>{resultadoIA.score >= 70 ? '🚀' : '💡'}</div>
       <h2 className="dashboard-card-title">Análise de Viabilidade: {resultadoIA.viabilidade}</h2>
       <div style={{ margin: '20px 0', padding: '15px', background: 'var(--primary-50)', borderRadius: '12px' }}>
         <p><strong>Score Geral: {resultadoIA.score}/100</strong></p>
+        <p style={{ marginTop: '8px' }}><strong>Fonte:</strong> {resultadoIA.origemAnalise}</p>
+        {resultadoIA.notaAnalise ? (
+          <p style={{ marginTop: '6px', fontSize: '0.85rem', color: 'var(--neutral-600)' }}>{resultadoIA.notaAnalise}</p>
+        ) : null}
       </div>
-      
+
       <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div className="badge-success" style={{ padding: '15px', borderRadius: '8px' }}>
           <strong>Pontos Fortes:</strong>
@@ -3632,19 +3774,56 @@ function SubmeterIdeia() {
           </ul>
         </div>
         <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: 'var(--warning-500)' }}>
-          <strong>A melhorar:</strong>
+          <strong>Riscos Identificados:</strong>
           <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-            {resultadoIA.pontosFracos.map(p => <li key={p}>{p}</li>)}
+            {resultadoIA.riscosIdentificados.map(p => <li key={p}>{p}</li>)}
           </ul>
         </div>
       </div>
-      
-      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)' }}>
-        <h4 style={{ color: 'var(--primary-600)' }}>Conselho da IA:</h4>
-        <p>{resultadoIA.melhorias}</p>
+
+      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)', textAlign: 'left' }}>
+        <h4 style={{ color: 'var(--primary-600)' }}>Análise Financeira</h4>
+        <p>{resultadoIA.analiseFinanceira}</p>
+        <h4 style={{ color: 'var(--primary-600)', marginTop: '16px' }}>Projeção Financeira</h4>
+        <p>{resultadoIA.projecaoFinanceira}</p>
       </div>
 
-      <button className="btn btn-primary" onClick={() => setEtapa(1)} style={{ marginTop: '20px' }}>Nova Submissão</button>
+      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)', textAlign: 'left' }}>
+        <h4 style={{ color: 'var(--primary-600)' }}>Ações Recomendadas</h4>
+        <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
+          {resultadoIA.acoesRecomendadas.map((acao) => <li key={acao}>{acao}</li>)}
+        </ul>
+        <h4 style={{ color: 'var(--primary-600)', marginTop: '16px' }}>Próximo Passo Recomendado</h4>
+        <p>{resultadoIA.proximoPassoRecomendado}</p>
+      </div>
+
+      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)', textAlign: 'left' }}>
+        <h4 style={{ color: 'var(--primary-600)' }}>Score por Fator</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(180px, 1fr))', gap: '10px' }}>
+          <div><strong>Problema/Mercado:</strong> {Number(resultadoIA.pontuacaoFatores?.problemaMercado || 0)}/100</div>
+          <div><strong>Diferencial:</strong> {Number(resultadoIA.pontuacaoFatores?.diferencial || 0)}/100</div>
+          <div><strong>Público-Alvo:</strong> {Number(resultadoIA.pontuacaoFatores?.publicoAlvo || 0)}/100</div>
+          <div><strong>Execução:</strong> {Number(resultadoIA.pontuacaoFatores?.execucao || 0)}/100</div>
+          <div><strong>Financeiro:</strong> {Number(resultadoIA.pontuacaoFatores?.financeiro || 0)}/100</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" onClick={reiniciarSubmissao} style={{ width: 'auto' }}>
+          Nova Submissão
+        </button>
+        <button className="btn btn-outline" onClick={gerarPlanoNegocioPdf} style={{ width: 'auto' }}>
+          Gerar Plano de Negócio (PDF)
+        </button>
+        <button
+          className="btn btn-primary"
+          onClick={publicarNoMarketplace}
+          disabled={!ultimaIdeiaId || publicandoMarketplace}
+          style={{ width: 'auto', opacity: !ultimaIdeiaId || publicandoMarketplace ? 0.6 : 1 }}
+        >
+          {publicandoMarketplace ? "A publicar..." : "Publicar no Marketplace"}
+        </button>
+      </div>
     </div>
   );
 
