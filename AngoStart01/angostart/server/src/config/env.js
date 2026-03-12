@@ -8,6 +8,7 @@ export const env = {
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
   JWT_SECRET: process.env.JWT_SECRET || "dev_secret_change_me",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+  GOOGLE_AI_STUDIO_API_KEY: process.env.GOOGLE_AI_STUDIO_API_KEY || "",
   DB_HOST: process.env.DB_HOST || "localhost",
   DB_PORT: Number(process.env.DB_PORT || 3306),
   DB_USER: process.env.DB_USER || "root",

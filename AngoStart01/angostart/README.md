@@ -140,6 +140,14 @@ Endpoints disponíveis:
 - `GET /api/v1/questionnaire/:sessionId`
   - Retorna sessão, perguntas e respostas já salvas.
 
+### Google AI Studio (Viabilidade)
+
+Para usar análise de viabilidade com Gemini (Google AI Studio), configure no `.env` do backend:
+
+`GOOGLE_AI_STUDIO_API_KEY=sua_chave_aqui`
+
+Se a chave não estiver definida ou a API externa falhar, o sistema usa fallback local heurístico para não bloquear o fluxo.
+
 ---
 
 ## ⚖️ Módulo 6 - Orientação Legal Angola + AGT

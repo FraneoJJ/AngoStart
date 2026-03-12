@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createViabilityReport } from "../models/viabilityModel.js";
+import { env } from "../config/env.js";
 
 const analyzeSchema = z.object({
   ideaId: z.number().int().positive().optional(),
@@ -34,7 +35,37 @@ function answerCompletionScore(answers) {
   return { score: Math.round(ratio * 20), ratio };
 }
 
-function computeViability(data) {
+function toNumber(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function formatAoa(value) {
+  return new Intl.NumberFormat("pt-PT").format(Math.round(toNumber(value, 0)));
+}
+
+function computeFinancialEstimate(idea, questionnaireAnswers) {
+  const capital = Math.max(0, toNumber(idea.initialCapital, 0));
+  const ticket = Math.max(0, toNumber(questionnaireAnswers?.ticket_medio, 0));
+  const pricingGuess = ticket > 0 ? ticket : Math.max(1500, Math.round(capital * 0.06));
+  const estimatedClientsMonth = Math.max(8, Math.round(8 + capital / 40000));
+  const estimatedRevenueMonth = Math.round(pricingGuess * estimatedClientsMonth);
+  const estimatedCostMonth = Math.round(Math.max(capital * 0.12, estimatedRevenueMonth * 0.58));
+  const estimatedProfitMonth = Math.round(estimatedRevenueMonth - estimatedCostMonth);
+  const breakEvenMonths =
+    estimatedProfitMonth > 0 ? Math.max(1, Math.ceil(capital / estimatedProfitMonth)) : null;
+  const projection12M = Math.round(estimatedProfitMonth * 12);
+
+  return {
+    estimatedRevenueMonth,
+    estimatedCostMonth,
+    estimatedProfitMonth,
+    breakEvenMonths,
+    projection12M,
+  };
+}
+
+function computeViabilityHeuristic(data) {
   const { idea, questionnaireAnswers } = data;
   let score = 40;
   const strengths = [];
@@ -111,13 +142,255 @@ function computeViability(data) {
     viabilityStatus === "viavel"
       ? "A ideia apresenta boa base de viabilidade para avançar para validação de mercado."
       : "A ideia precisa de ajustes estratégicos antes de avançar para execução.";
+  const financial = computeFinancialEstimate(idea, questionnaireAnswers);
+  const identifiedRisks = [];
+  const factorScores = {
+    problemaMercado: hasRelevantText(idea.problem, 30) ? 80 : 45,
+    diferencial: hasRelevantText(idea.differentialText, 30) ? 78 : 42,
+    publicoAlvo: hasRelevantText(idea.targetAudience, 20) ? 76 : 48,
+    execucao: questionnaireAnswers && Object.keys(questionnaireAnswers).length >= 3 ? 72 : 52,
+    financeiro: financial.estimatedProfitMonth > 0 ? 70 : 40,
+  };
 
-  return { viabilityStatus, score, strengths, weaknesses, adjustments, summary };
+  if (!hasRelevantText(idea.problem, 30)) identifiedRisks.push("Definição insuficiente da dor do cliente.");
+  if (!hasRelevantText(idea.differentialText, 30)) identifiedRisks.push("Diferencial competitivo ainda frágil.");
+  if ((idea.city || "").trim().length < 2) identifiedRisks.push("Mercado geográfico inicial pouco definido.");
+  if (financial.estimatedProfitMonth <= 0) identifiedRisks.push("Margem mensal projetada negativa no cenário base.");
+  if (!identifiedRisks.length) {
+    identifiedRisks.push("Sem riscos críticos imediatos, manter monitoramento de aquisição e custos.");
+  }
+  const recommendedActions = adjustments.length
+    ? adjustments.slice(0, 4)
+    : [
+        "Validar proposta com clientes reais em ciclos curtos.",
+        "Acompanhar CAC, taxa de conversão e margem mensal.",
+      ];
+
+  return {
+    viabilityStatus,
+    score,
+    strengths,
+    weaknesses,
+    adjustments,
+    summary,
+    identifiedRisks,
+    financialAnalysis: `Receita mensal estimada em ${formatAoa(
+      financial.estimatedRevenueMonth
+    )} AOA, custos em ${formatAoa(financial.estimatedCostMonth)} AOA e lucro em ${formatAoa(
+      financial.estimatedProfitMonth
+    )} AOA.`,
+    financialProjection:
+      financial.breakEvenMonths != null
+        ? `Com este cenário, o break-even pode ocorrer em cerca de ${financial.breakEvenMonths} meses e a projeção de lucro em 12 meses é de ${formatAoa(
+            financial.projection12M
+          )} AOA.`
+        : "No cenário atual, a ideia não atinge break-even; é necessário rever pricing, custos e aquisição.",
+    recommendedActions,
+    nextRecommendedStep:
+      viabilityStatus === "viavel"
+        ? "Executar validação com clientes reais nas próximas 2 semanas e medir conversão inicial."
+        : "Refinar proposta de valor e estrutura de custos antes da próxima rodada de validação.",
+    factorScores,
+  };
+}
+
+function buildGeminiPrompt(data) {
+  const payload = {
+    idea: data.idea,
+    questionnaireAnswers: data.questionnaireAnswers || {},
+  };
+
+  return `
+Você é um analista de viabilidade de negócios em Angola.
+Analise a ideia abaixo e responda SOMENTE JSON válido com este formato:
+{
+  "viabilityStatus": "viavel" | "inviavel",
+  "score": number (0-100),
+  "strengths": string[],
+  "weaknesses": string[],
+  "adjustments": string[],
+  "summary": string,
+  "identifiedRisks": string[],
+  "financialAnalysis": string,
+  "financialProjection": string,
+  "recommendedActions": string[],
+  "nextRecommendedStep": string,
+  "factorScores": {
+    "problemaMercado": number (0-100),
+    "diferencial": number (0-100),
+    "publicoAlvo": number (0-100),
+    "execucao": number (0-100),
+    "financeiro": number (0-100)
+  }
+}
+
+Regras:
+- Seja objetivo e prático.
+- Considere mercado local, clareza de problema, diferencial, público-alvo, capital e execução.
+- score deve estar entre 0 e 100.
+- "strengths", "weaknesses", "adjustments", "identifiedRisks" e "recommendedActions" devem ter entre 2 e 5 itens cada.
+- "summary" em 1 frase curta.
+- "financialAnalysis" e "financialProjection" devem ser objetivas e orientadas a números.
+- "nextRecommendedStep" com ação prática imediata (1 frase).
+- Não inclua markdown nem texto fora do JSON.
+
+Dados:
+${JSON.stringify(payload, null, 2)}
+`.trim();
+}
+
+function extractTextFromGeminiResponse(json) {
+  const candidates = json?.candidates;
+  if (!Array.isArray(candidates) || !candidates.length) return "";
+  const parts = candidates[0]?.content?.parts;
+  if (!Array.isArray(parts) || !parts.length) return "";
+  return parts
+    .map((p) => (typeof p?.text === "string" ? p.text : ""))
+    .join("\n")
+    .trim();
+}
+
+function safeParseGeminiJson(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Alguns modelos devolvem JSON dentro de bloco markdown.
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced?.[1]) {
+      try {
+        return JSON.parse(fenced[1].trim());
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+function normalizeAiReport(raw, fallback) {
+  const viabilityStatus = raw?.viabilityStatus === "viavel" ? "viavel" : "inviavel";
+  const score = Math.max(0, Math.min(100, Number(raw?.score || 0)));
+  const strengths = Array.isArray(raw?.strengths) ? raw.strengths.filter(Boolean).slice(0, 5) : [];
+  const weaknesses = Array.isArray(raw?.weaknesses) ? raw.weaknesses.filter(Boolean).slice(0, 5) : [];
+  const adjustments = Array.isArray(raw?.adjustments) ? raw.adjustments.filter(Boolean).slice(0, 5) : [];
+  const summary = String(raw?.summary || "").trim();
+  const identifiedRisks = Array.isArray(raw?.identifiedRisks)
+    ? raw.identifiedRisks.filter(Boolean).slice(0, 5)
+    : [];
+  const financialAnalysis = String(raw?.financialAnalysis || "").trim();
+  const financialProjection = String(raw?.financialProjection || "").trim();
+  const recommendedActions = Array.isArray(raw?.recommendedActions)
+    ? raw.recommendedActions.filter(Boolean).slice(0, 5)
+    : [];
+  const nextRecommendedStep = String(raw?.nextRecommendedStep || "").trim();
+  const factorScoresRaw = raw?.factorScores && typeof raw.factorScores === "object" ? raw.factorScores : {};
+  const factorScores = {
+    problemaMercado: Math.max(0, Math.min(100, toNumber(factorScoresRaw.problemaMercado, 0))),
+    diferencial: Math.max(0, Math.min(100, toNumber(factorScoresRaw.diferencial, 0))),
+    publicoAlvo: Math.max(0, Math.min(100, toNumber(factorScoresRaw.publicoAlvo, 0))),
+    execucao: Math.max(0, Math.min(100, toNumber(factorScoresRaw.execucao, 0))),
+    financeiro: Math.max(0, Math.min(100, toNumber(factorScoresRaw.financeiro, 0))),
+  };
+
+  if (
+    !strengths.length ||
+    !weaknesses.length ||
+    !adjustments.length ||
+    !summary ||
+    !financialAnalysis ||
+    !financialProjection ||
+    !recommendedActions.length ||
+    !nextRecommendedStep
+  ) {
+    return fallback;
+  }
+
+  return {
+    viabilityStatus,
+    score,
+    strengths,
+    weaknesses,
+    adjustments,
+    summary,
+    identifiedRisks: identifiedRisks.length ? identifiedRisks : fallback.identifiedRisks,
+    financialAnalysis,
+    financialProjection,
+    recommendedActions,
+    nextRecommendedStep,
+    factorScores,
+  };
+}
+
+async function generateWithGoogleAiStudio(data) {
+  const apiKey = env.GOOGLE_AI_STUDIO_API_KEY;
+  if (!apiKey) {
+    return { aiRaw: null, aiError: "GOOGLE_AI_STUDIO_API_KEY não configurada." };
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const prompt = buildGeminiPrompt(data);
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    let reason = `Gemini API HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      reason = body?.error?.message || reason;
+    } catch {
+      // ignora parse de erro
+    }
+    return { aiRaw: null, aiError: reason };
+  }
+
+  const json = await response.json();
+  const text = extractTextFromGeminiResponse(json);
+  const aiRaw = safeParseGeminiJson(text);
+  if (!aiRaw) {
+    return { aiRaw: null, aiError: "Resposta do Gemini inválida para JSON esperado." };
+  }
+  return { aiRaw, aiError: "" };
 }
 
 export async function analyzeViability(payload) {
   const data = analyzeSchema.parse(payload);
-  const report = computeViability(data);
+  const fallbackReport = computeViabilityHeuristic(data);
+
+  let report = fallbackReport;
+  let analysisSource = "fallback_local";
+  let analysisNote = "Análise local aplicada.";
+  try {
+    const { aiRaw, aiError } = await generateWithGoogleAiStudio(data);
+    if (aiRaw) {
+      report = normalizeAiReport(aiRaw, fallbackReport);
+      analysisSource = "google_ai_studio";
+      analysisNote = "Análise gerada pelo Google AI Studio (Gemini).";
+    } else if (aiError) {
+      analysisSource = "fallback_local";
+      analysisNote = `Fallback local: ${aiError}`;
+    }
+  } catch {
+    // Se API externa falhar, mantém fallback heurístico.
+    report = fallbackReport;
+    analysisSource = "fallback_local";
+    analysisNote = "Fallback local: falha inesperada ao chamar Google AI Studio.";
+  }
 
   // Persistência best-effort: se tabela não existir, retorna análise mesmo assim.
   try {
@@ -131,11 +404,17 @@ export async function analyzeViability(payload) {
       return {
         id: stored.id,
         ...report,
+        analysisSource,
+        analysisNote,
       };
     }
   } catch {
     // sem throw para não bloquear UX.
   }
 
-  return report;
+  return {
+    ...report,
+    analysisSource,
+    analysisNote,
+  };
 }
