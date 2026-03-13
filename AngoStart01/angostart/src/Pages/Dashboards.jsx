@@ -5244,6 +5244,103 @@ function Perfilmentor() {
   const p = user?.profileData || {};
   const isMentor = user?.role === "mentor";
   const isEmpreendedor = user?.role === "empreendedor";
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    phone: "",
+    province: "",
+    expertiseArea: "",
+    experienceYears: "",
+    company: "",
+    currentRole: "",
+    linkedin: "",
+    businessName: "",
+    businessSector: "",
+    businessStage: "",
+    businessLocation: "",
+  });
+
+  useEffect(() => {
+    setEditForm({
+      phone: p.phone || "",
+      province: p.province || "",
+      expertiseArea: p.expertise_area || p.expertiseArea || "",
+      experienceYears: p.experience_years || p.experienceYears || "",
+      company: p.company || "",
+      currentRole: p.current_role || p.currentRole || "",
+      linkedin: p.linkedin || "",
+      businessName: p.business_name || p.businessName || "",
+      businessSector: p.business_sector || p.businessSector || "",
+      businessStage: p.business_stage || p.businessStage || "",
+      businessLocation: p.business_location || p.businessLocation || "",
+    });
+  }, [
+    user?.id,
+    user?.role,
+    user?.verificationStatus,
+    p.phone,
+    p.province,
+    p.expertise_area,
+    p.expertiseArea,
+    p.experience_years,
+    p.experienceYears,
+    p.company,
+    p.current_role,
+    p.currentRole,
+    p.linkedin,
+    p.business_name,
+    p.businessName,
+    p.business_sector,
+    p.businessSector,
+    p.business_stage,
+    p.businessStage,
+    p.business_location,
+    p.businessLocation,
+  ]);
+
+  const handleEditChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const submitProfileEdit = async () => {
+    setSavingEdit(true);
+    try {
+      const profileData = isMentor
+        ? {
+            phone: editForm.phone,
+            province: editForm.province,
+            expertiseArea: editForm.expertiseArea,
+            experienceYears: Number(editForm.experienceYears || 0),
+            company: editForm.company,
+            currentRole: editForm.currentRole,
+            linkedin: editForm.linkedin,
+          }
+        : {
+            phone: editForm.phone,
+            businessName: editForm.businessName,
+            businessSector: editForm.businessSector,
+            businessStage: editForm.businessStage,
+            businessLocation: editForm.businessLocation,
+          };
+
+      await updateMyProfile({ profileData });
+      await ctx?.refreshCurrentUser?.();
+      setIsEditOpen(false);
+      ctx?.setModal?.({
+        open: true,
+        title: "Perfil atualizado",
+        message: "Os seus dados foram atualizados. A sua conta será verificada novamente pela nossa equipa.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha ao editar perfil",
+        message: err.message || "Não foi possível atualizar os dados do perfil.",
+      });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
   const status = user?.verificationStatus || "approved";
   const verificationLabel = status === "approved" ? "✔ Conta Verificada" : status === "rejected" ? "Conta rejeitada" : "Conta em verificação";
   const verificationColor = status === "approved" ? "#10b981" : status === "rejected" ? "#ef4444" : "#f59e0b";
@@ -5294,7 +5391,7 @@ function Perfilmentor() {
 
           <button
             className="btn btn-primary"
-            onClick={() => ctx?.setModal?.({ open: true, message: t('config.editOpened') })}
+            onClick={() => setIsEditOpen(true)}
           >
             Editar Perfil
           </button>
@@ -5347,6 +5444,44 @@ function Perfilmentor() {
           </div>
         </div>
       </div>
+
+      {isEditOpen && (
+        <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setIsEditOpen(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(820px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
+            <h3 style={{ marginTop: 0 }}>Editar dados do perfil</h3>
+            <p style={{ marginTop: 0, color: "var(--dm-text-muted)", fontSize: "0.9rem" }}>
+              Atualize as informações abaixo e clique em <strong>Confirmar e Editar</strong>.
+            </p>
+
+            {isMentor ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "12px" }}>
+                <div><label className="form-label">Telefone</label><input className="form-input" value={editForm.phone} onChange={(e) => handleEditChange("phone", e.target.value)} /></div>
+                <div><label className="form-label">Província</label><input className="form-input" value={editForm.province} onChange={(e) => handleEditChange("province", e.target.value)} /></div>
+                <div><label className="form-label">Área de especialidade</label><input className="form-input" value={editForm.expertiseArea} onChange={(e) => handleEditChange("expertiseArea", e.target.value)} /></div>
+                <div><label className="form-label">Anos de experiência</label><input className="form-input" type="number" min="0" value={editForm.experienceYears} onChange={(e) => handleEditChange("experienceYears", e.target.value)} /></div>
+                <div><label className="form-label">Empresa</label><input className="form-input" value={editForm.company} onChange={(e) => handleEditChange("company", e.target.value)} /></div>
+                <div><label className="form-label">Função atual</label><input className="form-input" value={editForm.currentRole} onChange={(e) => handleEditChange("currentRole", e.target.value)} /></div>
+                <div><label className="form-label">LinkedIn</label><input className="form-input" value={editForm.linkedin} onChange={(e) => handleEditChange("linkedin", e.target.value)} /></div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "12px" }}>
+                <div><label className="form-label">Telefone</label><input className="form-input" value={editForm.phone} onChange={(e) => handleEditChange("phone", e.target.value)} /></div>
+                <div><label className="form-label">Nome do negócio</label><input className="form-input" value={editForm.businessName} onChange={(e) => handleEditChange("businessName", e.target.value)} /></div>
+                <div><label className="form-label">Setor do negócio</label><input className="form-input" value={editForm.businessSector} onChange={(e) => handleEditChange("businessSector", e.target.value)} /></div>
+                <div><label className="form-label">Fase do negócio</label><input className="form-input" value={editForm.businessStage} onChange={(e) => handleEditChange("businessStage", e.target.value)} /></div>
+                <div><label className="form-label">Local do negócio</label><input className="form-input" value={editForm.businessLocation} onChange={(e) => handleEditChange("businessLocation", e.target.value)} /></div>
+              </div>
+            )}
+
+            <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setIsEditOpen(false)} disabled={savingEdit}>Cancelar</button>
+              <button className="btn btn-primary" style={{ width: "auto" }} onClick={submitProfileEdit} disabled={savingEdit}>
+                {savingEdit ? "A guardar..." : "Confirmar e Editar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
