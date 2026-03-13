@@ -1,10 +1,12 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { z } from "zod";
 import { pool } from "../config/db.js";
 import {
   createUser,
   findUserByEmail,
   findUserPublicById,
+  updateUserPasswordHashById,
   USER_ROLES,
 } from "../models/userModel.js";
 import {
@@ -20,7 +22,16 @@ import {
   updateInvestidorProfileByUserId,
   updateMentorProfileByUserId,
 } from "../models/registrationProfileModel.js";
+import {
+  createPasswordResetToken,
+  ensurePasswordResetTable,
+  findValidPasswordResetTokenByHash,
+  invalidateActiveTokensByUserId,
+  markPasswordResetTokenAsUsed,
+} from "../models/passwordResetModel.js";
 import { signAccessToken } from "../utils/jwt.js";
+import { env } from "../config/env.js";
+import { sendPasswordResetEmail } from "./mailService.js";
 
 const profileSchema = z.object({
   phone: z.string().min(6).max(30).optional(),
@@ -74,6 +85,15 @@ const switchRoleSchema = z.object({
 
 const updateProfileSchema = z.object({
   profileData: profileSchema,
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(20).max(300),
+  newPassword: z.string().min(8).max(120),
 });
 
 async function listAvailableRoles(user) {
@@ -322,4 +342,80 @@ export async function updateMyProfile(authUser, input) {
   const user = await findUserPublicById(userId);
   const userWithVerification = await enrichUserWithVerification(user, role);
   return { user: userWithVerification };
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function buildPasswordResetUrl(token) {
+  const base = env.FRONTEND_ORIGIN || "http://localhost:5173";
+  return `${base.replace(/\/+$/, "")}/redefinir-senha?token=${encodeURIComponent(token)}`;
+}
+
+export async function requestPasswordReset(input) {
+  const data = forgotPasswordSchema.parse(input);
+  await ensurePasswordResetTable();
+
+  const user = await findUserByEmail(data.email);
+  if (!user) {
+    throw {
+      status: 404,
+      message: "O e-mail não está cadastrado na AngoStart não pode recuperar senha de uma conta que não existe!",
+    };
+  }
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = sha256(rawToken);
+  const ttl = Math.max(5, Number(env.PASSWORD_RESET_TTL_MINUTES || 30));
+  const expiresAt = new Date(Date.now() + ttl * 60 * 1000);
+
+  await invalidateActiveTokensByUserId(Number(user.id));
+  await createPasswordResetToken({
+    userId: Number(user.id),
+    tokenHash,
+    expiresAt,
+  });
+
+  const resetUrl = buildPasswordResetUrl(rawToken);
+  await sendPasswordResetEmail({
+    to: user.email,
+    resetUrl,
+  });
+
+  return {
+    message: "Email de recuperação enviado com sucesso.",
+  };
+}
+
+export async function validatePasswordResetToken(input) {
+  const token = String(input?.token || "");
+  if (!token) {
+    throw { status: 400, message: "Token de recuperação ausente." };
+  }
+  await ensurePasswordResetTable();
+  const tokenHash = sha256(token);
+  const row = await findValidPasswordResetTokenByHash(tokenHash);
+  if (!row) {
+    throw { status: 400, message: "Token inválido ou expirado." };
+  }
+  return { valid: true };
+}
+
+export async function resetPassword(input) {
+  const data = resetPasswordSchema.parse(input);
+  await ensurePasswordResetTable();
+
+  const tokenHash = sha256(data.token);
+  const row = await findValidPasswordResetTokenByHash(tokenHash);
+  if (!row) {
+    throw { status: 400, message: "Token inválido ou expirado." };
+  }
+
+  const passwordHash = await bcrypt.hash(data.newPassword, 10);
+  await updateUserPasswordHashById(Number(row.user_id), passwordHash);
+  await markPasswordResetTokenAsUsed(Number(row.id));
+  await invalidateActiveTokensByUserId(Number(row.user_id));
+
+  return { message: "Senha redefinida com sucesso." };
 }

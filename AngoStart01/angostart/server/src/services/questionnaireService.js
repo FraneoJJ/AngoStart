@@ -5,6 +5,7 @@ import {
   listAnswersBySessionId,
   upsertAnswers,
 } from "../models/questionnaireModel.js";
+import { generateJsonWithOllama } from "./ollamaService.js";
 
 function safeJsonDecode(value, fallback) {
   if (value == null) return fallback;
@@ -38,7 +39,7 @@ const answersSchema = z.object({
   ).min(1),
 });
 
-function buildDynamicQuestions(context) {
+function buildDynamicQuestionsFallback(context) {
   const base = [
     {
       key: "cliente_dor",
@@ -122,9 +123,79 @@ function buildDynamicQuestions(context) {
   return [...base, ...sectorSpecific];
 }
 
+function buildQuestionsPrompt(context) {
+  return `
+Você é um analista de negócios para Angola.
+Com base no contexto abaixo, gere um JSON válido neste formato:
+{
+  "questions": [
+    {
+      "key": "string_snake_case",
+      "label": "pergunta em português",
+      "type": "textarea|number|select",
+      "required": true,
+      "options": ["op1","op2"] // apenas quando type="select"
+    }
+  ]
+}
+
+Regras:
+- Retorne entre 5 e 8 perguntas.
+- Foco em viabilidade prática no mercado angolano.
+- Perguntas objetivas, sem texto fora do JSON.
+- Keys únicas e curtas.
+- Se usar "select", inclua 3-6 opções.
+
+Contexto:
+${JSON.stringify(context, null, 2)}
+`.trim();
+}
+
+function sanitizeQuestions(aiQuestions, fallback) {
+  if (!Array.isArray(aiQuestions) || !aiQuestions.length) return fallback;
+  const allowedTypes = new Set(["textarea", "number", "select"]);
+  const used = new Set();
+  const out = [];
+  for (const q of aiQuestions) {
+    const key = String(q?.key || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "")
+      .slice(0, 120);
+    const label = String(q?.label || "").trim().slice(0, 300);
+    const type = String(q?.type || "textarea").toLowerCase();
+    const required = q?.required !== false;
+    if (!key || key.length < 2 || used.has(key) || !label || !allowedTypes.has(type)) continue;
+    const item = { key, label, type, required };
+    if (type === "select") {
+      const options = Array.isArray(q?.options)
+        ? q.options.map((o) => String(o || "").trim()).filter(Boolean).slice(0, 8)
+        : [];
+      item.options = options.length ? options : ["Sim", "Não", "Parcial"];
+    }
+    used.add(key);
+    out.push(item);
+    if (out.length >= 8) break;
+  }
+  if (out.length < 4) return fallback;
+  return out;
+}
+
+async function buildDynamicQuestions(context) {
+  const fallback = buildDynamicQuestionsFallback(context);
+  const prompt = buildQuestionsPrompt(context);
+  const { data, error } = await generateJsonWithOllama(prompt);
+  if (!data?.questions || error) {
+    return fallback;
+  }
+  return sanitizeQuestions(data.questions, fallback);
+}
+
 export async function generateSession(user, payload) {
   const data = generateSchema.parse(payload);
-  const questions = buildDynamicQuestions(data.context);
+  const questions = await buildDynamicQuestions(data.context);
 
   const session = await createQuestionnaireSession({
     userId: user?.sub ? Number(user.sub) : null,

@@ -12,6 +12,31 @@ export async function registerUser(payload) {
   });
 }
 
+export async function requestPasswordReset(email) {
+  return requestJson(`${API_BASE}/auth/forgot-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function validateResetToken(token) {
+  const params = new URLSearchParams({ token });
+  return requestJson(`${API_BASE}/auth/reset-password/validate?${params.toString()}`);
+}
+
+export async function resetPassword(token, newPassword) {
+  return requestJson(`${API_BASE}/auth/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
 export async function updateMyProfile(payload) {
   const token = localStorage.getItem("angostart_token");
   if (!token) throw new Error("Sem token de autenticação.");

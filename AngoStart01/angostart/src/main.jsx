@@ -12,6 +12,7 @@ import ErrorPage from './Pages/ErrorPage.jsx'
 // Paginas de navegacao
 import CriarContaPage from './Pages/CriarContaPage.jsx'
 import RecuperarSenhaPage from './Pages/RecuperarSenhaPage.jsx'
+import RedefinirSenhaPage from './Pages/RedefinirSenhaPage.jsx'
 import DashboardPage from './Pages/Dashboards.jsx'
 
 const router = createBrowserRouter([
@@ -27,6 +28,10 @@ const router = createBrowserRouter([
   {
     path: "/recuperar-senha",
     element: <RecuperarSenhaPage />,
+  },
+  {
+    path: "/redefinir-senha",
+    element: <RedefinirSenhaPage />,
   },
    {
     path: "/dashboard",

@@ -5,6 +5,7 @@ import {
   getReportActivityByMonth,
   getReportRoleDistributionByMonth,
   getReportSummaryByMonth,
+  listAllIdeasForAdmin,
   listInvestorsWithProfiles,
   listAvailableReportMonths,
   listUsersWithProfiles,
@@ -202,4 +203,8 @@ export async function getPerformanceReport(selectedMonth = "") {
     activity,
     collectedAt: new Date().toISOString(),
   };
+}
+
+export async function listAdminIdeas() {
+  return listAllIdeasForAdmin();
 }

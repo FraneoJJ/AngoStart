@@ -93,6 +93,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState("dashboard");
 
@@ -631,13 +632,33 @@ function RenderAdminPage() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
 
-                <input
-                  className="form-input"
-                  type="password"
-                  placeholder="Senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    className="form-input"
+                    type={showLoginPassword ? "text" : "password"}
+                    placeholder="Senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    style={{ paddingRight: "2.5rem" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    aria-label={showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
+                    style={{
+                      position: "absolute",
+                      right: "0.6rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      color: "var(--neutral-500)",
+                    }}
+                  >
+                    {showLoginPassword ? "🙈" : "👁"}
+                  </button>
+                </div>
 
                 {error && (
                   <div className="alert alert-error">{error}</div>

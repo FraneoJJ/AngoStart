@@ -58,3 +58,36 @@ export async function updateProfile(req, res, next) {
     return next(err);
   }
 }
+
+export async function forgotPassword(req, res, next) {
+  try {
+    const result = await authService.requestPasswordReset(req.body);
+    return res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return next({ status: 400, message: err.issues?.[0]?.message || "Dados inválidos." });
+    }
+    return next(err);
+  }
+}
+
+export async function validateResetToken(req, res, next) {
+  try {
+    const result = await authService.validatePasswordResetToken({ token: req.query?.token });
+    return res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function resetPassword(req, res, next) {
+  try {
+    const result = await authService.resetPassword(req.body);
+    return res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return next({ status: 400, message: err.issues?.[0]?.message || "Dados inválidos." });
+    }
+    return next(err);
+  }
+}

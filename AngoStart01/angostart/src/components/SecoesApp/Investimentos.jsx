@@ -35,7 +35,7 @@ const Investimentos = () => {
               <span className="detail-value">50.000Kz - 100.000Kz</span>
           </div>
 
-          <Link to={'/login'} className='btn-detalhe'>Ver Detalhes</Link>
+          <Link to={'/dashboard'} className='btn-detalhe'>Ver Detalhes</Link>
         </div>
 
         <div className="investment-card">
@@ -55,7 +55,7 @@ const Investimentos = () => {
               <span className="detail-value">100.000Kz - 200.000Kz</span>
           </div>
 
-          <Link to={'/login'} className='btn-detalhe'>Ver Detalhes</Link>
+          <Link to={'/dashboard'} className='btn-detalhe'>Ver Detalhes</Link>
         </div>
 
         <div className="investment-card">
@@ -75,7 +75,7 @@ const Investimentos = () => {
               <span className="detail-value">20.000Kz - 40.000Kz</span>
           </div>
 
-          <Link to={'/login'} className='btn-detalhe'>Ver Detalhes</Link>
+          <Link to={'/dashboard'} className='btn-detalhe'>Ver Detalhes</Link>
         </div>
 
       </div>

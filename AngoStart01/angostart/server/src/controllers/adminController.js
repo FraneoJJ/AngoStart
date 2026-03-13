@@ -49,3 +49,12 @@ export async function performanceReport(req, res, next) {
     next(err);
   }
 }
+
+export async function ideas(_req, res, next) {
+  try {
+    const ideas = await adminService.listAdminIdeas();
+    res.status(200).json({ success: true, ideas });
+  } catch (err) {
+    next(err);
+  }
+}

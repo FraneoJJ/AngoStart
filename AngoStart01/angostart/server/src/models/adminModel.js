@@ -201,3 +201,46 @@ export async function getReportActivityByMonth(startDate, endDate) {
     approvalRate,
   };
 }
+
+export async function listAllIdeasForAdmin() {
+  const [rows] = await pool.execute(
+    `SELECT
+      i.id,
+      i.title,
+      i.description,
+      i.sector,
+      i.city,
+      i.address,
+      i.region,
+      i.latitude,
+      i.longitude,
+      i.initial_capital,
+      i.problem,
+      i.differential_text,
+      i.target_audience,
+      i.status,
+      i.created_by,
+      i.created_at,
+      i.updated_at,
+      u.name AS owner_name,
+      u.email AS owner_email,
+      (
+        SELECT vr.score
+        FROM viability_reports vr
+        WHERE vr.idea_id = i.id
+        ORDER BY vr.created_at DESC
+        LIMIT 1
+      ) AS viability_score,
+      (
+        SELECT vr.viability_status
+        FROM viability_reports vr
+        WHERE vr.idea_id = i.id
+        ORDER BY vr.created_at DESC
+        LIMIT 1
+      ) AS viability_status
+    FROM ideas i
+    INNER JOIN users u ON u.id = i.created_by
+    ORDER BY i.created_at DESC, i.id DESC`
+  );
+  return rows;
+}

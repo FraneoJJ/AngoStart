@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 const router = Router();
 
 router.get("/users", requireAuth, requireRole("admin"), adminController.users);
+router.get("/ideas", requireAuth, requireRole("admin"), adminController.ideas);
 router.get(
   "/reports/performance",
   requireAuth,

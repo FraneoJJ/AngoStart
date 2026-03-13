@@ -42,3 +42,12 @@ export async function createUser({ name, email, passwordHash, role }, db = pool)
   );
   return rows[0] || null;
 }
+
+export async function updateUserPasswordHashById(userId, passwordHash) {
+  await pool.execute(
+    `UPDATE users
+     SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [passwordHash, userId]
+  );
+}

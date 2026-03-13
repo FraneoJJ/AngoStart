@@ -28,3 +28,12 @@ export async function updateAdminUserVerification(userId, status) {
   });
   return data.user;
 }
+
+export async function getAdminIdeas() {
+  const data = await requestJson(`${API_BASE}/admin/ideas`, {
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+  return data.ideas || [];
+}

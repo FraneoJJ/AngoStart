@@ -7,7 +7,7 @@ import { analyzeViability } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
-import { getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
+import { getAdminIdeas, getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import { updateMyProfile } from "../services/authApi";
 import { getPerformanceReport } from "../services/reportApi";
@@ -214,6 +214,7 @@ export default function Dashboard() {
   const [switchingRole, setSwitchingRole] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -295,10 +296,9 @@ export default function Dashboard() {
       }
 
       if (role === "admin") {
-        const marketplaceIdeas = await getMarketplaceIdeas();
-        const pendingReview = marketplaceIdeas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        const adminIdeas = await getAdminIdeas();
         setNavBadges({
-          ideias: pendingReview,
+          ideias: adminIdeas.length,
         });
         return;
       }
@@ -1047,14 +1047,34 @@ function RenderAdminPage() {
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
                 <input 
-                  type="password" 
+                  type={showLoginPassword ? "text" : "password"} 
                   id="password" 
-                  className="form-input" 
+                  className="form-input password-input-with-toggle" 
                   placeholder="••••••••"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  className="input-toggle-btn"
+                  onClick={() => setShowLoginPassword((prev) => !prev)}
+                  aria-label={showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showLoginPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.73-1.73 1.81-3.24 3.16-4.44" />
+                      <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+                      <path d="M1 1l22 22" />
+                      <path d="M9.88 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a11.8 11.8 0 0 1-1.67 2.79" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
 
               </div>
             </div>
@@ -2419,11 +2439,10 @@ function Ideias() {
     (async () => {
       setLoading(true);
       try {
-        const all = await getMarketplaceIdeas();
-        const pending = (all || []).filter((i) => i.status === "submitted" || i.status === "analyzing");
-        setIdeas(pending);
+        const allIdeas = await getAdminIdeas();
+        setIdeas(allIdeas || []);
       } catch (err) {
-        ctx?.setModal?.({ open: true, message: `Falha ao carregar ideias pendentes: ${err.message}` });
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar ideias do sistema: ${err.message}` });
         setIdeas([]);
       } finally {
         setLoading(false);
@@ -2452,13 +2471,13 @@ function Ideias() {
   return (<>
     <div className="dashboard-card">
       <div className="dashboard-card-header">
-        <h3 className="dashboard-card-title">Ideias Pendentes de Aprovação</h3>
-        <p className="dashboard-card-description">Ideias aguardando revisão</p>
+        <h3 className="dashboard-card-title">Ideias dos Utilizadores</h3>
+        <p className="dashboard-card-description">Todas as ideias registadas na plataforma</p>
       </div>
       {loading ? (
         <p>A carregar ideias...</p>
       ) : ideas.length === 0 ? (
-        <p>Não há ideias pendentes no momento.</p>
+        <p>Não há ideias registadas no momento.</p>
       ) : (
       <div style={{ width: "100%", overflowX: "auto" }}>
       <table className="data-table" style={{ minWidth: "760px" }}>
@@ -2467,6 +2486,7 @@ function Ideias() {
             <th>Ideia</th>
             <th>Empreendedor</th>
             <th>Score IA</th>
+            <th>Status</th>
             <th>Data Submissão</th>
             <th>Ação</th>
           </tr>
@@ -2477,6 +2497,7 @@ function Ideias() {
               <td>{idea.title}</td>
               <td>{idea.owner_name || "-"}</td>
               <td><span className={`badge ${Number(idea.viability_score || 0) >= 80 ? "badge-success" : "badge-warning"}`}>{idea.viability_score ?? "-"}</span></td>
+              <td><span className="badge badge-info">{idea.status || "-"}</span></td>
               <td>{formatDate(idea.created_at)}</td>
               <td>
                 <button
@@ -3251,7 +3272,7 @@ function SubmeterIdeia() {
     lng: "",
     capital: "",
     problema: "", diferencial: "", publico: "",
-    arquivos: null,
+    arquivos: [],
   };
   const [etapa, setEtapa] = useState(1);
   const [analisando, setAnalisando] = useState(false);
@@ -3263,15 +3284,74 @@ function SubmeterIdeia() {
   const [questionarioPerguntas, setQuestionarioPerguntas] = useState([]);
   const [questionarioRespostas, setQuestionarioRespostas] = useState({});
   const [gerandoQuestionario, setGerandoQuestionario] = useState(false);
+  const [avisoQuestionario, setAvisoQuestionario] = useState("");
 
   const [dados, setDados] = useState(initialDados);
 
-  const proximaEtapa = () => setEtapa(etapa + 1);
-  const etapaAnterior = () => setEtapa(etapa - 1);
+  const proximaEtapa = () => {
+    if (etapa === 1) {
+      const nome = String(dados.nome || "").trim();
+      const descricao = String(dados.descricao || "").trim();
+      const setor = String(dados.setor || "").trim();
+      if (!nome || nome.length < 2) {
+        ctx?.setModal?.({ open: true, message: "Preencha o nome do projeto (mínimo 2 caracteres)." });
+        return;
+      }
+      if (!setor) {
+        ctx?.setModal?.({ open: true, message: "Selecione o setor de atuação." });
+        return;
+      }
+      if (!descricao || descricao.length < 10) {
+        ctx?.setModal?.({ open: true, message: "A descrição curta deve ter pelo menos 10 caracteres." });
+        return;
+      }
+    }
+    if (etapa === 2) {
+      if (!String(dados.cidade || "").trim() || !String(dados.regiao || "").trim()) {
+        ctx?.setModal?.({ open: true, message: "Preencha cidade e região/província para continuar." });
+        return;
+      }
+    }
+    if (etapa === 3) {
+      const capital = Number(dados.capital || 0);
+      if (!Number.isFinite(capital) || capital <= 0) {
+        ctx?.setModal?.({ open: true, message: "Informe o capital inicial (Kz) maior que zero." });
+        return;
+      }
+    }
+    if (etapa === 4) {
+      if (!String(dados.problema || "").trim() || !String(dados.diferencial || "").trim() || !String(dados.publico || "").trim()) {
+        ctx?.setModal?.({ open: true, message: "Preencha problema, diferencial e público-alvo antes de avançar." });
+        return;
+      }
+      // Perguntas adicionais são opcionais: ao avançar daqui, vai direto para uploads.
+      setEtapa(6);
+      return;
+    }
+    if (etapa === 6) {
+      if (!Array.isArray(dados.arquivos) || dados.arquivos.length === 0) {
+        ctx?.setModal?.({ open: true, message: "Adicione pelo menos um arquivo sobre a ideia para continuar." });
+        return;
+      }
+    }
+    setEtapa(etapa + 1);
+  };
+  const etapaAnterior = () => {
+    if (etapa === 6 && questionarioPerguntas.length === 0) {
+      setEtapa(4);
+      return;
+    }
+    setEtapa(etapa - 1);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setDados({ ...dados, [name]: value });
+  };
+
+  const handleArquivosChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setDados((prev) => ({ ...prev, arquivos: files }));
   };
 
   const mapQuery = `${dados.localizacao || ''} ${dados.cidade || ''} ${dados.regiao || ''}`.trim() || "Luanda Angola";
@@ -3322,6 +3402,7 @@ function SubmeterIdeia() {
     setQuestionarioSessionId(null);
     setQuestionarioPerguntas([]);
     setQuestionarioRespostas({});
+    setAvisoQuestionario("");
     setEtapa(1);
   };
 
@@ -3390,26 +3471,40 @@ function SubmeterIdeia() {
   };
 
   const enviarParaAnalise = async () => {
-    if (!dados.nome || !dados.descricao || !dados.setor || !dados.cidade || !dados.regiao) {
+    const nome = String(dados.nome || "").trim();
+    const descricao = String(dados.descricao || "").trim();
+    const setor = String(dados.setor || "").trim();
+    const cidade = String(dados.cidade || "").trim();
+    const regiao = String(dados.regiao || "").trim();
+
+    if (!nome || !descricao || !setor || !cidade || !regiao) {
       ctx?.setModal?.({ open: true, message: "Preencha os campos obrigatórios das fases anteriores antes de submeter." });
+      return;
+    }
+    if (nome.length < 2) {
+      ctx?.setModal?.({ open: true, message: "O nome do projeto deve ter pelo menos 2 caracteres." });
+      return;
+    }
+    if (descricao.length < 10) {
+      ctx?.setModal?.({ open: true, message: "A descrição curta deve ter pelo menos 10 caracteres." });
       return;
     }
 
     const lat = Number(dados.lat || 0);
     const lng = Number(dados.lng || 0);
     const payload = {
-      title: dados.nome,
-      description: dados.descricao,
-      sector: dados.setor || "Geral",
-      city: dados.cidade,
+      title: nome,
+      description: descricao,
+      sector: setor || "Geral",
+      city: cidade,
       address: dados.localizacao,
-      region: dados.regiao,
+      region: regiao,
       latitude: lat,
       longitude: lng,
       initialCapital: Number(dados.capital || 0),
-      problem: dados.problema,
-      differentialText: dados.diferencial,
-      targetAudience: dados.publico,
+      problem: String(dados.problema || "").trim(),
+      differentialText: String(dados.diferencial || "").trim(),
+      targetAudience: String(dados.publico || "").trim(),
       status: "submitted",
     };
 
@@ -3448,7 +3543,14 @@ function SubmeterIdeia() {
       }
 
       if (activeSessionId && Object.keys(questionarioRespostas).length > 0) {
-        await saveQuestionnaireAnswers(activeSessionId, questionarioRespostas);
+        try {
+          await saveQuestionnaireAnswers(activeSessionId, questionarioRespostas);
+        } catch (err) {
+          if (!isPlanFeatureBlocked(err)) {
+            // Não bloquear fluxo principal caso a ideia já esteja no banco.
+            setMensagemFluxo(`Ideia submetida. Não foi possível guardar respostas do questionário: ${err.message}`);
+          }
+        }
       }
 
       try {
@@ -3463,7 +3565,7 @@ function SubmeterIdeia() {
       }
 
       if (!analiseIndisponivel) {
-        setEtapa(7);
+        setEtapa(8);
       }
       if (analiseIndisponivel) {
         ctx?.setModal?.({
@@ -3477,17 +3579,34 @@ function SubmeterIdeia() {
         setMensagemFluxo("Ideia enviada e analisada com sucesso.");
       }
     } catch (err) {
-      salvarRascunhoLocal();
-      ctx?.setModal?.({
-        open: true,
-        message: `Não foi possível completar o fluxo na API (${err.message}). O rascunho foi salvo localmente.`,
-      });
+      const msg = String(err?.message || "");
+      const isValidationError =
+        msg.includes("Too small") ||
+        msg.includes("Invalid") ||
+        msg.includes("Payload inválido");
+
+      if (isValidationError) {
+        ctx?.setModal?.({
+          open: true,
+          message: `Não foi possível submeter para a API: ${msg}. Corrija os campos obrigatórios e tente novamente.`,
+        });
+      } else {
+        salvarRascunhoLocal();
+        ctx?.setModal?.({
+          open: true,
+          message: `Não foi possível completar o fluxo na API (${msg}). O rascunho foi salvo localmente.`,
+        });
+      }
     } finally {
       setAnalisando(false);
     }
   };
 
-  const gerarQuestionarioIA = async () => {
+  const gerarQuestionarioIA = async (avancarParaPerguntas = false) => {
+    if (questionarioSessionId && questionarioPerguntas.length > 0) {
+      if (avancarParaPerguntas) setEtapa(5);
+      return;
+    }
     setGerandoQuestionario(true);
     try {
       const session = await generateQuestionnaire({
@@ -3508,7 +3627,10 @@ function SubmeterIdeia() {
         baseAnswers[q.key] = questionarioRespostas[q.key] || "";
       });
       setQuestionarioRespostas(baseAnswers);
-      ctx?.setModal?.({ open: true, message: "Questionário dinâmico gerado com sucesso." });
+      setAvisoQuestionario("Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.");
+      if (avancarParaPerguntas) {
+        setEtapa(5);
+      }
     } catch (err) {
       ctx?.setModal?.({ open: true, message: `Falha ao gerar questionário: ${err.message}` });
     } finally {
@@ -3520,7 +3642,7 @@ function SubmeterIdeia() {
     if (!questionarioSessionId) return;
     try {
       await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
-      ctx?.setModal?.({ open: true, message: "Respostas do questionário guardadas." });
+      setAvisoQuestionario("Respostas do questionário guardadas com sucesso.");
     } catch (err) {
       ctx?.setModal?.({ open: true, message: `Falha ao guardar respostas: ${err.message}` });
     }
@@ -3547,9 +3669,11 @@ function SubmeterIdeia() {
     setResultadoIA({
       viabilidade: report.viabilityStatus === "viavel" ? "Viável" : "Inviável",
       origemAnalise:
-        report.analysisSource === "google_ai_studio"
-          ? "Google AI Studio (Gemini)"
-          : "Análise Local (Fallback)",
+        report.analysisSource === "ollama"
+          ? "Ollama (Open Source)"
+          : report.analysisSource === "google_ai_studio"
+            ? "Google AI Studio (Gemini)"
+            : "Análise Local (Fallback)",
       notaAnalise: report.analysisNote || "",
       pontosFortes: report.strengths?.length ? report.strengths : ["Estrutura inicial adequada."],
       riscosIdentificados: report.identifiedRisks?.length
@@ -3664,7 +3788,7 @@ function SubmeterIdeia() {
 
   const renderFase4 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 4: Questionário Dinâmico (IA)</h3>
+      <h3 className="dashboard-card-title">Fase 4: Contexto para IA</h3>
       <div className="form-group">
         <label className="form-label">Qual problema específico o seu produto resolve?</label>
         <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
@@ -3673,21 +3797,50 @@ function SubmeterIdeia() {
         <label className="form-label">Como sua solução é diferente das existentes?</label>
         <textarea className="form-input" name="diferencial" value={dados.diferencial} onChange={handleChange} />
       </div>
+      <div className="form-group">
+        <label className="form-label">Quem é o seu público-alvo principal?</label>
+        <textarea className="form-input" name="publico" value={dados.publico} onChange={handleChange} />
+      </div>
+      <div className="dashboard-card" style={{ background: "var(--neutral-50)", fontSize: "0.9rem" }}>
+        <p style={{ margin: 0 }}>
+          Com estes dados, a IA vai identificar pontos pouco claros e criar perguntas adicionais para melhorar a análise de viabilidade.
+        </p>
+      </div>
+      {avisoQuestionario ? (
+        <div className="dashboard-card" style={{ background: "var(--success-100)", border: "1px solid var(--success-500)" }}>
+          <p style={{ margin: 0, color: "var(--success-500)" }}>{avisoQuestionario}</p>
+        </div>
+      ) : null}
       <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-        <button type="button" className="btn btn-primary" onClick={gerarQuestionarioIA} disabled={gerandoQuestionario}>
-          {gerandoQuestionario ? "Gerando..." : "Gerar Questionário IA"}
+        <button type="button" className="btn btn-primary" onClick={() => gerarQuestionarioIA(true)} disabled={gerandoQuestionario}>
+          {gerandoQuestionario ? "Gerando..." : "Perguntas adicionais (opcional)"}
         </button>
-        <button type="button" className="btn btn-outline" onClick={salvarQuestionarioIA} disabled={!questionarioSessionId}>
-          Guardar Respostas
+        <button type="button" className="btn btn-outline" onClick={() => setEtapa(5)} disabled={!questionarioSessionId}>
+          Ver perguntas geradas
         </button>
       </div>
+    </div>
+  );
 
-      {questionarioPerguntas.length > 0 && (
-        <div className="dashboard-card" style={{ marginTop: "16px", background: "var(--neutral-50)" }}>
-          <h4 style={{ marginBottom: "12px" }}>Perguntas Dinâmicas</h4>
-          {questionarioPerguntas.map((q) => (
-            <div key={q.key} className="form-group" style={{ marginBottom: "10px" }}>
-              <label className="form-label">{q.label}</label>
+  const renderFase5 = () => (
+    <div className="auth-form">
+      <h3 className="dashboard-card-title">Fase 5: Perguntas adicionais da IA (Opcional)</h3>
+      <p style={{ margin: 0, color: "var(--neutral-600)", fontSize: "0.9rem" }}>
+        Responda este questionário para melhorar a precisão da análise de viabilidade.
+      </p>
+      {avisoQuestionario ? (
+        <div className="dashboard-card" style={{ background: "var(--success-100)", border: "1px solid var(--success-500)" }}>
+          <p style={{ margin: 0, color: "var(--success-500)" }}>{avisoQuestionario}</p>
+        </div>
+      ) : null}
+      {questionarioPerguntas.length > 0 ? (
+        <div className="dashboard-card" style={{ marginTop: "8px", background: "var(--neutral-50)" }}>
+          <h4 style={{ marginBottom: "12px" }}>Questionário Gerado</h4>
+          {questionarioPerguntas.map((q, idx) => (
+            <div key={q.key} className="form-group" style={{ marginBottom: "12px" }}>
+              <label className="form-label">
+                {idx + 1}. {q.label} {q.required ? <span style={{ color: "var(--error-500)" }}>*</span> : null}
+              </label>
               {q.type === "select" ? (
                 <select
                   className="form-input"
@@ -3713,7 +3866,7 @@ function SubmeterIdeia() {
               ) : (
                 <textarea
                   className="form-input"
-                  style={{ minHeight: "80px" }}
+                  style={{ minHeight: "90px" }}
                   value={questionarioRespostas[q.key] || ""}
                   onChange={(e) =>
                     setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
@@ -3722,84 +3875,157 @@ function SubmeterIdeia() {
               )}
             </div>
           ))}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+            <button type="button" className="btn btn-outline" onClick={salvarQuestionarioIA} disabled={!questionarioSessionId}>
+              Guardar Respostas
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="dashboard-card" style={{ marginTop: "8px" }}>
+          <p style={{ margin: 0 }}>Ainda não há perguntas geradas. Esta etapa é opcional. Se quiser, volte à fase anterior e clique em "Perguntas adicionais (opcional)".</p>
         </div>
       )}
     </div>
   );
 
-  const renderFase5 = () => (
+  const renderFase6 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 5: Uploads</h3>
+      <h3 className="dashboard-card-title">Fase 6: Uploads</h3>
       <div style={{ border: '2px dashed var(--neutral-300)', padding: '40px', textAlign: 'center', borderRadius: '12px' }}>
-        <p>Arraste imagens ou vídeos do produto/protótipo</p>
-        <button className="btn-logout" style={{marginTop: '10px', width: 'auto', display: 'inline-block'}}>Selecionar Arquivos</button>
+        <p>Adicione imagens, PDF ou vídeos do produto/protótipo</p>
+        <input
+          type="file"
+          multiple
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.mp4,.mov,.avi"
+          onChange={handleArquivosChange}
+          style={{ marginTop: "10px" }}
+        />
+        {Array.isArray(dados.arquivos) && dados.arquivos.length > 0 ? (
+          <div style={{ marginTop: "12px", textAlign: "left", display: "grid", gap: "4px" }}>
+            {dados.arquivos.map((f) => (
+              <div key={`${f.name}-${f.size}`} style={{ fontSize: "0.85rem", color: "var(--neutral-700)" }}>
+                • {f.name}
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 
-  const renderFase6 = () => (
+  const renderFase7 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 6: Revisão</h3>
+      <h3 className="dashboard-card-title">Fase 7: Revisão Final</h3>
       <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
         <p><strong>Projeto:</strong> {dados.nome}</p>
         <p><strong>Setor:</strong> {dados.setor}</p>
         <p><strong>Localização:</strong> {dados.cidade} - {dados.regiao} ({dados.localizacao || "Sem referência"})</p>
         <p><strong>Investimento:</strong> Kz{dados.capital}</p>
         <p><strong>Problema:</strong> {(dados.problema || "").substring(0, 50)}...</p>
+        <p><strong>Perguntas IA respondidas:</strong> {Object.values(questionarioRespostas).filter((v) => String(v || "").trim()).length}</p>
+        <p><strong>Arquivos anexados:</strong> {Array.isArray(dados.arquivos) ? dados.arquivos.length : 0}</p>
       </div>
       <p style={{fontSize: '0.8rem', color: 'var(--neutral-500)'}}>Ao clicar em submeter, nossa IA analisará a viabilidade do seu negócio.</p>
     </div>
   );
 
   const renderResultado = () => (
-    <div className="dashboard-card" style={{ textAlign: 'center', animation: 'fadeIn 0.5s' }}>
+    <div className="dashboard-card" style={{ animation: 'fadeIn 0.5s' }}>
       {mensagemFluxo && (
         <p style={{ marginBottom: '12px', color: 'var(--success-500)', fontWeight: 600 }}>{mensagemFluxo}</p>
       )}
-      <div style={{ fontSize: '3rem' }}>{resultadoIA.score >= 70 ? '🚀' : '💡'}</div>
-      <h2 className="dashboard-card-title">Análise de Viabilidade: {resultadoIA.viabilidade}</h2>
-      <div style={{ margin: '20px 0', padding: '15px', background: 'var(--primary-50)', borderRadius: '12px' }}>
-        <p><strong>Score Geral: {resultadoIA.score}/100</strong></p>
-        <p style={{ marginTop: '8px' }}><strong>Fonte:</strong> {resultadoIA.origemAnalise}</p>
-        {resultadoIA.notaAnalise ? (
-          <p style={{ marginTop: '6px', fontSize: '0.85rem', color: 'var(--neutral-600)' }}>{resultadoIA.notaAnalise}</p>
-        ) : null}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, var(--primary-800), var(--primary-700))',
+          color: 'var(--on-primary)',
+          borderRadius: '14px',
+          padding: '18px',
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr auto',
+          alignItems: 'center',
+          gap: '14px',
+        }}
+      >
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="dashboard-card-title" style={{ margin: 0, color: 'var(--on-primary)' }}>
+            Análise de Viabilidade: {resultadoIA.viabilidade}
+          </h2>
+          <p style={{ margin: '6px 0 0', opacity: 0.92 }}>
+            Fonte: {resultadoIA.origemAnalise}
+          </p>
+        </div>
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.18)',
+            borderRadius: '12px',
+            padding: '10px 14px',
+            minWidth: '110px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: '0.78rem', opacity: 0.9 }}>Score Geral</div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 700 }}>{resultadoIA.score}/100</div>
+        </div>
       </div>
 
-      <div style={{ textAlign: 'left', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div className="badge-success" style={{ padding: '15px', borderRadius: '8px' }}>
-          <strong>Pontos Fortes:</strong>
-          <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-            {resultadoIA.pontosFortes.map(p => <li key={p}>{p}</li>)}
+      {resultadoIA.notaAnalise ? (
+        <div className="dashboard-card" style={{ marginTop: '14px', border: '1px solid var(--dm-border)' }}>
+          <p style={{ margin: 0, color: 'var(--neutral-600)', fontSize: '0.9rem' }}>{resultadoIA.notaAnalise}</p>
+        </div>
+      ) : null}
+
+      <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+        <div className="dashboard-card" style={{ border: '1px solid var(--success-500)' }}>
+          <h4 style={{ marginTop: 0, color: 'var(--success-500)' }}>Pontos Fortes</h4>
+          <ul style={{ paddingLeft: '18px', marginBottom: 0 }}>
+            {resultadoIA.pontosFortes.map((p) => <li key={p}>{p}</li>)}
           </ul>
         </div>
-        <div className="badge-warning" style={{ padding: '15px', borderRadius: '8px', color: 'var(--warning-500)' }}>
-          <strong>Riscos Identificados:</strong>
-          <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-            {resultadoIA.riscosIdentificados.map(p => <li key={p}>{p}</li>)}
+        <div className="dashboard-card" style={{ border: '1px solid var(--warning-500)' }}>
+          <h4 style={{ marginTop: 0, color: 'var(--warning-500)' }}>Riscos Identificados</h4>
+          <ul style={{ paddingLeft: '18px', marginBottom: 0 }}>
+            {resultadoIA.riscosIdentificados.map((p) => <li key={p}>{p}</li>)}
           </ul>
         </div>
       </div>
 
-      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)', textAlign: 'left' }}>
-        <h4 style={{ color: 'var(--primary-600)' }}>Análise Financeira</h4>
-        <p>{resultadoIA.analiseFinanceira}</p>
-        <h4 style={{ color: 'var(--primary-600)', marginTop: '16px' }}>Projeção Financeira</h4>
-        <p>{resultadoIA.projecaoFinanceira}</p>
+      <div style={{ marginTop: '14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+        <div className="dashboard-card" style={{ border: '1px solid var(--primary-200)' }}>
+          <h4 style={{ color: 'var(--primary-600)', marginTop: 0 }}>Análise Financeira</h4>
+          <p>{resultadoIA.analiseFinanceira}</p>
+          <h4 style={{ color: 'var(--primary-600)' }}>Projeção Financeira</h4>
+          <p style={{ marginBottom: 0 }}>{resultadoIA.projecaoFinanceira}</p>
+        </div>
+        <div className="dashboard-card" style={{ border: '1px solid var(--primary-200)' }}>
+          <h4 style={{ color: 'var(--primary-600)', marginTop: 0 }}>Ações Recomendadas</h4>
+          <ul style={{ paddingLeft: '18px' }}>
+            {resultadoIA.acoesRecomendadas.map((acao) => <li key={acao}>{acao}</li>)}
+          </ul>
+          <h4 style={{ color: 'var(--primary-600)' }}>Próximo Passo Recomendado</h4>
+          <p style={{ marginBottom: 0 }}>{resultadoIA.proximoPassoRecomendado}</p>
+        </div>
       </div>
 
-      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)', textAlign: 'left' }}>
-        <h4 style={{ color: 'var(--primary-600)' }}>Ações Recomendadas</h4>
-        <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-          {resultadoIA.acoesRecomendadas.map((acao) => <li key={acao}>{acao}</li>)}
-        </ul>
-        <h4 style={{ color: 'var(--primary-600)', marginTop: '16px' }}>Próximo Passo Recomendado</h4>
-        <p>{resultadoIA.proximoPassoRecomendado}</p>
-      </div>
-
-      <div className="dashboard-card" style={{ marginTop: '20px', border: '1px solid var(--primary-200)', textAlign: 'left' }}>
-        <h4 style={{ color: 'var(--primary-600)' }}>Score por Fator</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(180px, 1fr))', gap: '10px' }}>
+      <div className="dashboard-card" style={{ marginTop: '14px', border: '1px solid var(--primary-200)' }}>
+        <h4 style={{ color: 'var(--primary-600)', marginTop: 0 }}>Score por Fator</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
           <div><strong>Problema/Mercado:</strong> {Number(resultadoIA.pontuacaoFatores?.problemaMercado || 0)}/100</div>
           <div><strong>Diferencial:</strong> {Number(resultadoIA.pontuacaoFatores?.diferencial || 0)}/100</div>
           <div><strong>Público-Alvo:</strong> {Number(resultadoIA.pontuacaoFatores?.publicoAlvo || 0)}/100</div>
@@ -3831,9 +4057,9 @@ function SubmeterIdeia() {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       
       {/* INDICADOR DE ETAPAS */}
-      {etapa < 7 && (
+      {etapa < 8 && (
         <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-          {[1, 2, 3, 4, 5, 6].map(i => (
+          {[1, 2, 3, 4, 5, 6, 7].map(i => (
             <div key={i} style={{ 
               flex: 1, height: '8px', borderRadius: '4px',
               background: i <= etapa ? 'var(--primary-600)' : 'var(--neutral-200)',
@@ -3858,12 +4084,14 @@ function SubmeterIdeia() {
             {etapa === 4 && renderFase4()}
             {etapa === 5 && renderFase5()}
             {etapa === 6 && renderFase6()}
-            {etapa === 7 && renderResultado()}
+            {etapa === 7 && renderFase7()}
+            {etapa === 8 && renderResultado()}
 
             {/* BOTÕES DE NAVEGAÇÃO */}
-            {etapa < 7 && (
+            {etapa < 8 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--neutral-100)' }}>
                 <button 
+                  type="button"
                   className="btn-logout" 
                   onClick={etapaAnterior} 
                   disabled={etapa === 1}
@@ -3872,12 +4100,12 @@ function SubmeterIdeia() {
                   Voltar
                 </button>
                 
-                {etapa < 6 ? (
-                  <button className="btn btn-primary" onClick={proximaEtapa} style={{ width: 'auto', padding: '10px 40px' }}>
+                {etapa < 7 ? (
+                  <button type="button" className="btn btn-primary" onClick={proximaEtapa} style={{ width: 'auto', padding: '10px 40px' }}>
                     Próxima Fase
                   </button>
                 ) : (
-                  <button className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
+                  <button type="button" className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
                     Enviar para Análise IA
                   </button>
                 )}

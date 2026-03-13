@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createViabilityReport } from "../models/viabilityModel.js";
 import { env } from "../config/env.js";
+import { generateJsonWithOllama } from "./ollamaService.js";
 
 const analyzeSchema = z.object({
   ideaId: z.number().int().positive().optional(),
@@ -239,6 +240,46 @@ ${JSON.stringify(payload, null, 2)}
 `.trim();
 }
 
+function buildOllamaPrompt(data) {
+  const payload = {
+    idea: data.idea,
+    questionnaireAnswers: data.questionnaireAnswers || {},
+  };
+  return `
+Você é um analista de viabilidade de negócios para o mercado de Angola.
+Responda SOMENTE em JSON válido, sem markdown, com este formato:
+{
+  "viabilityStatus": "viavel" | "inviavel",
+  "score": number,
+  "strengths": string[],
+  "weaknesses": string[],
+  "adjustments": string[],
+  "summary": string,
+  "identifiedRisks": string[],
+  "financialAnalysis": string,
+  "financialProjection": string,
+  "recommendedActions": string[],
+  "nextRecommendedStep": string,
+  "factorScores": {
+    "problemaMercado": number,
+    "diferencial": number,
+    "publicoAlvo": number,
+    "execucao": number,
+    "financeiro": number
+  }
+}
+
+Regras:
+- score entre 0 e 100.
+- strengths, weaknesses, adjustments, identifiedRisks e recommendedActions: 2 a 5 itens.
+- summary e nextRecommendedStep: 1 frase objetiva.
+- considerar contexto local de Angola.
+
+Dados:
+${JSON.stringify(payload, null, 2)}
+`.trim();
+}
+
 function extractTextFromGeminiResponse(json) {
   const candidates = json?.candidates;
   if (!Array.isArray(candidates) || !candidates.length) return "";
@@ -368,6 +409,13 @@ async function generateWithGoogleAiStudio(data) {
   return { aiRaw, aiError: "" };
 }
 
+async function generateWithOllama(data) {
+  const prompt = buildOllamaPrompt(data);
+  const { data: aiRaw, error } = await generateJsonWithOllama(prompt);
+  if (!aiRaw) return { aiRaw: null, aiError: error || "Falha ao gerar resposta no Ollama." };
+  return { aiRaw, aiError: "" };
+}
+
 export async function analyzeViability(payload) {
   const data = analyzeSchema.parse(payload);
   const fallbackReport = computeViabilityHeuristic(data);
@@ -376,14 +424,21 @@ export async function analyzeViability(payload) {
   let analysisSource = "fallback_local";
   let analysisNote = "Análise local aplicada.";
   try {
-    const { aiRaw, aiError } = await generateWithGoogleAiStudio(data);
-    if (aiRaw) {
-      report = normalizeAiReport(aiRaw, fallbackReport);
-      analysisSource = "google_ai_studio";
-      analysisNote = "Análise gerada pelo Google AI Studio (Gemini).";
-    } else if (aiError) {
-      analysisSource = "fallback_local";
-      analysisNote = `Fallback local: ${aiError}`;
+    const ollamaResult = await generateWithOllama(data);
+    if (ollamaResult.aiRaw) {
+      report = normalizeAiReport(ollamaResult.aiRaw, fallbackReport);
+      analysisSource = "ollama";
+      analysisNote = `Análise gerada pelo Ollama (${env.OLLAMA_MODEL}).`;
+    } else {
+      const { aiRaw, aiError } = await generateWithGoogleAiStudio(data);
+      if (aiRaw) {
+        report = normalizeAiReport(aiRaw, fallbackReport);
+        analysisSource = "google_ai_studio";
+        analysisNote = "Análise gerada pelo Google AI Studio (Gemini).";
+      } else if (aiError) {
+        analysisSource = "fallback_local";
+        analysisNote = `Fallback local: ${ollamaResult.aiError || aiError}`;
+      }
     }
   } catch {
     // Se API externa falhar, mantém fallback heurístico.

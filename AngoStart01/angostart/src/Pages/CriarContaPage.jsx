@@ -12,6 +12,8 @@ const CriarConta = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState({ show: false, message: '' });
   const [successMessage, setSuccessMessage] = useState({ show: false, message: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Estado para upload de arquivos
   const [uploadedFiles, setUploadedFiles] = useState({
@@ -591,14 +593,34 @@ const CriarConta = () => {
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             id="password"
-            className="form-input"
+            className="form-input password-input-with-toggle"
             placeholder="Mínimo 6 caracteres"
             value={formData.password}
             onChange={handleInputChange}
             required
           />
+          <button
+            type="button"
+            className="input-toggle-btn"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+          >
+            {showPassword ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.73-1.73 1.81-3.24 3.16-4.44" />
+                <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+                <path d="M1 1l22 22" />
+                <path d="M9.88 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a11.8 11.8 0 0 1-1.67 2.79" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
 
@@ -610,14 +632,34 @@ const CriarConta = () => {
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <input
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             id="confirmPassword"
-            className="form-input"
+            className="form-input password-input-with-toggle"
             placeholder="Digite a senha novamente"
             value={formData.confirmPassword}
             onChange={handleInputChange}
             required
           />
+          <button
+            type="button"
+            className="input-toggle-btn"
+            onClick={() => setShowConfirmPassword((prev) => !prev)}
+            aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+          >
+            {showConfirmPassword ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.73-1.73 1.81-3.24 3.16-4.44" />
+                <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+                <path d="M1 1l22 22" />
+                <path d="M9.88 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a11.8 11.8 0 0 1-1.67 2.79" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
     </>

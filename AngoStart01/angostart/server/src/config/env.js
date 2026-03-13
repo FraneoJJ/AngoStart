@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({ override: true });
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
@@ -9,9 +9,14 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET || "dev_secret_change_me",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   GOOGLE_AI_STUDIO_API_KEY: process.env.GOOGLE_AI_STUDIO_API_KEY || "",
+  OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+  OLLAMA_MODEL: process.env.OLLAMA_MODEL || "qwen2.5:7b-instruct",
   DB_HOST: process.env.DB_HOST || "localhost",
   DB_PORT: Number(process.env.DB_PORT || 3306),
   DB_USER: process.env.DB_USER || "root",
   DB_PASSWORD: process.env.DB_PASSWORD || "",
   DB_NAME: process.env.DB_NAME || "angostart",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+  MAIL_FROM: process.env.MAIL_FROM || "",
+  PASSWORD_RESET_TTL_MINUTES: Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30),
 };
