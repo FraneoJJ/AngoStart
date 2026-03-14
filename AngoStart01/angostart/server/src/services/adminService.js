@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  findMentorByUserId,
   findInvestorByUserId,
   findUserRoleById,
   getReportActivityByMonth,
@@ -7,8 +8,10 @@ import {
   getReportSummaryByMonth,
   listAllIdeasForAdmin,
   listInvestorsWithProfiles,
+  listMentorsWithProfiles,
   listAvailableReportMonths,
   listUsersWithProfiles,
+  updateEmpreendedorVerificationStatus,
   updateInvestidorVerificationStatus,
   updateMentorVerificationStatus,
 } from "../models/adminModel.js";
@@ -23,6 +26,8 @@ function normalizeUser(row) {
   let profile = {};
 
   if (row.role === "empreendedor") {
+    verificationStatus = row.ep_verification_status || "pending";
+    verificationId = row.ep_verification_id || null;
     profile = {
       phone: row.ep_phone || null,
       businessName: row.business_name || null,
@@ -95,11 +100,13 @@ export async function setUserVerification(userId, payload) {
 
   const user = await findUserRoleById(targetUserId);
   if (!user) throw { status: 404, message: "Utilizador não encontrado." };
-  if (user.role === "admin" || user.role === "empreendedor") {
+  if (user.role === "admin") {
     throw { status: 400, message: "Este tipo de conta não requer aprovação/rejeição manual." };
   }
 
-  if (user.role === "mentor") {
+  if (user.role === "empreendedor") {
+    await updateEmpreendedorVerificationStatus(targetUserId, status);
+  } else if (user.role === "mentor") {
     await updateMentorVerificationStatus(targetUserId, status);
   } else if (user.role === "investidor") {
     await updateInvestidorVerificationStatus(targetUserId, status);
@@ -137,6 +144,29 @@ function normalizeInvestor(row) {
   };
 }
 
+function normalizeMentor(row) {
+  return {
+    id: Number(row.id),
+    name: row.name,
+    email: row.email,
+    role: "mentor",
+    createdAt: row.created_at,
+    verificationStatus: row.verification_status || "pending",
+    verificationId: row.verification_id || null,
+    profile: {
+      phone: row.phone || null,
+      identityNumber: row.identity_number || null,
+      birthDate: row.birth_date || null,
+      province: row.province || null,
+      expertiseArea: row.expertise_area || null,
+      experienceYears: row.experience_years || null,
+      company: row.company || null,
+      currentRole: row.current_role || null,
+      linkedin: row.linkedin || null,
+    },
+  };
+}
+
 export async function listInvestorsForEntrepreneur() {
   const rows = await listInvestorsWithProfiles();
   return rows.map(normalizeInvestor);
@@ -153,6 +183,30 @@ export async function getInvestorDetailsForEntrepreneur(investorUserId) {
     throw { status: 404, message: "Investidor não encontrado." };
   }
   return normalizeInvestor(row);
+}
+
+export async function listMentorsForEntrepreneur() {
+  const rows = await listMentorsWithProfiles();
+  return rows
+    .map(normalizeMentor)
+    .filter((mentor) => mentor.verificationStatus === "approved");
+}
+
+export async function getMentorDetailsForEntrepreneur(mentorUserId) {
+  const targetId = Number(mentorUserId);
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw { status: 400, message: "ID de mentor inválido." };
+  }
+
+  const row = await findMentorByUserId(targetId);
+  if (!row) {
+    throw { status: 404, message: "Mentor não encontrado." };
+  }
+  const mentor = normalizeMentor(row);
+  if (mentor.verificationStatus !== "approved") {
+    throw { status: 403, message: "Este mentor ainda não está verificado." };
+  }
+  return mentor;
 }
 
 function monthLabel(monthKey) {

@@ -5,6 +5,7 @@ export async function listUsersWithProfiles() {
     `SELECT
       u.id, u.name, u.email, u.role, u.created_at,
       ep.phone AS ep_phone, ep.business_name, ep.business_sector, ep.business_stage, ep.business_location,
+      ep.verification_status AS ep_verification_status, ep.verification_id AS ep_verification_id,
       mp.phone AS mp_phone, mp.identity_number AS mp_identity_number, mp.birth_date AS mp_birth_date,
       mp.province AS mp_province, mp.expertise_area, mp.experience_years, mp.company AS mp_company,
       mp.current_role AS mp_current_role, mp.linkedin AS mp_linkedin, mp.bi_front_doc AS mp_bi_front_doc,
@@ -35,6 +36,15 @@ export async function findUserRoleById(userId) {
 export async function updateMentorVerificationStatus(userId, status) {
   await pool.execute(
     `UPDATE mentor_profiles
+     SET verification_status = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE user_id = ?`,
+    [status, userId]
+  );
+}
+
+export async function updateEmpreendedorVerificationStatus(userId, status) {
+  await pool.execute(
+    `UPDATE empreendedor_profiles
      SET verification_status = ?, updated_at = CURRENT_TIMESTAMP
      WHERE user_id = ?`,
     [status, userId]
@@ -103,6 +113,58 @@ export async function findInvestorByUserId(userId) {
       ip.verification_id
     FROM users u
     INNER JOIN investidor_profiles ip ON ip.user_id = u.id
+    WHERE u.id = ?
+    LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+export async function listMentorsWithProfiles() {
+  const [rows] = await pool.execute(
+    `SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.created_at,
+      mp.phone,
+      mp.identity_number,
+      mp.birth_date,
+      mp.province,
+      mp.expertise_area,
+      mp.experience_years,
+      mp.company,
+      mp.current_role,
+      mp.linkedin,
+      mp.verification_status,
+      mp.verification_id
+    FROM users u
+    INNER JOIN mentor_profiles mp ON mp.user_id = u.id
+    ORDER BY u.created_at DESC, u.id DESC`
+  );
+  return rows;
+}
+
+export async function findMentorByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.created_at,
+      mp.phone,
+      mp.identity_number,
+      mp.birth_date,
+      mp.province,
+      mp.expertise_area,
+      mp.experience_years,
+      mp.company,
+      mp.current_role,
+      mp.linkedin,
+      mp.verification_status,
+      mp.verification_id
+    FROM users u
+    INNER JOIN mentor_profiles mp ON mp.user_id = u.id
     WHERE u.id = ?
     LIMIT 1`,
     [userId]
@@ -185,6 +247,8 @@ export async function getReportActivityByMonth(startDate, endDate) {
       SUM(CASE WHEN verification_status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
       SUM(CASE WHEN verification_status IN ('approved', 'rejected', 'pending') THEN 1 ELSE 0 END) AS total_count
      FROM (
+       SELECT verification_status FROM empreendedor_profiles
+       UNION ALL
        SELECT verification_status FROM mentor_profiles
        UNION ALL
        SELECT verification_status FROM investidor_profiles

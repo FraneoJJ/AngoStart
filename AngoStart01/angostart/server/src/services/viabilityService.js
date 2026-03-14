@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createViabilityReport } from "../models/viabilityModel.js";
 import { env } from "../config/env.js";
-import { generateJsonWithOllama } from "./ollamaService.js";
+import { generateJsonWithGemini } from "./googleAiService.js";
 
 const analyzeSchema = z.object({
   ideaId: z.number().int().positive().optional(),
@@ -240,75 +240,6 @@ ${JSON.stringify(payload, null, 2)}
 `.trim();
 }
 
-function buildOllamaPrompt(data) {
-  const payload = {
-    idea: data.idea,
-    questionnaireAnswers: data.questionnaireAnswers || {},
-  };
-  return `
-Você é um analista de viabilidade de negócios para o mercado de Angola.
-Responda SOMENTE em JSON válido, sem markdown, com este formato:
-{
-  "viabilityStatus": "viavel" | "inviavel",
-  "score": number,
-  "strengths": string[],
-  "weaknesses": string[],
-  "adjustments": string[],
-  "summary": string,
-  "identifiedRisks": string[],
-  "financialAnalysis": string,
-  "financialProjection": string,
-  "recommendedActions": string[],
-  "nextRecommendedStep": string,
-  "factorScores": {
-    "problemaMercado": number,
-    "diferencial": number,
-    "publicoAlvo": number,
-    "execucao": number,
-    "financeiro": number
-  }
-}
-
-Regras:
-- score entre 0 e 100.
-- strengths, weaknesses, adjustments, identifiedRisks e recommendedActions: 2 a 5 itens.
-- summary e nextRecommendedStep: 1 frase objetiva.
-- considerar contexto local de Angola.
-
-Dados:
-${JSON.stringify(payload, null, 2)}
-`.trim();
-}
-
-function extractTextFromGeminiResponse(json) {
-  const candidates = json?.candidates;
-  if (!Array.isArray(candidates) || !candidates.length) return "";
-  const parts = candidates[0]?.content?.parts;
-  if (!Array.isArray(parts) || !parts.length) return "";
-  return parts
-    .map((p) => (typeof p?.text === "string" ? p.text : ""))
-    .join("\n")
-    .trim();
-}
-
-function safeParseGeminiJson(text) {
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    // Alguns modelos devolvem JSON dentro de bloco markdown.
-    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (fenced?.[1]) {
-      try {
-        return JSON.parse(fenced[1].trim());
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }
-}
-
 function normalizeAiReport(raw, fallback) {
   const viabilityStatus = raw?.viabilityStatus === "viavel" ? "viavel" : "inviavel";
   const score = Math.max(0, Math.min(100, Number(raw?.score || 0)));
@@ -363,59 +294,6 @@ function normalizeAiReport(raw, fallback) {
   };
 }
 
-async function generateWithGoogleAiStudio(data) {
-  const apiKey = env.GOOGLE_AI_STUDIO_API_KEY;
-  if (!apiKey) {
-    return { aiRaw: null, aiError: "GOOGLE_AI_STUDIO_API_KEY não configurada." };
-  }
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const prompt = buildGeminiPrompt(data);
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    let reason = `Gemini API HTTP ${response.status}`;
-    try {
-      const body = await response.json();
-      reason = body?.error?.message || reason;
-    } catch {
-      // ignora parse de erro
-    }
-    return { aiRaw: null, aiError: reason };
-  }
-
-  const json = await response.json();
-  const text = extractTextFromGeminiResponse(json);
-  const aiRaw = safeParseGeminiJson(text);
-  if (!aiRaw) {
-    return { aiRaw: null, aiError: "Resposta do Gemini inválida para JSON esperado." };
-  }
-  return { aiRaw, aiError: "" };
-}
-
-async function generateWithOllama(data) {
-  const prompt = buildOllamaPrompt(data);
-  const { data: aiRaw, error } = await generateJsonWithOllama(prompt);
-  if (!aiRaw) return { aiRaw: null, aiError: error || "Falha ao gerar resposta no Ollama." };
-  return { aiRaw, aiError: "" };
-}
-
 export async function analyzeViability(payload) {
   const data = analyzeSchema.parse(payload);
   const fallbackReport = computeViabilityHeuristic(data);
@@ -424,27 +302,21 @@ export async function analyzeViability(payload) {
   let analysisSource = "fallback_local";
   let analysisNote = "Análise local aplicada.";
   try {
-    const ollamaResult = await generateWithOllama(data);
-    if (ollamaResult.aiRaw) {
-      report = normalizeAiReport(ollamaResult.aiRaw, fallbackReport);
-      analysisSource = "ollama";
-      analysisNote = `Análise gerada pelo Ollama (${env.OLLAMA_MODEL}).`;
-    } else {
-      const { aiRaw, aiError } = await generateWithGoogleAiStudio(data);
-      if (aiRaw) {
-        report = normalizeAiReport(aiRaw, fallbackReport);
-        analysisSource = "google_ai_studio";
-        analysisNote = "Análise gerada pelo Google AI Studio (Gemini).";
-      } else if (aiError) {
-        analysisSource = "fallback_local";
-        analysisNote = `Fallback local: ${ollamaResult.aiError || aiError}`;
-      }
+    const prompt = buildGeminiPrompt(data);
+    const { data: aiRaw, error: aiError } = await generateJsonWithGemini(prompt, { temperature: 0.2 });
+    if (aiRaw) {
+      report = normalizeAiReport(aiRaw, fallbackReport);
+      analysisSource = "google_generative_ai";
+      analysisNote = `Análise gerada pelo Google Generative AI (${env.GEMINI_MODEL || "gemini-1.5-flash"}).`;
+    } else if (aiError) {
+      analysisSource = "fallback_local";
+      analysisNote = `Fallback local: ${aiError}`;
     }
   } catch {
     // Se API externa falhar, mantém fallback heurístico.
     report = fallbackReport;
     analysisSource = "fallback_local";
-    analysisNote = "Fallback local: falha inesperada ao chamar Google AI Studio.";
+    analysisNote = "Fallback local: falha inesperada ao chamar Google Generative AI.";
   }
 
   // Persistência best-effort: se tabela não existir, retorna análise mesmo assim.

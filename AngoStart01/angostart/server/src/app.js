@@ -10,6 +10,7 @@ import legalRoutes from "./routes/legalRoutes.js";
 import strategyRoutes from "./routes/strategyRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import mentorshipRoutes from "./routes/mentorshipRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { env } from "./config/env.js";
 
@@ -54,6 +55,7 @@ app.use("/api/v1/legal", legalRoutes);
 app.use("/api/v1/strategy", strategyRoutes);
 app.use("/api/v1/subscription", subscriptionRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/mentorship", mentorshipRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

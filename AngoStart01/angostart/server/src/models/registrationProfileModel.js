@@ -3,8 +3,11 @@ import { pool } from "../config/db.js";
 export async function createEmpreendedorProfile(db, input) {
   const [result] = await db.execute(
     `INSERT INTO empreendedor_profiles
-      (user_id, phone, business_name, business_sector, business_stage, business_location, accept_terms)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      (
+        user_id, phone, business_name, business_sector, business_stage, business_location,
+        accept_terms, verification_id, verification_status
+      )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
     [
       input.userId,
       input.phone,
@@ -13,6 +16,7 @@ export async function createEmpreendedorProfile(db, input) {
       input.businessStage,
       input.businessLocation || null,
       input.acceptTerms ? 1 : 0,
+      input.verificationId,
     ]
   );
   return result.insertId;
@@ -118,6 +122,7 @@ export async function updateEmpreendedorProfileByUserId(userId, input) {
        business_sector = ?,
        business_stage = ?,
        business_location = ?,
+      verification_status = 'pending',
        updated_at = CURRENT_TIMESTAMP
      WHERE user_id = ?`,
     [
@@ -199,6 +204,17 @@ export async function updateInvestidorProfileByUserId(userId, input) {
 }
 
 export async function findVerificationByUserRole(userId, role) {
+  if (role === "empreendedor") {
+    const [rows] = await dbQuery(
+      `SELECT verification_status, verification_id
+       FROM empreendedor_profiles
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
+
   if (role === "mentor") {
     const [rows] = await dbQuery(
       `SELECT verification_status, verification_id
@@ -232,7 +248,8 @@ export async function findProfileDataByUserRole(userId, role) {
         business_name,
         business_sector,
         business_stage,
-        business_location
+        business_location,
+        verification_status
        FROM empreendedor_profiles
        WHERE user_id = ?
        LIMIT 1`,

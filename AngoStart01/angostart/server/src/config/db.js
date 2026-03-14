@@ -14,6 +14,39 @@ export const pool = mysql.createPool({
 
 export async function initDb() {
   const conn = await pool.getConnection();
-  await conn.ping();
-  conn.release();
+  try {
+    await conn.ping();
+    const [[tableCheck]] = await conn.execute(
+      `SELECT COUNT(*) AS total
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME = 'empreendedor_profiles'`,
+      [env.DB_NAME]
+    );
+    if (!Number(tableCheck?.total || 0)) return;
+
+    const [rows] = await conn.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME = 'empreendedor_profiles'
+         AND COLUMN_NAME IN ('verification_id', 'verification_status')`,
+      [env.DB_NAME]
+    );
+    const cols = new Set((rows || []).map((r) => String(r.COLUMN_NAME || "").toLowerCase()));
+    if (!cols.has("verification_id")) {
+      await conn.execute(
+        `ALTER TABLE empreendedor_profiles
+         ADD COLUMN verification_id VARCHAR(40) NOT NULL DEFAULT 'VER-E-LEGACY'`
+      );
+    }
+    if (!cols.has("verification_status")) {
+      await conn.execute(
+        `ALTER TABLE empreendedor_profiles
+         ADD COLUMN verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'`
+      );
+    }
+  } finally {
+    conn.release();
+  }
 }

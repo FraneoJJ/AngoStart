@@ -31,6 +31,24 @@ export async function investors(req, res, next) {
   }
 }
 
+export async function mentors(req, res, next) {
+  try {
+    const data = await adminService.listMentorsForEntrepreneur();
+    res.status(200).json({ success: true, mentors: data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function mentorById(req, res, next) {
+  try {
+    const mentor = await adminService.getMentorDetailsForEntrepreneur(req.params.id);
+    res.status(200).json({ success: true, mentor });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function investorById(req, res, next) {
   try {
     const investor = await adminService.getInvestorDetailsForEntrepreneur(req.params.id);

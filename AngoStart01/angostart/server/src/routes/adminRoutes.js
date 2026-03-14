@@ -24,6 +24,18 @@ router.get(
   requireRole("empreendedor", "admin"),
   adminController.investorById
 );
+router.get(
+  "/mentors",
+  requireAuth,
+  requireRole("empreendedor", "admin"),
+  adminController.mentors
+);
+router.get(
+  "/mentors/:id",
+  requireAuth,
+  requireRole("empreendedor", "admin"),
+  adminController.mentorById
+);
 router.patch(
   "/users/:id/verification",
   requireAuth,

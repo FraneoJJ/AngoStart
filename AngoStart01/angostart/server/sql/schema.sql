@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS empreendedor_profiles (
   business_stage VARCHAR(120) NOT NULL,
   business_location VARCHAR(120) NULL,
   accept_terms TINYINT(1) NOT NULL DEFAULT 0,
+  verification_id VARCHAR(40) NOT NULL,
+  verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_ep_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -209,4 +211,31 @@ CREATE TABLE IF NOT EXISTS investidor_profiles (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_ip_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS mentorship_requests (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  entrepreneur_user_id BIGINT UNSIGNED NOT NULL,
+  mentor_user_id BIGINT UNSIGNED NOT NULL,
+  idea_id BIGINT UNSIGNED NULL,
+  topic VARCHAR(180) NOT NULL,
+  session_type ENUM('online', 'presencial') NOT NULL DEFAULT 'online',
+  preferred_datetime DATETIME NOT NULL,
+  duration_minutes INT NOT NULL DEFAULT 60,
+  payment_method ENUM('multicaixa', 'transferencia', 'unitel-money', 'afrimoney') NOT NULL,
+  price_kz DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status ENUM('pending', 'accepted', 'rejected', 'completed') NOT NULL DEFAULT 'pending',
+  entrepreneur_notes TEXT NULL,
+  mentor_notes TEXT NULL,
+  mentor_response_at DATETIME NULL,
+  scheduled_for DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_mr_entrepreneur (entrepreneur_user_id),
+  INDEX idx_mr_mentor (mentor_user_id),
+  INDEX idx_mr_status (status),
+  INDEX idx_mr_datetime (preferred_datetime),
+  CONSTRAINT fk_mr_entrepreneur FOREIGN KEY (entrepreneur_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_mr_mentor FOREIGN KEY (mentor_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_mr_idea FOREIGN KEY (idea_id) REFERENCES ideas(id) ON DELETE SET NULL
 );

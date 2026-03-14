@@ -9,6 +9,8 @@ import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } 
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
 import { getAdminIdeas, getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
+import { getAvailableMentors, getMentorById } from "../services/mentorApi";
+import { createMentorshipRequest, getMentorMentorshipRequests, updateMentorMentorshipRequest } from "../services/mentorshipApi";
 import { updateMyProfile } from "../services/authApi";
 import { getPerformanceReport } from "../services/reportApi";
 import { jsPDF } from "jspdf";
@@ -99,6 +101,7 @@ const navigationConfig = {
       { id: 'minhas-ideias', icon: 'folder', badge: 3 },
     ]},
     { sectionKey: 'crescimento', items: [
+      { id: 'mensagens', icon: 'inbox' },
       { id: 'mentoria', icon: 'users' },
       { id: 'investidores', icon: 'trending-up' },
       { id: 'checklist-estrategico', icon: 'check-circle' },
@@ -237,10 +240,16 @@ export default function Dashboard() {
     role: apiUser.role,
     primaryRole: apiUser.primaryRole || apiUser.role,
     availableRoles: apiUser.availableRoles || [apiUser.role],
-    verificationStatus: apiUser.verificationStatus || "approved",
+    verificationStatus: apiUser.verificationStatus || (apiUser.role === "admin" ? "approved" : "pending"),
     verificationId: apiUser.verificationId || null,
     profileData: apiUser.profileData || {},
   });
+  const applyAuthenticatedUser = useCallback((apiUser) => {
+    if (!apiUser) return null;
+    const mapped = mapAuthenticatedUser(apiUser);
+    setUser(mapped);
+    return mapped;
+  }, []);
   const refreshCurrentUser = useCallback(async () => {
     const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
     const token = localStorage.getItem("angostart_token");
@@ -251,16 +260,12 @@ export default function Dashboard() {
       });
       const contentType = res.headers.get("content-type") || "";
       const data = contentType.includes("application/json") ? await res.json() : null;
-      if (res.ok && data?.success && data?.user) {
-        const mapped = mapAuthenticatedUser(data.user);
-        setUser(mapped);
-        return mapped;
-      }
+      if (res.ok && data?.success && data?.user) return applyAuthenticatedUser(data.user);
       return null;
     } catch {
       return null;
     }
-  }, []);
+  }, [applyAuthenticatedUser]);
   const refreshNavBadges = useCallback(async (targetUser = user) => {
     const role = targetUser?.role;
     if (!role) return;
@@ -310,7 +315,7 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, refreshCurrentUser, currentUser: user }), [idioma, modal, refreshNavBadges, refreshCurrentUser, user]);
+  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, currentUser: user }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user]);
 
   useEffect(() => {
     const s = loadSettings();
@@ -364,7 +369,7 @@ export default function Dashboard() {
 
       if (res.ok && data?.success && data?.token) {
         localStorage.setItem("angostart_token", data.token);
-        setUser(mapAuthenticatedUser(data.user));
+        applyAuthenticatedUser(data.user);
         setSelectedRoleForSwitch(data.user.role);
         setError("");
         return;
@@ -406,7 +411,7 @@ export default function Dashboard() {
         throw new Error(data?.message || "Falha ao trocar de papel.");
       }
       localStorage.setItem("angostart_token", data.token);
-      setUser(mapAuthenticatedUser(data.user));
+      applyAuthenticatedUser(data.user);
       setCurrentPage("dashboard");
     } catch (err) {
       setModal({ open: true, title: "Troca de papel", message: err.message || "Falha ao trocar de papel." });
@@ -415,7 +420,7 @@ export default function Dashboard() {
     }
   }
 
-  const canShowVerificationNotice = user?.role === "mentor" || user?.role === "investidor";
+  const canShowVerificationNotice = user?.role === "mentor" || user?.role === "investidor" || user?.role === "empreendedor";
   const verificationMeta = {
     pending: {
       title: "Conta pendente de verificação",
@@ -480,6 +485,7 @@ function RenderEmpreendedorPage() {
     case 'dashboard': return <Empreendedor />;
     case 'submeter-ideia': return <SubmeterIdeia/>;
     case 'minhas-ideias': return <MinhasIdeias />;
+    case 'mensagens': return <Mensagens />;
     case 'mentoria': return <Mentoria />;
     case 'investidores': return <Investidores />;
     case 'checklist-estrategico': return <ChecklistEstrategico />;
@@ -492,15 +498,15 @@ function RenderEmpreendedorPage() {
 }
 function RenderMentorPage() {
   switch(currentPage) {
-    case 'dashboard': return <Mentor />;
-    case 'sessoes': return <Sessoes/>;
-    case 'mentorados': return <Mentorados/>;
-    case 'agenda': return <Agenda/>;
-    case 'mensagens': return < Mensagens/>;
+    case 'dashboard': return <MentorDashboardDynamic />;
+    case 'sessoes': return <MentorSessoesDynamic />;
+    case 'mentorados': return <MentoradosDynamic />;
+    case 'agenda': return <AgendaMentorDynamic />;
+    case 'mensagens': return <MensagensMentorDynamic />;
     case 'assinatura': return <AssinaturaPlano />;
     case 'perfil': return <Perfilmentor />;
     case 'configuracoes': return <Configuracoes />;
-    default: return <Mentor />;
+    default: return <MentorDashboardDynamic />;
   }
 }
 function RenderAdminPage() {
@@ -1917,7 +1923,19 @@ function InvestidorPerfil() {
   const submitProfileEdit = async () => {
     setSavingEdit(true);
     try {
-      await updateMyProfile({ profileData: editForm });
+      const resp = await updateMyProfile({ profileData: editForm });
+      if (resp?.user) {
+        ctx?.applyAuthenticatedUser?.(resp.user);
+      } else {
+        ctx?.applyAuthenticatedUser?.({
+          ...(user || {}),
+          verificationStatus: "pending",
+          profileData: {
+            ...(user?.profileData || {}),
+            ...editForm,
+          },
+        });
+      }
       await ctx?.refreshCurrentUser?.();
       setIsEditOpen(false);
       ctx?.setModal?.({
@@ -2252,13 +2270,13 @@ function Usuarios() {
   };
 
   const statusLabel = (status, role) => {
-    if (role === "admin" || role === "empreendedor") return "Ativo";
+    if (role === "admin") return "Ativo";
     if (status === "approved") return "Aprovado";
     if (status === "rejected") return "Rejeitado";
     return "Pendente";
   };
 
-  const canModerate = (role) => role === "mentor" || role === "investidor";
+  const canModerate = (role) => role === "mentor" || role === "investidor" || role === "empreendedor";
 
   const profileFieldLabel = (key) => {
     const labels = {
@@ -3130,7 +3148,443 @@ function Agenda() {
     </div>
   );
 }
-function Mensagens() {
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("pt-PT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function mentorStatusLabel(status) {
+  if (status === "accepted") return "Aceite";
+  if (status === "rejected") return "Rejeitada";
+  if (status === "completed") return "Concluída";
+  return "Pendente";
+}
+
+function mentorStatusBadgeClass(status) {
+  if (status === "accepted") return "badge-success";
+  if (status === "rejected") return "badge-warning";
+  if (status === "completed") return "badge-primary";
+  return "badge-info";
+}
+
+function useMentorRequestsData() {
+  const ctx = useContext(AppContext);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [savingId, setSavingId] = useState(null);
+
+  const loadRequests = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getMentorMentorshipRequests();
+      setRequests(data || []);
+    } catch (err) {
+      setRequests([]);
+      setError(err.message || "Falha ao carregar solicitações.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  const updateRequest = useCallback(async (requestId, payload) => {
+    setSavingId(Number(requestId));
+    try {
+      const updated = await updateMentorMentorshipRequest(requestId, payload);
+      setRequests((prev) => prev.map((r) => (Number(r.id) === Number(requestId) ? updated : r)));
+      ctx?.setModal?.({
+        open: true,
+        title: "Solicitação atualizada",
+        message: `Status alterado para ${mentorStatusLabel(updated?.status)}.`,
+      });
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha ao atualizar",
+        message: err.message || "Não foi possível atualizar a solicitação.",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  }, [ctx]);
+
+  return { requests, loading, error, loadRequests, updateRequest, savingId };
+}
+
+function MentorDashboardDynamic() {
+  const { requests, loading, error, loadRequests } = useMentorRequestsData();
+  const pending = requests.filter((r) => r.status === "pending");
+  const accepted = requests.filter((r) => r.status === "accepted");
+  const completed = requests.filter((r) => r.status === "completed");
+  const rejected = requests.filter((r) => r.status === "rejected");
+  const mentoradosAtivos = new Set(
+    accepted.concat(completed).map((r) => r.entrepreneurUserId).filter(Boolean)
+  ).size;
+  const horasMentoria = Math.round(
+    completed.reduce((sum, r) => sum + Number(r.durationMinutes || 0), 0) / 60
+  );
+  const proximas = [...accepted]
+    .sort((a, b) => new Date(a.scheduledFor || a.preferredDatetime) - new Date(b.scheduledFor || b.preferredDatetime))
+    .slice(0, 8);
+
+  return (
+    <>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card-content">
+            <div className="stat-info">
+              <div className="stat-label">Mentorados Ativos</div>
+              <div className="stat-value">{mentoradosAtivos}</div>
+              <div className="stat-change">Empreendedores com sessões ativas</div>
+            </div>
+            <div className="stat-icon-wrapper stat-icon-primary">{icons.users}</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-content">
+            <div className="stat-info">
+              <div className="stat-label">Solicitações Pendentes</div>
+              <div className="stat-value">{pending.length}</div>
+              <div className="stat-change">Aguardam decisão do mentor</div>
+            </div>
+            <div className="stat-icon-wrapper stat-icon-warning">{icons.inbox}</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-content">
+            <div className="stat-info">
+              <div className="stat-label">Sessões Concluídas</div>
+              <div className="stat-value">{completed.length}</div>
+              <div className="stat-change">Total concluído pelo mentor</div>
+            </div>
+            <div className="stat-icon-wrapper stat-icon-success">{icons["check-circle"]}</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-content">
+            <div className="stat-info">
+              <div className="stat-label">Horas de Mentoria</div>
+              <div className="stat-value">{horasMentoria}</div>
+              <div className="stat-change">Baseado em sessões concluídas</div>
+            </div>
+            <div className="stat-icon-wrapper stat-icon-secondary">{icons.clock}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-card">
+        <div className="dashboard-card-header" style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+          <div>
+            <h3 className="dashboard-card-title">Próximas Sessões</h3>
+            <p className="dashboard-card-description">Sessões aceites e agendadas no banco de dados.</p>
+          </div>
+          <button className="btn btn-outline" style={{ width: "auto" }} onClick={loadRequests} disabled={loading}>
+            Atualizar
+          </button>
+        </div>
+        {loading ? (
+          <p>A carregar sessões...</p>
+        ) : error ? (
+          <p style={{ color: "var(--error-500)" }}>{error}</p>
+        ) : proximas.length === 0 ? (
+          <p>Sem sessões aceites até ao momento.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Empreendedor</th>
+                <th>Tópico</th>
+                <th>Data & Hora</th>
+                <th>Duração</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {proximas.map((s) => (
+                <tr key={s.id}>
+                  <td>{s?.entrepreneur?.name || "-"}</td>
+                  <td>{s.topic}</td>
+                  <td>{formatDateTime(s.scheduledFor || s.preferredDatetime)}</td>
+                  <td>{s.durationMinutes} min</td>
+                  <td>
+                    <span className={`badge ${mentorStatusBadgeClass(s.status)}`}>{mentorStatusLabel(s.status)}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {!loading && (
+          <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "var(--neutral-500)" }}>
+            Rejeitadas: {rejected.length} • Aceites: {accepted.length} • Concluídas: {completed.length}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function MentorSessoesDynamic() {
+  const { requests, loading, error, loadRequests, updateRequest, savingId } = useMentorRequestsData();
+  const pendentes = requests.filter((r) => r.status === "pending");
+  const [localState, setLocalState] = useState({});
+
+  const updateLocal = (id, patch) => {
+    setLocalState((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
+  };
+
+  const sendDecision = async (req, status) => {
+    const local = localState[req.id] || {};
+    await updateRequest(req.id, {
+      status,
+      mentorNotes: local.mentorNotes || "",
+      scheduledFor: status === "accepted" ? (local.scheduledFor || req.scheduledFor || req.preferredDatetime) : "",
+    });
+  };
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+        <div>
+          <h2 className="dashboard-card-title">Solicitações de Mentoria</h2>
+          <p className="dashboard-card-description">Empreendedores aguardando aceitação/rejeição da mentoria.</p>
+        </div>
+        <button className="btn btn-outline" style={{ width: "auto" }} onClick={loadRequests} disabled={loading}>
+          Atualizar
+        </button>
+      </div>
+      {loading ? (
+        <p>A carregar solicitações...</p>
+      ) : error ? (
+        <p style={{ color: "var(--error-500)" }}>{error}</p>
+      ) : pendentes.length === 0 ? (
+        <div className="dashboard-card">
+          <p>Sem solicitações pendentes.</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {pendentes.map((req) => {
+            const local = localState[req.id] || {};
+            return (
+              <div key={req.id} className="dashboard-card">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                  <Info label="Empreendedor" value={req?.entrepreneur?.name || "-"} />
+                  <Info label="Projeto" value={req.ideaTitle || req?.entrepreneur?.businessName || "-"} />
+                  <Info label="Setor" value={req?.entrepreneur?.businessSector || "-"} />
+                  <Info label="Tópico" value={req.topic} />
+                  <Info label="Preferência de data/hora" value={formatDateTime(req.preferredDatetime)} />
+                  <Info label="Duração" value={`${req.durationMinutes} min`} />
+                  <Info label="Pagamento" value={req.paymentMethod} />
+                  <Info label="Valor" value={`${Number(req.priceKz || 0).toLocaleString("pt-PT")} Kz`} />
+                </div>
+                <div style={{ marginTop: "8px", color: "var(--neutral-600)", fontSize: "0.9rem" }}>
+                  <strong>Observações do empreendedor:</strong> {req.entrepreneurNotes || "Sem observações."}
+                </div>
+                <div style={{ marginTop: "10px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                  <div>
+                    <label className="form-label">Data/hora confirmada</label>
+                    <input
+                      className="form-input"
+                      type="datetime-local"
+                      value={local.scheduledFor || ""}
+                      onChange={(e) => updateLocal(req.id, { scheduledFor: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Notas do mentor</label>
+                    <textarea
+                      className="form-input"
+                      rows={2}
+                      value={local.mentorNotes || ""}
+                      onChange={(e) => updateLocal(req.id, { mentorNotes: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: "10px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <button
+                    className="btn btn-outline"
+                    style={{ width: "auto", color: "var(--error-500)" }}
+                    onClick={() => sendDecision(req, "rejected")}
+                    disabled={savingId === Number(req.id)}
+                  >
+                    Rejeitar
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: "auto" }}
+                    onClick={() => sendDecision(req, "accepted")}
+                    disabled={savingId === Number(req.id)}
+                  >
+                    {savingId === Number(req.id) ? "A guardar..." : "Aceitar mentoria"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MentoradosDynamic() {
+  const { requests, loading, error } = useMentorRequestsData();
+  const acceptedOrCompleted = requests.filter((r) => r.status === "accepted" || r.status === "completed");
+  const grouped = Array.from(
+    acceptedOrCompleted.reduce((acc, item) => {
+      const key = String(item.entrepreneurUserId);
+      if (!acc.has(key)) acc.set(key, []);
+      acc.get(key).push(item);
+      return acc;
+    }, new Map()).entries()
+  );
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "16px" }}>
+        <h2 className="dashboard-card-title">Mentorados</h2>
+        <p className="dashboard-card-description">Empreendedores com sessões aceites ou concluídas.</p>
+      </div>
+      {loading ? (
+        <p>A carregar mentorados...</p>
+      ) : error ? (
+        <p style={{ color: "var(--error-500)" }}>{error}</p>
+      ) : grouped.length === 0 ? (
+        <div className="dashboard-card"><p>Sem mentorados ativos no momento.</p></div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {grouped.map(([entrepreneurId, items]) => {
+            const first = items[0];
+            return (
+              <div key={entrepreneurId} className="dashboard-card">
+                <h4 style={{ marginTop: 0 }}>{first?.entrepreneur?.name || "Empreendedor"}</h4>
+                <div style={{ fontSize: "0.9rem", color: "var(--neutral-600)" }}>
+                  {first?.entrepreneur?.email || "-"} • Negócio: {first?.entrepreneur?.businessName || "-"}
+                </div>
+                <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "8px" }}>
+                  <Info label="Total de sessões" value={items.length} />
+                  <Info label="Concluídas" value={items.filter((x) => x.status === "completed").length} />
+                  <Info label="Aceites" value={items.filter((x) => x.status === "accepted").length} />
+                  <Info label="Última atualização" value={formatDateTime(items[0]?.updatedAt)} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgendaMentorDynamic() {
+  const { requests, loading, error, updateRequest, savingId } = useMentorRequestsData();
+  const upcoming = requests
+    .filter((r) => r.status === "accepted")
+    .sort((a, b) => new Date(a.scheduledFor || a.preferredDatetime) - new Date(b.scheduledFor || b.preferredDatetime));
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "16px" }}>
+        <h2 className="dashboard-card-title">Agenda de Mentoria</h2>
+        <p className="dashboard-card-description">Sessões aceites com opção de marcar como concluída.</p>
+      </div>
+      {loading ? (
+        <p>A carregar agenda...</p>
+      ) : error ? (
+        <p style={{ color: "var(--error-500)" }}>{error}</p>
+      ) : upcoming.length === 0 ? (
+        <div className="dashboard-card"><p>Sem sessões agendadas.</p></div>
+      ) : (
+        <div className="dashboard-card">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Empreendedor</th>
+                <th>Tópico</th>
+                <th>Duração</th>
+                <th>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcoming.map((req) => (
+                <tr key={req.id}>
+                  <td>{formatDateTime(req.scheduledFor || req.preferredDatetime)}</td>
+                  <td>{req?.entrepreneur?.name || "-"}</td>
+                  <td>{req.topic}</td>
+                  <td>{req.durationMinutes} min</td>
+                  <td>
+                    <button
+                      className="btn btn-primary"
+                      style={{ width: "auto", padding: "6px 12px" }}
+                      onClick={() => updateRequest(req.id, { status: "completed", mentorNotes: req.mentorNotes || "", scheduledFor: req.scheduledFor || req.preferredDatetime })}
+                      disabled={savingId === Number(req.id)}
+                    >
+                      Concluir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MensagensMentorDynamic() {
+  const { requests, loading, error } = useMentorRequestsData();
+  const ordered = [...requests].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "16px" }}>
+        <h2 className="dashboard-card-title">Mensagens e Atualizações</h2>
+        <p className="dashboard-card-description">Resumo das alterações e confirmações feitas pelo mentor.</p>
+      </div>
+      {loading ? (
+        <p>A carregar atualizações...</p>
+      ) : error ? (
+        <p style={{ color: "var(--error-500)" }}>{error}</p>
+      ) : ordered.length === 0 ? (
+        <div className="dashboard-card"><p>Sem mensagens de mentoria no momento.</p></div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {ordered.map((req) => (
+            <div key={req.id} className="dashboard-card" style={{ borderLeft: "4px solid var(--primary-600)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                <strong>{req?.entrepreneur?.name || "Empreendedor"} • {req.topic}</strong>
+                <span className={`badge ${mentorStatusBadgeClass(req.status)}`}>{mentorStatusLabel(req.status)}</span>
+              </div>
+              <div style={{ marginTop: "6px", color: "var(--neutral-600)", fontSize: "0.9rem" }}>
+                Última atualização: {formatDateTime(req.updatedAt)}
+              </div>
+              <div style={{ marginTop: "6px", color: "var(--neutral-600)", fontSize: "0.9rem" }}>
+                Nota do mentor: {req.mentorNotes || "Sem nota adicionada."}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MensagensEmpreendedorLegacy() {
   return (
     <div
       className="responsive-split-layout"
@@ -3669,10 +4123,8 @@ function SubmeterIdeia() {
     setResultadoIA({
       viabilidade: report.viabilityStatus === "viavel" ? "Viável" : "Inviável",
       origemAnalise:
-        report.analysisSource === "ollama"
-          ? "Ollama (Open Source)"
-          : report.analysisSource === "google_ai_studio"
-            ? "Google AI Studio (Gemini)"
+        report.analysisSource === "google_generative_ai" || report.analysisSource === "google_ai_studio"
+          ? "Google Generative AI (Gemini 1.5 Flash)"
             : "Análise Local (Fallback)",
       notaAnalise: report.analysisNote || "",
       pontosFortes: report.strengths?.length ? report.strengths : ["Estrutura inicial adequada."],
@@ -5033,6 +5485,307 @@ function Investidores() {
   );
 }
 function Mentoria() {
+  const ctx = useContext(AppContext);
+  const [mentores, setMentores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedMentor, setSelectedMentor] = useState(null);
+  const [loadingDetailsId, setLoadingDetailsId] = useState(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [savingBooking, setSavingBooking] = useState(false);
+  const [booking, setBooking] = useState({
+    mentorId: null,
+    tipoSessao: "online",
+    dataHora: "",
+    duracao: "60",
+    pagamento: "multicaixa",
+    observacoes: "",
+  });
+
+  const loadMentores = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getAvailableMentors();
+      setMentores((data || []).filter((m) => m?.verificationStatus === "approved"));
+    } catch (err) {
+      setMentores([]);
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha ao carregar mentores",
+        message: err.message || "Não foi possível carregar os mentores verificados.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [ctx]);
+
+  useEffect(() => {
+    loadMentores();
+  }, [loadMentores]);
+
+  const filtrados = mentores.filter((mentor) => {
+    const target = `${mentor.name || ""} ${mentor?.profile?.expertiseArea || ""} ${mentor?.profile?.province || ""}`.toLowerCase();
+    return target.includes(search.trim().toLowerCase());
+  });
+
+  const openMentorDetails = async (mentorId) => {
+    setLoadingDetailsId(Number(mentorId));
+    try {
+      const mentor = await getMentorById(mentorId);
+      setSelectedMentor(mentor);
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Detalhes do mentor",
+        message: err.message || "Não foi possível carregar o perfil do mentor.",
+      });
+    } finally {
+      setLoadingDetailsId(null);
+    }
+  };
+
+  const getPrecoSessao = () => {
+    const duracao = Number(booking.duracao || 60);
+    if (duracao <= 30) return 5000;
+    if (duracao <= 60) return 10000;
+    if (duracao <= 90) return 15000;
+    return 20000;
+  };
+
+  const openBooking = (mentor) => {
+    setBooking({
+      mentorId: mentor?.id || null,
+      tipoSessao: "online",
+      dataHora: "",
+      duracao: "60",
+      pagamento: "multicaixa",
+      observacoes: "",
+    });
+    setBookingOpen(true);
+  };
+
+  const confirmarMarcacao = async () => {
+    if (!selectedMentor?.id) {
+      ctx?.setModal?.({ open: true, message: "Selecione primeiro um mentor." });
+      return;
+    }
+    if (!booking.dataHora) {
+      ctx?.setModal?.({ open: true, message: "Selecione a data e hora da mentoria." });
+      return;
+    }
+    if (!booking.pagamento) {
+      ctx?.setModal?.({ open: true, message: "Selecione a forma de pagamento." });
+      return;
+    }
+
+    const preco = getPrecoSessao();
+    setSavingBooking(true);
+    try {
+      await createMentorshipRequest({
+        mentorId: Number(selectedMentor.id),
+        topic: `Sessão de mentoria com foco em ${selectedMentor?.profile?.expertiseArea || "estratégia de negócio"}`,
+        sessionType: booking.tipoSessao,
+        preferredDatetime: booking.dataHora,
+        durationMinutes: Number(booking.duracao || 60),
+        paymentMethod: booking.pagamento,
+        priceKz: preco,
+        entrepreneurNotes: booking.observacoes || "",
+      });
+      setBookingOpen(false);
+      ctx?.setModal?.({
+        open: true,
+        title: "Sessão de mentoria enviada",
+        message: `Solicitação enviada para ${selectedMentor.name}. Sessão ${booking.tipoSessao} de ${booking.duracao} minutos. Valor: ${preco.toLocaleString("pt-PT")} Kz. Pagamento: ${booking.pagamento}.`,
+      });
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha ao marcar sessão",
+        message: err.message || "Não foi possível enviar a solicitação de mentoria.",
+      });
+    } finally {
+      setSavingBooking(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="dashboard-card" style={{ marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+          <div>
+            <h3 className="dashboard-card-title">Mentoria</h3>
+            <p className="dashboard-card-description">
+              Mentores verificados da plataforma para sessões de apoio estratégico.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", minWidth: "260px" }}>
+            <input
+              className="form-input"
+              placeholder="Pesquisar mentor, área ou província..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button className="btn btn-outline" style={{ width: "auto" }} onClick={loadMentores} disabled={loading}>
+              Atualizar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <p>A carregar mentores verificados...</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
+          {filtrados.map((mentor) => (
+            <div key={mentor.id} className="dashboard-card" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: "50%",
+                    background: "var(--primary-100)",
+                    color: "var(--primary-700)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 700,
+                  }}
+                >
+                  {String(mentor.name || "M").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <strong>{mentor.name}</strong>
+                  <div style={{ fontSize: "0.8rem", color: "var(--dm-text-muted)" }}>
+                    {mentor?.profile?.expertiseArea || "Mentoria geral"} • {mentor?.profile?.province || "Angola"}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: "0.86rem", color: "var(--dm-text-muted)" }}>
+                Empresa: {mentor?.profile?.company || "-"}
+              </div>
+              <div style={{ fontSize: "0.86rem", color: "var(--dm-text-muted)" }}>
+                Experiência: {mentor?.profile?.experienceYears || "-"} anos
+              </div>
+              <div style={{ marginTop: "6px", display: "flex", gap: "8px" }}>
+                <button
+                  className="btn btn-outline"
+                  style={{ width: "auto", flex: 1 }}
+                  onClick={() => openMentorDetails(mentor.id)}
+                  disabled={loadingDetailsId === Number(mentor.id)}
+                >
+                  {loadingDetailsId === Number(mentor.id) ? "A carregar..." : "Ver perfil"}
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: "auto", flex: 1 }}
+                  onClick={() => {
+                    setSelectedMentor(mentor);
+                    openBooking(mentor);
+                  }}
+                >
+                  Marcar sessão
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && filtrados.length === 0 && (
+        <div className="dashboard-card" style={{ textAlign: "center", color: "var(--neutral-500)" }}>
+          Nenhum mentor verificado encontrado para esse filtro.
+        </div>
+      )}
+
+      {selectedMentor && (
+        <div className="dashboard-card" style={{ marginTop: "16px" }}>
+          <h4 style={{ marginTop: 0 }}>Sobre o mentor</h4>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+            <Info label="Nome" value={selectedMentor.name || "-"} />
+            <Info label="E-mail" value={selectedMentor.email || "-"} />
+            <Info label="Telefone" value={selectedMentor?.profile?.phone || "-"} />
+            <Info label="Província" value={selectedMentor?.profile?.province || "-"} />
+            <Info label="Área de especialidade" value={selectedMentor?.profile?.expertiseArea || "-"} />
+            <Info label="Anos de experiência" value={selectedMentor?.profile?.experienceYears || "-"} />
+            <Info label="Empresa" value={selectedMentor?.profile?.company || "-"} />
+            <Info label="Função" value={selectedMentor?.profile?.currentRole || "-"} />
+            <Info
+              label="LinkedIn"
+              value={
+                selectedMentor?.profile?.linkedin
+                  ? <a href={selectedMentor.profile.linkedin} target="_blank" rel="noreferrer" style={{ color: "#2563eb" }}>Abrir perfil</a>
+                  : "-"
+              }
+            />
+          </div>
+          <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn btn-primary" style={{ width: "auto" }} onClick={() => openBooking(selectedMentor)}>
+              Marcar sessão de mentoria
+            </button>
+          </div>
+        </div>
+      )}
+
+      {bookingOpen && (
+        <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px" }} onClick={() => setBookingOpen(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(700px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "18px" }}>
+            <h3 style={{ marginTop: 0 }}>Marcar sessão de mentoria</h3>
+            <p style={{ color: "var(--dm-text-muted)", marginTop: 0 }}>
+              Mentor: <strong>{selectedMentor?.name || "-"}</strong>
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+              <div>
+                <label className="form-label">Tipo de sessão</label>
+                <select className="form-input" value={booking.tipoSessao} onChange={(e) => setBooking((p) => ({ ...p, tipoSessao: e.target.value }))}>
+                  <option value="online">Online</option>
+                  <option value="presencial">Presencial</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Duração (minutos)</label>
+                <select className="form-input" value={booking.duracao} onChange={(e) => setBooking((p) => ({ ...p, duracao: e.target.value }))}>
+                  <option value="30">30</option>
+                  <option value="60">60</option>
+                  <option value="90">90</option>
+                  <option value="120">120</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Data e hora</label>
+                <input className="form-input" type="datetime-local" value={booking.dataHora} onChange={(e) => setBooking((p) => ({ ...p, dataHora: e.target.value }))} />
+              </div>
+              <div>
+                <label className="form-label">Forma de pagamento</label>
+                <select className="form-input" value={booking.pagamento} onChange={(e) => setBooking((p) => ({ ...p, pagamento: e.target.value }))}>
+                  <option value="multicaixa">Cartão Multicaixa</option>
+                  <option value="transferencia">Transferência bancária</option>
+                  <option value="unitel-money">Unitel Money</option>
+                  <option value="afrimoney">Afrimoney</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ marginTop: "10px" }}>
+              <label className="form-label">Observações (opcional)</label>
+              <textarea className="form-input" rows={3} value={booking.observacoes} onChange={(e) => setBooking((p) => ({ ...p, observacoes: e.target.value }))} />
+            </div>
+            <div style={{ marginTop: "10px", background: "var(--neutral-50)", border: "1px solid var(--dm-border)", borderRadius: "8px", padding: "10px" }}>
+              Valor estimado da sessão: <strong>{getPrecoSessao().toLocaleString("pt-PT")} Kz</strong>
+            </div>
+            <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setBookingOpen(false)} disabled={savingBooking}>Cancelar</button>
+              <button className="btn btn-primary" style={{ width: "auto" }} onClick={confirmarMarcacao} disabled={savingBooking}>
+                {savingBooking ? "A enviar..." : "Confirmar marcação"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Mensagens() {
   return (
     <div
       className="responsive-split-layout"
@@ -5323,7 +6076,19 @@ function Perfilmentor() {
             businessLocation: editForm.businessLocation,
           };
 
-      await updateMyProfile({ profileData });
+      const resp = await updateMyProfile({ profileData });
+      if (resp?.user) {
+        ctx?.applyAuthenticatedUser?.(resp.user);
+      } else {
+        ctx?.applyAuthenticatedUser?.({
+          ...(user || {}),
+          verificationStatus: isMentor ? "pending" : (user?.verificationStatus || "approved"),
+          profileData: {
+            ...(user?.profileData || {}),
+            ...profileData,
+          },
+        });
+      }
       await ctx?.refreshCurrentUser?.();
       setIsEditOpen(false);
       ctx?.setModal?.({
@@ -5341,7 +6106,7 @@ function Perfilmentor() {
       setSavingEdit(false);
     }
   };
-  const status = user?.verificationStatus || "approved";
+  const status = user?.verificationStatus || "pending";
   const verificationLabel = status === "approved" ? "✔ Conta Verificada" : status === "rejected" ? "Conta rejeitada" : "Conta em verificação";
   const verificationColor = status === "approved" ? "#10b981" : status === "rejected" ? "#ef4444" : "#f59e0b";
   const verificationText = status === "approved"

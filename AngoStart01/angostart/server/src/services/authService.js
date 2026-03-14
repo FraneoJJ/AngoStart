@@ -112,12 +112,13 @@ async function enrichUserWithVerification(user, activeRole = null) {
   const verification = await findVerificationByUserRole(Number(user.id), selectedRole);
   const profileData = await findProfileDataByUserRole(Number(user.id), selectedRole);
   const availableRoles = await listAvailableRoles(user);
+  const fallbackVerification = selectedRole === "admin" ? "approved" : "pending";
   return {
     ...user,
     primaryRole: user.role,
     role: selectedRole,
     availableRoles,
-    verificationStatus: verification?.verification_status || "approved",
+    verificationStatus: verification?.verification_status || fallbackVerification,
     verificationId: verification?.verification_id || null,
     profileData: profileData || {},
   };
@@ -160,6 +161,7 @@ export async function register(input) {
       }
       const exists = await findEmpreendedorProfileByUserId(user.id);
       if (exists) throw { status: 409, message: "Este utilizador já possui perfil de empreendedor." };
+      const verificationId = `VER-E-${Date.now().toString(36).toUpperCase()}`;
       await createEmpreendedorProfile(db, {
         userId: user.id,
         phone: profile.phone,
@@ -168,7 +170,9 @@ export async function register(input) {
         businessStage: profile.businessStage,
         businessLocation: profile.businessLocation || null,
         acceptTerms: !!profile.acceptTerms,
+        verificationId,
       });
+      verification = { id: verificationId, status: "pending" };
     }
 
     if (data.role === "mentor") {
