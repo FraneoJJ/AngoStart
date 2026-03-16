@@ -88,8 +88,9 @@ export async function listMentorshipRequestsForMentor(mentorUserId, status = "")
       mr.preferred_datetime, mr.duration_minutes, mr.payment_method, mr.price_kz, mr.status,
       mr.entrepreneur_notes, mr.mentor_notes, mr.mentor_response_at, mr.scheduled_for, mr.created_at, mr.updated_at,
       eu.name AS entrepreneur_name, eu.email AS entrepreneur_email,
+      eu.avatar_url AS entrepreneur_avatar_url,
       mp.business_name AS entrepreneur_business_name, mp.business_sector AS entrepreneur_business_sector,
-      m.name AS mentor_name, m.email AS mentor_email,
+      m.name AS mentor_name, m.email AS mentor_email, m.avatar_url AS mentor_avatar_url,
       i.title AS idea_title
      FROM mentorship_requests mr
      INNER JOIN users eu ON eu.id = mr.entrepreneur_user_id
@@ -110,7 +111,7 @@ export async function listMentorshipRequestsByEntrepreneur(entrepreneurUserId) {
       mr.id, mr.entrepreneur_user_id, mr.mentor_user_id, mr.idea_id, mr.topic, mr.session_type,
       mr.preferred_datetime, mr.duration_minutes, mr.payment_method, mr.price_kz, mr.status,
       mr.entrepreneur_notes, mr.mentor_notes, mr.mentor_response_at, mr.scheduled_for, mr.created_at, mr.updated_at,
-      me.name AS mentor_name, me.email AS mentor_email,
+      me.name AS mentor_name, me.email AS mentor_email, me.avatar_url AS mentor_avatar_url,
       i.title AS idea_title
      FROM mentorship_requests mr
      INNER JOIN users me ON me.id = mr.mentor_user_id

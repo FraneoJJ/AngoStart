@@ -60,6 +60,7 @@ function normalizeRequest(row) {
       ? {
           name: row.entrepreneur_name,
           email: row.entrepreneur_email || "",
+          avatarUrl: row.entrepreneur_avatar_url || null,
           businessName: row.entrepreneur_business_name || "",
           businessSector: row.entrepreneur_business_sector || "",
         }
@@ -68,6 +69,7 @@ function normalizeRequest(row) {
       ? {
           name: row.mentor_name,
           email: row.mentor_email || "",
+          avatarUrl: row.mentor_avatar_url || null,
         }
       : null,
     ideaTitle: row.idea_title || "",

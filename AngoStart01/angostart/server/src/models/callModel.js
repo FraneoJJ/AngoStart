@@ -77,14 +77,17 @@ export async function updateCallStatus({ channelName, status, endedByUserId = nu
 
 export async function listCallsBetweenUsers(userA, userB, limit = 30) {
   await ensureCallTable();
+  const safeLimit = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.min(200, Math.trunc(Number(limit))))
+    : 30;
   const [rows] = await pool.execute(
     `SELECT id, channel_name, caller_id, receiver_id, call_type, status, created_at, accepted_at, ended_at, ended_by_user_id
      FROM call_sessions
      WHERE (caller_id = ? AND receiver_id = ?)
         OR (caller_id = ? AND receiver_id = ?)
      ORDER BY created_at DESC, id DESC
-     LIMIT ?`,
-    [userA, userB, userB, userA, Number(limit)]
+     LIMIT ${safeLimit}`,
+    [userA, userB, userB, userA]
   );
   return rows;
 }

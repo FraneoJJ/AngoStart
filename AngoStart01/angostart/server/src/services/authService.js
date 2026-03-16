@@ -6,6 +6,7 @@ import {
   createUser,
   findUserByEmail,
   findUserPublicById,
+  updateUserAvatarById,
   updateUserPasswordHashById,
   USER_ROLES,
 } from "../models/userModel.js";
@@ -84,8 +85,22 @@ const switchRoleSchema = z.object({
 });
 
 const updateProfileSchema = z.object({
-  profileData: profileSchema,
+  profileData: profileSchema.optional(),
+  avatarDataUrl: z.string().max(2_500_000).optional(),
+}).refine((val) => !!val.profileData || !!val.avatarDataUrl, {
+  message: "Envie dados de perfil ou foto de perfil.",
 });
+
+function isSupportedAvatarDataUrl(value) {
+  const raw = String(value || "").trim();
+  return /^data:image\/(jpeg|jpg|png|webp);base64,[a-z0-9+/=]+$/i.test(raw);
+}
+
+function approxDataUrlBytes(dataUrl) {
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  const len = base64.length;
+  return Math.floor((len * 3) / 4);
+}
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -122,6 +137,7 @@ async function enrichUserWithVerification(user, activeRole = null) {
     availableRoles,
     verificationStatus: verification?.verification_status || fallbackVerification,
     verificationId: verification?.verification_id || null,
+    avatarUrl: user?.avatar_url || null,
     profileData: profileData || {},
   };
 }
@@ -311,44 +327,58 @@ export async function updateMyProfile(authUser, input) {
   const role = authUser?.role;
   const userId = Number(authUser?.sub);
   const profile = data.profileData || {};
+  const avatarDataUrl = data.avatarDataUrl ? String(data.avatarDataUrl).trim() : "";
 
   if (!userId || !role) throw { status: 401, message: "Sessão inválida." };
 
-  if (role === "empreendedor") {
-    await updateEmpreendedorProfileByUserId(userId, {
-      phone: profile.phone,
-      businessName: profile.businessName,
-      businessSector: profile.businessSector,
-      businessStage: profile.businessStage,
-      businessLocation: profile.businessLocation,
-    });
-  } else if (role === "mentor") {
-    await updateMentorProfileByUserId(userId, {
-      phone: profile.phone,
-      province: profile.province,
-      expertiseArea: profile.expertiseArea,
-      experienceYears: profile.experienceYears,
-      company: profile.company,
-      currentRole: profile.currentRole,
-      linkedin: profile.linkedin,
-    });
-  } else if (role === "investidor") {
-    await updateInvestidorProfileByUserId(userId, {
-      phone: profile.phone,
-      province: profile.province,
-      investorType: profile.investorType,
-      profession: profile.profession,
-      incomeSource: profile.incomeSource,
-      investmentRange: profile.investmentRange,
-      companyName: profile.companyName,
-      companyNif: profile.companyNif,
-      companyRole: profile.companyRole,
-      hasInvestmentExperience: profile.hasInvestmentExperience,
-      investmentExperienceArea: profile.investmentExperienceArea,
-      linkedinOrWebsite: profile.linkedinOrWebsite,
-    });
-  } else {
-    throw { status: 400, message: "Este tipo de conta não possui perfil editável." };
+  if (data.profileData) {
+    if (role === "empreendedor") {
+      await updateEmpreendedorProfileByUserId(userId, {
+        phone: profile.phone,
+        businessName: profile.businessName,
+        businessSector: profile.businessSector,
+        businessStage: profile.businessStage,
+        businessLocation: profile.businessLocation,
+      });
+    } else if (role === "mentor") {
+      await updateMentorProfileByUserId(userId, {
+        phone: profile.phone,
+        province: profile.province,
+        expertiseArea: profile.expertiseArea,
+        experienceYears: profile.experienceYears,
+        company: profile.company,
+        currentRole: profile.currentRole,
+        linkedin: profile.linkedin,
+      });
+    } else if (role === "investidor") {
+      await updateInvestidorProfileByUserId(userId, {
+        phone: profile.phone,
+        province: profile.province,
+        investorType: profile.investorType,
+        profession: profile.profession,
+        incomeSource: profile.incomeSource,
+        investmentRange: profile.investmentRange,
+        companyName: profile.companyName,
+        companyNif: profile.companyNif,
+        companyRole: profile.companyRole,
+        hasInvestmentExperience: profile.hasInvestmentExperience,
+        investmentExperienceArea: profile.investmentExperienceArea,
+        linkedinOrWebsite: profile.linkedinOrWebsite,
+      });
+    } else {
+      throw { status: 400, message: "Este tipo de conta não possui perfil editável." };
+    }
+  }
+
+  if (avatarDataUrl) {
+    if (!isSupportedAvatarDataUrl(avatarDataUrl)) {
+      throw { status: 400, message: "Formato de foto inválido. Use JPG, PNG ou WEBP." };
+    }
+    const bytes = approxDataUrlBytes(avatarDataUrl);
+    if (bytes > 700 * 1024) {
+      throw { status: 400, message: "A foto está pesada. Use uma imagem menor (até ~700KB)." };
+    }
+    await updateUserAvatarById(userId, avatarDataUrl);
   }
 
   const user = await findUserPublicById(userId);

@@ -25,6 +25,21 @@ function formatDateTime(value) {
   });
 }
 
+function toFriendlyChatError(raw) {
+  const msg = String(raw || "").trim();
+  if (!msg) return "Falha de comunicação. Tente novamente.";
+  const lower = msg.toLowerCase();
+  if (
+    lower.includes("mysqld_stmt_execute")
+    || lower.includes("sql")
+    || lower.includes("er_")
+    || lower.includes("incorrect arguments")
+  ) {
+    return "Não foi possível carregar a conversa agora. Atualize a página e tente novamente.";
+  }
+  return msg;
+}
+
 export default function ChatWindow({
   title = "Mensagens",
   contacts = [],
@@ -57,6 +72,7 @@ export default function ChatWindow({
         name: c.name || "Utilizador",
         role: c.role || "",
         subtitle: c.subtitle || "",
+        avatarUrl: c.avatarUrl || null,
       });
     }
     for (const c of localContacts) {
@@ -98,7 +114,7 @@ export default function ChatWindow({
         setOnlineSet(new Set((onlineUsers || []).map((n) => Number(n))));
       } catch (err) {
         if (!mounted) return;
-        setError(err.message || "Falha ao carregar conversas.");
+        setError(toFriendlyChatError(err?.message || "Falha ao carregar conversas."));
       } finally {
         if (mounted) setLoadingContacts(false);
       }
@@ -133,7 +149,7 @@ export default function ChatWindow({
           setCallHistory(calls || []);
         }
       } catch (err) {
-        if (mounted) setError(err.message || "Falha ao carregar mensagens.");
+        if (mounted) setError(toFriendlyChatError(err?.message || "Falha ao carregar mensagens."));
       } finally {
         if (mounted) setLoadingMessages(false);
       }
@@ -256,7 +272,7 @@ export default function ChatWindow({
     const socket = getChatSocket();
     if (socket?.connected) {
       socket.emit("chat:send", { receiverId: selectedContact.userId, message }, (ack) => {
-        if (!ack?.ok) setError(ack?.error || "Falha ao enviar mensagem.");
+        if (!ack?.ok) setError(toFriendlyChatError(ack?.error || "Falha ao enviar mensagem."));
       });
       return;
     }
@@ -264,7 +280,7 @@ export default function ChatWindow({
       const saved = await sendChatMessageHttp(selectedContact.userId, message);
       if (saved) setMessages((prev) => [...prev, saved]);
     } catch (err) {
-      setError(err.message || "Falha ao enviar mensagem.");
+      setError(toFriendlyChatError(err?.message || "Falha ao enviar mensagem."));
     }
   };
 
@@ -287,7 +303,7 @@ export default function ChatWindow({
         peerName: selectedContact.name,
       });
     } catch (err) {
-      setError(err.message || "Falha ao iniciar chamada.");
+      setError(toFriendlyChatError(err?.message || "Falha ao iniciar chamada."));
     }
   };
 
@@ -309,7 +325,7 @@ export default function ChatWindow({
       });
       setIncomingCall(null);
     } catch (err) {
-      setError(err.message || "Falha ao aceitar chamada.");
+      setError(toFriendlyChatError(err?.message || "Falha ao aceitar chamada."));
     }
   };
 
@@ -363,7 +379,16 @@ export default function ChatWindow({
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
-                      <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ width: "28px", height: "28px", borderRadius: "50%", overflow: "hidden", background: "var(--primary-100)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-700)" }}>
+                          {c.avatarUrl ? (
+                            <img src={c.avatarUrl} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            String(c.name || "U").charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
+                      </div>
                       <UserOnlineIndicator online={onlineSet.has(Number(c.userId))} />
                     </div>
                     <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{c.subtitle || c.role || "-"}</div>

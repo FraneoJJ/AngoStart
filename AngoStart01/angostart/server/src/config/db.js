@@ -46,6 +46,21 @@ export async function initDb() {
          ADD COLUMN verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'`
       );
     }
+
+    const [userAvatarColRows] = await conn.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'avatar_url'`,
+      [env.DB_NAME]
+    );
+    if (!Array.isArray(userAvatarColRows) || userAvatarColRows.length === 0) {
+      await conn.execute(
+        `ALTER TABLE users
+         ADD COLUMN avatar_url LONGTEXT NULL`
+      );
+    }
   } finally {
     conn.release();
   }

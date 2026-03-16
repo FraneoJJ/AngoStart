@@ -29,6 +29,7 @@ function normalizeConversation(row) {
     name: row.name || "",
     email: row.email || "",
     role: row.role || "",
+    avatarUrl: row.avatar_url || null,
     lastMessage: row.last_message || "",
     lastMessageAt: row.last_message_at || null,
   };

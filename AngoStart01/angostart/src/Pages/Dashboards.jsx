@@ -11,6 +11,7 @@ import { getAdminIdeas, getAdminUsers, updateAdminUserVerification } from "../se
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import { getAvailableMentors, getMentorById } from "../services/mentorApi";
 import { createMentorshipRequest, getMentorMentorshipRequests, getMyMentorshipRequests, updateMentorMentorshipRequest } from "../services/mentorshipApi";
+import { getChatConversations } from "../services/chatService";
 import { updateMyProfile } from "../services/authApi";
 import { getPerformanceReport } from "../services/reportApi";
 import { jsPDF } from "jspdf";
@@ -27,6 +28,40 @@ function parseJsonSafe(raw, fallback) {
   } catch {
     return fallback;
   }
+}
+
+async function compressImageToDataUrl(file, options = {}) {
+  const maxWidth = Number(options.maxWidth || 700);
+  const maxHeight = Number(options.maxHeight || 700);
+  const quality = Number(options.quality || 0.8);
+
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Falha ao ler ficheiro de imagem."));
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Falha ao processar imagem."));
+    image.src = dataUrl;
+  });
+
+  let targetW = img.width;
+  let targetH = img.height;
+  const scale = Math.min(maxWidth / targetW, maxHeight / targetH, 1);
+  targetW = Math.max(1, Math.round(targetW * scale));
+  targetH = Math.max(1, Math.round(targetH * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Não foi possível preparar compressão da imagem.");
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 const translations = {
@@ -244,6 +279,7 @@ export default function Dashboard() {
     availableRoles: apiUser.availableRoles || [apiUser.role],
     verificationStatus: apiUser.verificationStatus || (apiUser.role === "admin" ? "approved" : "pending"),
     verificationId: apiUser.verificationId || null,
+    avatarUrl: apiUser.avatarUrl || null,
     profileData: apiUser.profileData || {},
   });
   const applyAuthenticatedUser = useCallback((apiUser) => {
@@ -274,35 +310,43 @@ export default function Dashboard() {
 
     try {
       if (role === "empreendedor") {
-        const [ideas, mentorshipRequests] = await Promise.all([
+        const [ideas, mentorshipRequests, conversations] = await Promise.all([
           getMyIdeas(),
           getMyMentorshipRequests(),
+          getChatConversations().catch(() => []),
         ]);
         const pendingSubmission = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
         const mentoriasAgendadas = mentorshipRequests.filter((r) => r.status === "accepted").length;
         setNavBadges({
           "submeter-ideia": pendingSubmission,
           "minhas-ideias": ideas.length,
+          mensagens: conversations.length,
           mentoria: mentoriasAgendadas,
         });
         return;
       }
 
       if (role === "investidor") {
-        const marketplaceIdeas = await getMarketplaceIdeas();
-        const pendingProposals = marketplaceIdeas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        const [marketplaceIdeas, conversations] = await Promise.all([
+          getMarketplaceIdeas(),
+          getChatConversations().catch(() => []),
+        ]);
         setNavBadges({
           marketplace: marketplaceIdeas.length,
-          propostas: pendingProposals,
+          propostas: conversations.length,
         });
         return;
       }
 
       if (role === "mentor") {
-        const requests = await getMentorMentorshipRequests();
+        const [requests, conversations] = await Promise.all([
+          getMentorMentorshipRequests(),
+          getChatConversations().catch(() => []),
+        ]);
         const mentoringRequests = requests.filter((r) => r.status === "accepted").length;
         setNavBadges({
           sessoes: mentoringRequests,
+          mensagens: conversations.length,
         });
         return;
       }
@@ -341,6 +385,14 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user?.role) return;
     refreshNavBadges(user);
+  }, [user?.id, user?.role, refreshNavBadges]);
+
+  useEffect(() => {
+    if (!user?.role) return;
+    const timer = setInterval(() => {
+      refreshNavBadges(user);
+    }, 20000);
+    return () => clearInterval(timer);
   }, [user?.id, user?.role, refreshNavBadges]);
 
   useEffect(() => {
@@ -1236,7 +1288,13 @@ return (
           </div>
           <div className="sidebar-footer">
             <div className="user-profile">
-              <div className="user-avatar">{user.name.charAt(0)}</div>
+              <div className="user-avatar" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  user.name.charAt(0)
+                )}
+              </div>
               <div className="user-info">
                 <div className="user-name">{user.name}</div>
                 <div className="user-role">{user.role}</div>
@@ -1678,6 +1736,7 @@ function Propostas() {
             unique.set(uid, {
               userId: uid,
               name: idea.owner_name || "Empreendedor",
+              avatarUrl: idea.owner_avatar_url || null,
               role: "empreendedor",
               subtitle: `${idea.title || "Projeto"} • ${idea.sector || "Setor"}`,
             });
@@ -1708,6 +1767,9 @@ function InvestidorPerfil() {
   const t = ctx?.t ?? (k => k);
   const user = ctx?.currentUser || null;
   const p = user?.profileData || {};
+  const avatarInputRef = useRef(null);
+  const [avatarHover, setAvatarHover] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -1767,6 +1829,46 @@ function InvestidorPerfil() {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleAvatarPickClick = () => {
+    avatarInputRef.current?.click?.();
+  };
+
+  const handleAvatarFileChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    try {
+      if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type || "")) {
+        throw new Error("Formato inválido. Use JPG, PNG ou WEBP.");
+      }
+      setUploadingAvatar(true);
+      const avatarDataUrl = await compressImageToDataUrl(file, { maxWidth: 700, maxHeight: 700, quality: 0.8 });
+      const resp = await updateMyProfile({ avatarDataUrl });
+      if (resp?.user) {
+        ctx?.applyAuthenticatedUser?.(resp.user);
+      } else {
+        ctx?.applyAuthenticatedUser?.({
+          ...(user || {}),
+          avatarUrl: avatarDataUrl,
+        });
+      }
+      await ctx?.refreshCurrentUser?.();
+      ctx?.setModal?.({
+        open: true,
+        title: "Foto atualizada",
+        message: "A foto de perfil foi atualizada com sucesso.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha no upload",
+        message: err?.message || "Não foi possível atualizar a foto de perfil.",
+      });
+    } finally {
+      event.target.value = "";
+      setUploadingAvatar(false);
+    }
+  };
+
   const submitProfileEdit = async () => {
     setSavingEdit(true);
     try {
@@ -1809,9 +1911,28 @@ function InvestidorPerfil() {
         <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)' }}>
-            {String(user?.name || "I").charAt(0)}
+          <div
+            onMouseEnter={() => setAvatarHover(true)}
+            onMouseLeave={() => setAvatarHover(false)}
+            onClick={handleAvatarPickClick}
+            style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)', overflow: "hidden", position: "relative", cursor: "pointer" }}
+            title="Alterar foto de perfil"
+          >
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user?.name || "Perfil"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              String(user?.name || "I").charAt(0)
+            )}
+            <div style={{ position: "absolute", inset: 0, background: avatarHover ? "rgba(0,0,0,0.4)" : "transparent", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: 700, transition: "0.2s" }}>
+              {avatarHover ? "+" : ""}
+            </div>
+            {uploadingAvatar ? (
+              <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", fontSize: "0.72rem", background: "rgba(0,0,0,0.6)", color: "#fff", padding: "2px 6px", borderRadius: "6px" }}>
+                A carregar...
+              </div>
+            ) : null}
           </div>
+          <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleAvatarFileChange} style={{ display: "none" }} />
 
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0 }}>{user?.name || "Investidor"}</h2>
@@ -3138,6 +3259,7 @@ function useMentorRequestsData() {
     try {
       const data = await getMentorMentorshipRequests();
       setRequests(data || []);
+      await ctx?.refreshNavBadges?.();
     } catch (err) {
       setRequests([]);
       setError(err.message || "Falha ao carregar solicitações.");
@@ -3155,6 +3277,7 @@ function useMentorRequestsData() {
     try {
       const updated = await updateMentorMentorshipRequest(requestId, payload);
       setRequests((prev) => prev.map((r) => (Number(r.id) === Number(requestId) ? updated : r)));
+      await ctx?.refreshNavBadges?.();
       ctx?.setModal?.({
         open: true,
         title: "Solicitação atualizada",
@@ -3516,6 +3639,7 @@ function MensagensMentorDynamic() {
         map.set(uid, {
           userId: uid,
           name: req?.entrepreneur?.name || "Empreendedor",
+          avatarUrl: req?.entrepreneur?.avatarUrl || null,
           role: "empreendedor",
           subtitle: `${mentorStatusLabel(req.status)} • ${req.topic || "Mentoria"}`,
         });
@@ -3566,6 +3690,7 @@ function MensagensEmpreendedorLegacy() {
         map.set(uid, {
           userId: uid,
           name: req?.mentor?.name || "Mentor",
+          avatarUrl: req?.mentor?.avatarUrl || null,
           role: "mentor",
           subtitle: `${mentorStatusLabel(req.status)} • ${req.topic || "Mentoria"}`,
         });
@@ -5160,7 +5285,7 @@ function Investidores() {
             areas: inv.profile?.investmentExperienceArea
               ? [String(inv.profile.investmentExperienceArea)]
               : ["Sem área definida"],
-            imagem: "",
+            imagem: inv.avatarUrl || "",
             descricao: inv.profile?.profession
               ? `Profissão: ${inv.profile.profession}`
               : "Investidor cadastrado na plataforma.",
@@ -5548,9 +5673,14 @@ function Mentoria() {
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: 700,
+                    overflow: "hidden",
                   }}
                 >
-                  {String(mentor.name || "M").charAt(0).toUpperCase()}
+                  {mentor.avatarUrl ? (
+                    <img src={mentor.avatarUrl} alt={mentor.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    String(mentor.name || "M").charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div>
                   <strong>{mentor.name}</strong>
@@ -5899,6 +6029,9 @@ function Perfilmentor() {
   const t = ctx?.t ?? (k => k);
   const user = ctx?.currentUser || null;
   const p = user?.profileData || {};
+  const avatarInputRef = useRef(null);
+  const [avatarHover, setAvatarHover] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const isMentor = user?.role === "mentor";
   const isEmpreendedor = user?.role === "empreendedor";
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -5957,6 +6090,46 @@ function Perfilmentor() {
 
   const handleEditChange = (field, value) => {
     setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAvatarPickClick = () => {
+    avatarInputRef.current?.click?.();
+  };
+
+  const handleAvatarFileChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    try {
+      if (!/^image\/(jpeg|jpg|png|webp)$/i.test(file.type || "")) {
+        throw new Error("Formato inválido. Use JPG, PNG ou WEBP.");
+      }
+      setUploadingAvatar(true);
+      const avatarDataUrl = await compressImageToDataUrl(file, { maxWidth: 700, maxHeight: 700, quality: 0.8 });
+      const resp = await updateMyProfile({ avatarDataUrl });
+      if (resp?.user) {
+        ctx?.applyAuthenticatedUser?.(resp.user);
+      } else {
+        ctx?.applyAuthenticatedUser?.({
+          ...(user || {}),
+          avatarUrl: avatarDataUrl,
+        });
+      }
+      await ctx?.refreshCurrentUser?.();
+      ctx?.setModal?.({
+        open: true,
+        title: "Foto atualizada",
+        message: "A foto de perfil foi atualizada com sucesso.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        title: "Falha no upload",
+        message: err?.message || "Não foi possível atualizar a foto de perfil.",
+      });
+    } finally {
+      event.target.value = "";
+      setUploadingAvatar(false);
+    }
   };
 
   const submitProfileEdit = async () => {
@@ -6047,9 +6220,28 @@ function Perfilmentor() {
         <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
         <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
-          <div style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)' }}>
-            {String(user?.name || "U").charAt(0)}
+          <div
+            onMouseEnter={() => setAvatarHover(true)}
+            onMouseLeave={() => setAvatarHover(false)}
+            onClick={handleAvatarPickClick}
+            style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)', overflow: "hidden", position: "relative", cursor: "pointer" }}
+            title="Alterar foto de perfil"
+          >
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user?.name || "Perfil"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              String(user?.name || "U").charAt(0)
+            )}
+            <div style={{ position: "absolute", inset: 0, background: avatarHover ? "rgba(0,0,0,0.4)" : "transparent", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: 700, transition: "0.2s" }}>
+              {avatarHover ? "+" : ""}
+            </div>
+            {uploadingAvatar ? (
+              <div style={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", fontSize: "0.72rem", background: "rgba(0,0,0,0.6)", color: "#fff", padding: "2px 6px", borderRadius: "6px" }}>
+                A carregar...
+              </div>
+            ) : null}
           </div>
+          <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleAvatarFileChange} style={{ display: "none" }} />
 
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0 }}>{user?.name || "Utilizador"}</h2>

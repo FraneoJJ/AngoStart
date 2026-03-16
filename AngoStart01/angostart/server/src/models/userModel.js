@@ -4,7 +4,7 @@ export const USER_ROLES = ["admin", "empreendedor", "mentor", "investidor"];
 
 export async function findUserByEmail(email) {
   const [rows] = await pool.execute(
-    `SELECT id, name, email, password_hash, role, created_at
+    `SELECT id, name, email, password_hash, role, avatar_url, created_at
      FROM users
      WHERE email = ?
      LIMIT 1`,
@@ -16,7 +16,7 @@ export async function findUserByEmail(email) {
 
 export async function findUserPublicById(id) {
   const [rows] = await pool.execute(
-    `SELECT id, name, email, role, created_at
+    `SELECT id, name, email, role, avatar_url, created_at
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -34,7 +34,7 @@ export async function createUser({ name, email, passwordHash, role }, db = pool)
   );
 
   const [rows] = await db.execute(
-    `SELECT id, name, email, role, created_at
+    `SELECT id, name, email, role, avatar_url, created_at
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -49,5 +49,14 @@ export async function updateUserPasswordHashById(userId, passwordHash) {
      SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
     [passwordHash, userId]
+  );
+}
+
+export async function updateUserAvatarById(userId, avatarUrl) {
+  await pool.execute(
+    `UPDATE users
+     SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [avatarUrl || null, userId]
   );
 }

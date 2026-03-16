@@ -93,7 +93,7 @@ export async function updateIdeaStatusById(id, status) {
 export async function listMarketplaceIdeas() {
   const [rows] = await pool.execute(
     `SELECT i.id, i.title, i.description, i.sector, i.city, i.region, i.latitude, i.longitude,
-            i.initial_capital, i.status, i.created_at, u.name AS owner_name,
+            i.initial_capital, i.status, i.created_at, u.name AS owner_name, u.avatar_url AS owner_avatar_url,
             i.created_by AS owner_user_id,
             (
               SELECT vr.score

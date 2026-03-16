@@ -46,14 +46,17 @@ export async function findMessageById(id) {
 
 export async function listMessagesBetweenUsers(userA, userB, limit = 100) {
   await ensureChatTables();
+  const safeLimit = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.min(500, Math.trunc(Number(limit))))
+    : 100;
   const [rows] = await pool.execute(
     `SELECT m.id, m.sender_id, m.receiver_id, m.message, m.timestamp, m.lida
      FROM mensagens m
      WHERE (m.sender_id = ? AND m.receiver_id = ?)
         OR (m.sender_id = ? AND m.receiver_id = ?)
      ORDER BY m.timestamp ASC, m.id ASC
-     LIMIT ?`,
-    [userA, userB, userB, userA, Number(limit)]
+     LIMIT ${safeLimit}`,
+    [userA, userB, userB, userA]
   );
   return rows;
 }
@@ -66,8 +69,9 @@ export async function listConversationUsersForUser(userId) {
       u.name,
       u.email,
       u.role,
-      x.last_message,
-      x.last_message_at
+      u.avatar_url,
+      lm.message AS last_message,
+      lm.timestamp AS last_message_at
      FROM (
        SELECT
          CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END AS other_user_id,
@@ -76,16 +80,9 @@ export async function listConversationUsersForUser(userId) {
        WHERE m.sender_id = ? OR m.receiver_id = ?
        GROUP BY other_user_id
      ) c
-     INNER JOIN mensagens xmsg ON xmsg.id = c.last_message_id
+     INNER JOIN mensagens lm ON lm.id = c.last_message_id
      INNER JOIN users u ON u.id = c.other_user_id
-     INNER JOIN (
-       SELECT
-         m.id,
-         m.message AS last_message,
-         m.timestamp AS last_message_at
-       FROM mensagens m
-     ) x ON x.id = xmsg.id
-     ORDER BY x.last_message_at DESC, u.id DESC`,
+     ORDER BY lm.timestamp DESC, u.id DESC`,
     [userId, userId, userId]
   );
   return rows;
