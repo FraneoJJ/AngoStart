@@ -18,14 +18,15 @@ import {
 
 const verificationSchema = z.object({
   status: z.enum(["approved", "rejected"]),
+  role: z.enum(["empreendedor", "mentor", "investidor"]).optional(),
 });
 
-function normalizeUser(row) {
+function normalizeUserByRole(row, role) {
   let verificationStatus = "approved";
   let verificationId = null;
   let profile = {};
 
-  if (row.role === "empreendedor") {
+  if (role === "empreendedor") {
     verificationStatus = row.ep_verification_status || "pending";
     verificationId = row.ep_verification_id || null;
     profile = {
@@ -35,7 +36,7 @@ function normalizeUser(row) {
       businessStage: row.business_stage || null,
       businessLocation: row.business_location || null,
     };
-  } else if (row.role === "mentor") {
+  } else if (role === "mentor") {
     verificationStatus = row.mp_verification_status || "pending";
     verificationId = row.mp_verification_id || null;
     profile = {
@@ -52,7 +53,7 @@ function normalizeUser(row) {
       cvDoc: row.mp_cv_doc || null,
       certificateDoc: row.mp_certificate_doc || null,
     };
-  } else if (row.role === "investidor") {
+  } else if (role === "investidor") {
     verificationStatus = row.ip_verification_status || "pending";
     verificationId = row.ip_verification_id || null;
     profile = {
@@ -76,9 +77,11 @@ function normalizeUser(row) {
 
   return {
     id: Number(row.id),
+    rowKey: `${Number(row.id)}:${role}`,
     name: row.name,
     email: row.email,
-    role: row.role,
+    role,
+    profileExists: true,
     createdAt: row.created_at,
     verificationStatus,
     verificationId,
@@ -88,7 +91,32 @@ function normalizeUser(row) {
 
 export async function listAdminUsers() {
   const rows = await listUsersWithProfiles();
-  return rows.map(normalizeUser);
+  const out = [];
+  for (const row of rows) {
+    const uid = Number(row.id);
+    const hasEmpreendedor = row.ep_user_id != null;
+    const hasMentor = row.mp_user_id != null;
+    const hasInvestidor = row.ip_user_id != null;
+
+    if (hasEmpreendedor) out.push(normalizeUserByRole(row, "empreendedor"));
+    if (hasMentor) out.push(normalizeUserByRole(row, "mentor"));
+    if (hasInvestidor) out.push(normalizeUserByRole(row, "investidor"));
+    if (!hasEmpreendedor && !hasMentor && !hasInvestidor) {
+      out.push({
+        id: uid,
+        rowKey: `${uid}:admin`,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        profileExists: false,
+        createdAt: row.created_at,
+        verificationStatus: "approved",
+        verificationId: null,
+        profile: {},
+      });
+    }
+  }
+  return out;
 }
 
 export async function setUserVerification(userId, payload) {
@@ -96,25 +124,36 @@ export async function setUserVerification(userId, payload) {
   if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
     throw { status: 400, message: "ID de utilizador inválido." };
   }
-  const { status } = verificationSchema.parse(payload || {});
+  const { status, role } = verificationSchema.parse(payload || {});
 
   const user = await findUserRoleById(targetUserId);
   if (!user) throw { status: 404, message: "Utilizador não encontrado." };
-  if (user.role === "admin") {
+  const targetRole = role || user.role;
+  if (targetRole === "admin") {
     throw { status: 400, message: "Este tipo de conta não requer aprovação/rejeição manual." };
   }
 
-  if (user.role === "empreendedor") {
-    await updateEmpreendedorVerificationStatus(targetUserId, status);
-  } else if (user.role === "mentor") {
-    await updateMentorVerificationStatus(targetUserId, status);
-  } else if (user.role === "investidor") {
-    await updateInvestidorVerificationStatus(targetUserId, status);
+  let affected = 0;
+  if (targetRole === "empreendedor") {
+    affected = await updateEmpreendedorVerificationStatus(targetUserId, status);
+  } else if (targetRole === "mentor") {
+    affected = await updateMentorVerificationStatus(targetUserId, status);
+  } else if (targetRole === "investidor") {
+    affected = await updateInvestidorVerificationStatus(targetUserId, status);
   }
 
-  const users = await listUsersWithProfiles();
-  const updated = users.find((row) => Number(row.id) === targetUserId);
-  return updated ? normalizeUser(updated) : null;
+  if (!affected) {
+    const users = await listAdminUsers();
+    const candidate = users.find((u) => Number(u.id) === targetUserId && u.profileExists);
+    if (!candidate) {
+      throw { status: 404, message: "Este utilizador não possui perfil verificável para aprovação/rejeição." };
+    }
+    throw { status: 404, message: "Perfil do papel selecionado não encontrado para este utilizador. Atualize a lista e tente novamente." };
+  }
+
+  const users = await listAdminUsers();
+  const updated = users.find((u) => Number(u.id) === targetUserId && u.role === targetRole);
+  return updated || null;
 }
 
 function normalizeInvestor(row) {

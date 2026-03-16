@@ -1,12 +1,16 @@
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { initDb } from "./config/db.js";
+import http from "node:http";
+import { initSocket } from "./realtime/socketServer.js";
 
 async function bootstrap() {
   try {
     await initDb();
-    app.listen(env.PORT, () => {
-      console.log(`API rodando em http://localhost:${env.PORT}`);
+    const server = http.createServer(app);
+    initSocket(server);
+    server.listen(env.PORT, () => {
+      console.log(`API rodando em http://localhost:${env.PORT} (HTTP + WebSocket)`);
     });
   } catch (err) {
     const details = err?.message || err?.code || JSON.stringify(err);

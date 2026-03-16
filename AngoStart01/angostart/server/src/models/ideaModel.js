@@ -94,6 +94,7 @@ export async function listMarketplaceIdeas() {
   const [rows] = await pool.execute(
     `SELECT i.id, i.title, i.description, i.sector, i.city, i.region, i.latitude, i.longitude,
             i.initial_capital, i.status, i.created_at, u.name AS owner_name,
+            i.created_by AS owner_user_id,
             (
               SELECT vr.score
               FROM viability_reports vr

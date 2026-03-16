@@ -17,14 +17,14 @@ export async function getAdminUsers() {
   return data.users || [];
 }
 
-export async function updateAdminUserVerification(userId, status) {
+export async function updateAdminUserVerification(userId, status, role) {
   const data = await requestJson(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/verification`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, role }),
   });
   return data.user;
 }

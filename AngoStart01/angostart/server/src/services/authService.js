@@ -99,10 +99,12 @@ const resetPasswordSchema = z.object({
 async function listAvailableRoles(user) {
   if (!user) return [];
   const userId = Number(user.id);
-  const roles = new Set([user.role]);
+  const roles = new Set();
+  if (user.role === "admin") roles.add("admin");
   if (await findEmpreendedorProfileByUserId(userId)) roles.add("empreendedor");
   if (await findMentorProfileByUserId(userId)) roles.add("mentor");
   if (await findInvestidorProfileByUserId(userId)) roles.add("investidor");
+  if (roles.size === 0) roles.add(user.role);
   return Array.from(roles);
 }
 
@@ -271,7 +273,9 @@ export async function login(input) {
 
   const publicUser = await findUserPublicById(user.id);
   const availableRoles = await listAvailableRoles(publicUser);
-  const selectedRole = data.role && availableRoles.includes(data.role) ? data.role : publicUser.role;
+  const selectedRole = data.role && availableRoles.includes(data.role)
+    ? data.role
+    : (availableRoles.includes(publicUser.role) ? publicUser.role : (availableRoles[0] || publicUser.role));
   const token = signAccessToken({ sub: user.id, role: selectedRole, email: user.email });
   const userWithVerification = await enrichUserWithVerification(publicUser, selectedRole);
   return { user: userWithVerification, token };
@@ -282,7 +286,11 @@ export async function getMe(userId, activeRole = null) {
   if (!user) {
     throw { status: 404, message: "Usuário não encontrado." };
   }
-  return enrichUserWithVerification(user, activeRole || user.role);
+  const availableRoles = await listAvailableRoles(user);
+  const preferredRole = activeRole && availableRoles.includes(activeRole)
+    ? activeRole
+    : (availableRoles.includes(user.role) ? user.role : (availableRoles[0] || user.role));
+  return enrichUserWithVerification(user, preferredRole);
 }
 
 export async function switchRole(authUser, input) {

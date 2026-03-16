@@ -239,3 +239,37 @@ CREATE TABLE IF NOT EXISTS mentorship_requests (
   CONSTRAINT fk_mr_mentor FOREIGN KEY (mentor_user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_mr_idea FOREIGN KEY (idea_id) REFERENCES ideas(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS mensagens (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  sender_id BIGINT UNSIGNED NOT NULL,
+  receiver_id BIGINT UNSIGNED NOT NULL,
+  message TEXT NOT NULL,
+  timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  lida TINYINT(1) NOT NULL DEFAULT 0,
+  INDEX idx_msg_sender (sender_id),
+  INDEX idx_msg_receiver (receiver_id),
+  INDEX idx_msg_time (timestamp),
+  CONSTRAINT fk_msg_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_msg_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS call_sessions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  channel_name VARCHAR(200) NOT NULL UNIQUE,
+  caller_id BIGINT UNSIGNED NOT NULL,
+  receiver_id BIGINT UNSIGNED NOT NULL,
+  call_type ENUM('video', 'voice') NOT NULL DEFAULT 'video',
+  status ENUM('invited', 'accepted', 'rejected', 'ended', 'missed') NOT NULL DEFAULT 'invited',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  accepted_at DATETIME NULL,
+  ended_at DATETIME NULL,
+  ended_by_user_id BIGINT UNSIGNED NULL,
+  INDEX idx_call_channel (channel_name),
+  INDEX idx_call_caller (caller_id),
+  INDEX idx_call_receiver (receiver_id),
+  INDEX idx_call_status (status),
+  CONSTRAINT fk_call_caller FOREIGN KEY (caller_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_call_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_call_ended_by FOREIGN KEY (ended_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);

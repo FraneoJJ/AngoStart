@@ -10,12 +10,13 @@ import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } 
 import { getAdminIdeas, getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import { getAvailableMentors, getMentorById } from "../services/mentorApi";
-import { createMentorshipRequest, getMentorMentorshipRequests, updateMentorMentorshipRequest } from "../services/mentorshipApi";
+import { createMentorshipRequest, getMentorMentorshipRequests, getMyMentorshipRequests, updateMentorMentorshipRequest } from "../services/mentorshipApi";
 import { updateMyProfile } from "../services/authApi";
 import { getPerformanceReport } from "../services/reportApi";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import Planos from "../components/SecoesApp/Planos";
+import ChatWindow from "../components/communication/ChatWindow";
 
 const STORAGE_KEY = 'angostart_settings';
 
@@ -101,7 +102,7 @@ const navigationConfig = {
       { id: 'minhas-ideias', icon: 'folder', badge: 3 },
     ]},
     { sectionKey: 'crescimento', items: [
-      { id: 'mensagens', icon: 'inbox' },
+      { id: 'mensagens', icon: 'message-square-text' },
       { id: 'mentoria', icon: 'users' },
       { id: 'investidores', icon: 'trending-up' },
       { id: 'checklist-estrategico', icon: 'check-circle' },
@@ -137,7 +138,7 @@ const navigationConfig = {
     ]},
     { sectionKey: 'conteudo', items: [
       { id: 'agenda', icon: 'clock' },
-      { id: 'mensagens', icon: 'user' },
+      { id: 'mensagens', icon: 'message-square-text' },
     ]},
     { sectionKey: 'configuracoes', items: [
       { id: 'assinatura', icon: 'credit-card' },
@@ -171,6 +172,7 @@ const icons = {
   'credit-card': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
   'shopping-bag': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
   inbox: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>,
+  'message-square-text': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/><path d="M7 11h10"/><path d="M7 15h6"/><path d="M7 7h8"/></svg>,
   heart: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
   'bar-chart': <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
   briefcase: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
@@ -272,11 +274,16 @@ export default function Dashboard() {
 
     try {
       if (role === "empreendedor") {
-        const ideas = await getMyIdeas();
+        const [ideas, mentorshipRequests] = await Promise.all([
+          getMyIdeas(),
+          getMyMentorshipRequests(),
+        ]);
         const pendingSubmission = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        const mentoriasAgendadas = mentorshipRequests.filter((r) => r.status === "accepted").length;
         setNavBadges({
           "submeter-ideia": pendingSubmission,
           "minhas-ideias": ideas.length,
+          mentoria: mentoriasAgendadas,
         });
         return;
       }
@@ -292,8 +299,8 @@ export default function Dashboard() {
       }
 
       if (role === "mentor") {
-        const marketplaceIdeas = await getMarketplaceIdeas();
-        const mentoringRequests = marketplaceIdeas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+        const requests = await getMentorMentorshipRequests();
+        const mentoringRequests = requests.filter((r) => r.status === "accepted").length;
         setNavBadges({
           sessoes: mentoringRequests,
         });
@@ -424,7 +431,7 @@ export default function Dashboard() {
   const verificationMeta = {
     pending: {
       title: "Conta pendente de verificação",
-      text: "A sua conta já está ativa no dashboard, mas o perfil ainda está em análise da equipa.",
+      text: "A conta está em análise. Enquanto isso, apenas Dashboard, Perfil e Configurações ficam disponíveis.",
       border: "#f59e0b",
       bg: "#fffbeb",
       titleColor: "#92400e",
@@ -440,7 +447,7 @@ export default function Dashboard() {
     },
     rejected: {
       title: "Conta rejeitada na verificação",
-      text: "A verificação foi rejeitada. Atualize os dados/documentos e contacte o suporte para nova análise.",
+      text: "A verificação foi rejeitada. Apenas o Perfil permanece ativo para atualizar os seus dados/documentos antes de nova análise.",
       border: "#ef4444",
       bg: "#fef2f2",
       titleColor: "#991b1b",
@@ -450,6 +457,15 @@ export default function Dashboard() {
   const currentVerificationStatus = user?.verificationStatus || "pending";
   const currentVerificationMeta = verificationMeta[currentVerificationStatus] || verificationMeta.pending;
   const verificationNoticeDismissKey = user ? `angostart_verif_notice_${user.id}_${user.role}_${currentVerificationStatus}` : "";
+  const isRejectedRestricted = user?.role !== "admin" && currentVerificationStatus === "rejected";
+  const isPendingRestricted = user?.role !== "admin" && currentVerificationStatus === "pending";
+  const isVerificationRestricted = isRejectedRestricted || isPendingRestricted;
+  const isPageAllowedByVerification = (page) => {
+    if (isRejectedRestricted) return page === "perfil";
+    if (isPendingRestricted) return page === "dashboard" || page === "perfil" || page === "configuracoes";
+    return true;
+  };
+  const restrictedFallbackPage = isRejectedRestricted ? "perfil" : "dashboard";
 
   useEffect(() => {
     if (!verificationNoticeDismissKey) {
@@ -466,6 +482,13 @@ export default function Dashboard() {
     }
     setDismissedVerificationNotice(true);
   };
+
+  useEffect(() => {
+    if (!isVerificationRestricted) return;
+    if (!isPageAllowedByVerification(currentPage)) {
+      setCurrentPage(restrictedFallbackPage);
+    }
+  }, [isVerificationRestricted, currentPage, restrictedFallbackPage]);
 
 function RenderInvestidorPage() {
   switch(currentPage) {
@@ -485,7 +508,7 @@ function RenderEmpreendedorPage() {
     case 'dashboard': return <Empreendedor />;
     case 'submeter-ideia': return <SubmeterIdeia/>;
     case 'minhas-ideias': return <MinhasIdeias />;
-    case 'mensagens': return <Mensagens />;
+    case 'mensagens': return <MensagensEmpreendedorLegacy />;
     case 'mentoria': return <Mentoria />;
     case 'investidores': return <Investidores />;
     case 'checklist-estrategico': return <ChecklistEstrategico />;
@@ -883,13 +906,13 @@ function RenderAdminPage() {
     const totalUsers = users.length;
     const totalEmpreendedores = users.filter((u) => u.role === "empreendedor").length;
     const pendingApprovals = users.filter(
-      (u) => (u.role === "mentor" || u.role === "investidor") && u.verificationStatus === "pending"
+      (u) => u.role !== "admin" && u.verificationStatus === "pending"
     ).length;
     const approvedProfiles = users.filter(
-      (u) => (u.role === "mentor" || u.role === "investidor") && u.verificationStatus === "approved"
+      (u) => u.role !== "admin" && u.verificationStatus === "approved"
     ).length;
     const pendingList = users.filter(
-      (u) => (u.role === "mentor" || u.role === "investidor") && u.verificationStatus === "pending"
+      (u) => u.role !== "admin" && u.verificationStatus === "pending"
     );
 
     return (
@@ -943,7 +966,7 @@ function RenderAdminPage() {
         <div className="dashboard-card">
           <div className="dashboard-card-header">
             <h3 className="dashboard-card-title">Contas pendentes de aprovação</h3>
-            <p className="dashboard-card-description">Revisão de mentores e investidores.</p>
+            <p className="dashboard-card-description">Revisão de todas as contas pendentes (exceto admin).</p>
           </div>
           {loading ? (
             <p>A carregar usuários...</p>
@@ -988,6 +1011,10 @@ function RenderAdminPage() {
   }
 
   function RenderArea() {
+    if (isRejectedRestricted) {
+      if (user.role === "investidor") return <InvestidorPerfil />;
+      if (user.role === "mentor" || user.role === "empreendedor") return <Perfilmentor />;
+    }
     if (user.role === "investidor") return <RenderInvestidorPage />;
     if (user.role === "empreendedor") return <RenderEmpreendedorPage/>;
     if (user.role === "mentor") return <RenderMentorPage />;
@@ -1182,9 +1209,20 @@ return (
                     key={item.id}
                     className={`nav-item ${currentPage === item.id ? "active" : ""}`}
                     onClick={() => {
+                      if (isVerificationRestricted && !isPageAllowedByVerification(item.id)) {
+                        setModal({
+                          open: true,
+                          title: isRejectedRestricted ? "Conta rejeitada" : "Conta em verificação",
+                          message: isRejectedRestricted
+                            ? "Enquanto a conta estiver rejeitada, apenas o perfil fica disponível para atualizar os seus dados."
+                            : "Enquanto a conta estiver em verificação, apenas Dashboard, Perfil e Configurações ficam disponíveis.",
+                        });
+                        return;
+                      }
                       setCurrentPage(item.id);
                       closeSidebarOnMobile();
                     }}
+                    style={isVerificationRestricted && !isPageAllowedByVerification(item.id) ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
                   >
                     <span className="nav-icon">{icons[item.icon]}</span>
                     <span className="nav-label">{t('nav.item.' + item.id)}</span>
@@ -1623,237 +1661,46 @@ function Analytics() {
 }
 function Propostas() {
   const ctx = useContext(AppContext);
-  const t = ctx?.t ?? (k => k);
+  const currentUserId = Number(ctx?.currentUser?.id || 0);
+  const [contacts, setContacts] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const ideas = await getMarketplaceIdeas();
+        if (!mounted) return;
+        const unique = new Map();
+        for (const idea of ideas || []) {
+          const uid = Number(idea.owner_user_id || 0);
+          if (!uid || uid === currentUserId) continue;
+          if (!unique.has(uid)) {
+            unique.set(uid, {
+              userId: uid,
+              name: idea.owner_name || "Empreendedor",
+              role: "empreendedor",
+              subtitle: `${idea.title || "Projeto"} • ${idea.sector || "Setor"}`,
+            });
+          }
+        }
+        setContacts(Array.from(unique.values()));
+      } catch {
+        if (!mounted) return;
+        setContacts([]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [currentUserId]);
+
   return (
-    <div
-      className="responsive-split-layout"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '350px 1fr',
-        gap: '20px',
-        height: 'calc(100vh - 180px)',
-        minHeight: '500px'
-      }}
-    >
-      {/* LISTA DE PROPOSTAS */}
-      <div
-        className="dashboard-card"
-        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
-      >
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--dm-border)' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Solicitações Recebidas</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--dm-text-muted)' }}>
-            Você tem 2 propostas pendentes
-          </p>
-        </div>
-
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          <div
-            className="proposta-item active"
-            style={{
-              padding: '15px',
-              borderBottom: '1px solid var(--dm-border)',
-              cursor: 'pointer',
-              background: 'var(--primary-100)',
-              borderLeft: '4px solid var(--primary-600)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <strong style={{ fontSize: '0.9rem' }}>SolarPay Angola</strong>
-              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Hoje</span>
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.85rem',
-                color: 'var(--dm-text)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              Proposta de Equity: 5% por Kz 25.000
-            </p>
-            <span className="badge badge-warning" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
-              Pendente
-            </span>
-          </div>
-
-          <div
-            className="proposta-item"
-            style={{ padding: '15px', borderBottom: '1px solid var(--dm-border)', cursor: 'pointer' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <strong style={{ fontSize: '0.9rem' }}>AgroFácil</strong>
-              <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)' }}>Ontem</span>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--dm-text)' }}>
-              Solicitação de Mentoria e Aporte
-            </p>
-            <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '5px' }}>
-              Em conversa
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* CHAT / DETALHE */}
-      <div
-        className="dashboard-card"
-        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
-      >
-        <div
-          style={{
-            padding: '15px 20px',
-            borderBottom: '1px solid var(--dm-border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'var(--dm-surface)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                background: 'var(--primary-600)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--on-primary)',
-                fontWeight: 'bold'
-              }}
-            >
-              S
-            </div>
-            <div>
-              <h4 style={{ margin: 0 }}>SolarPay Angola</h4>
-              <span style={{ fontSize: '0.75rem', color: '#10b981' }}>
-                Score IA: 92/100
-              </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              className="btn"
-              style={{
-                background: 'var(--error-100)',
-                color: 'var(--error-500)',
-                border: 'none',
-                padding: '8px 15px',
-                borderRadius: '6px',
-                fontWeight: 600
-              }}
-              onClick={() => ctx?.setModal?.({ open: true, message: t('config.proposalRejected') })}
-            >
-              Recusar
-            </button>
-
-            <button
-              className="btn btn-primary"
-              style={{ padding: '8px 15px', borderRadius: '6px' }}
-              onClick={() => ctx?.setModal?.({ open: true, message: t('config.proposalAccepted') })}
-            >
-              Aceitar Proposta
-            </button>
-          </div>
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            padding: '20px',
-            background: 'var(--neutral-50)',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '15px'
-          }}
-        >
-          <div
-            style={{
-              alignSelf: 'flex-start',
-              background: 'var(--dm-surface)',
-              padding: '12px',
-              borderRadius: '12px',
-              borderBottomLeftRadius: '2px',
-              maxWidth: '70%',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
-              Olá, Maria Investidora! Enviamos nosso pitch deck atualizado. Estamos buscando
-              25.000 Kz para expansão em Benguela em troca de 5% de equity.
-            </p>
-            <span style={{ fontSize: '0.7rem', color: 'var(--dm-text-muted)', marginTop: '5px', display: 'block' }}>
-              10:30 AM
-            </span>
-          </div>
-
-          <div
-            style={{
-              alignSelf: 'flex-end',
-              background: 'var(--primary-600)',
-              color: 'var(--on-primary)',
-              padding: '12px',
-              borderRadius: '12px',
-              borderBottomRightRadius: '2px',
-              maxWidth: '70%'
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
-              Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos
-              agendar uma call amanhã?
-            </p>
-            <span
-              style={{
-                fontSize: '0.7rem',
-                color: '#e0e7ff',
-                marginTop: '5px',
-                display: 'block'
-              }}
-            >
-              10:45 AM
-            </span>
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '15px',
-            borderTop: '1px solid var(--dm-border)',
-            background: 'var(--dm-surface)',
-            display: 'flex',
-            gap: '10px'
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Escreva sua mensagem ou contraproposta..."
-            style={{
-              flex: 1,
-              padding: '10px',
-              border: '1px solid var(--dm-border)',
-              borderRadius: '8px',
-              outline: 'none'
-            }}
-          />
-          <button className="btn btn-primary" style={{ padding: '0 20px' }}>
-            Enviar
-          </button>
-        </div>
-      </div>
-      <style>
-        {`
-          .proposta-item:hover { background: var(--primary-100); }
-          .badge-warning { background: var(--warning-100); color: var(--warning-500); }
-          .badge-success { background: var(--success-100); color: var(--success-500); }
-        `}
-      </style>
-    </div>
+    <ChatWindow
+      title="Propostas e Conversas"
+      contacts={contacts}
+      currentUserId={currentUserId}
+      emptyText="Sem propostas disponíveis para conversa no momento."
+    />
   );
 }
 function InvestidorPerfil() {
@@ -2219,6 +2066,7 @@ function Usuarios() {
   const [loading, setLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState(null);
   const [aboutUser, setAboutUser] = useState(null);
+  const [expandedDocs, setExpandedDocs] = useState({});
 
   const loadUsers = async () => {
     setLoading(true);
@@ -2237,11 +2085,14 @@ function Usuarios() {
     loadUsers();
   }, []);
 
-  const handleVerification = async (targetUserId, status) => {
-    setSavingUserId(targetUserId);
+  const handleVerification = async (targetUserId, targetRole, status) => {
+    const saveKey = `${targetUserId}:${targetRole}`;
+    setSavingUserId(saveKey);
     try {
-      const updated = await updateAdminUserVerification(targetUserId, status);
-      setUsers((prev) => prev.map((u) => (Number(u.id) === Number(targetUserId) ? updated : u)));
+      const updated = await updateAdminUserVerification(targetUserId, status, targetRole);
+      setUsers((prev) => prev.map((u) => (
+        Number(u.id) === Number(targetUserId) && u.role === targetRole ? updated : u
+      )));
       ctx?.setModal?.({
         open: true,
         message: status === "approved"
@@ -2276,7 +2127,7 @@ function Usuarios() {
     return "Pendente";
   };
 
-  const canModerate = (role) => role === "mentor" || role === "investidor" || role === "empreendedor";
+  const canModerate = (u) => !!u?.profileExists && (u.role === "mentor" || u.role === "investidor" || u.role === "empreendedor");
 
   const profileFieldLabel = (key) => {
     const labels = {
@@ -2323,12 +2174,48 @@ function Usuarios() {
       linkedin_or_website: "LinkedIn ou website",
       verificationStatus: "Status de verificação",
       verification_status: "Status de verificação",
+      biFrontDoc: "Documento BI (frente)",
+      bi_front_doc: "Documento BI (frente)",
+      cvDoc: "Currículo (CV)",
+      cv_doc: "Currículo (CV)",
+      certificateDoc: "Certificado",
+      certificate_doc: "Certificado",
+      companyCertificateDoc: "Certidão da empresa",
+      company_certificate_doc: "Certidão da empresa",
     };
     return labels[key] || key;
   };
 
+  const isDocumentField = (key) => {
+    const docFields = new Set([
+      "biFrontDoc",
+      "bi_front_doc",
+      "cvDoc",
+      "cv_doc",
+      "certificateDoc",
+      "certificate_doc",
+      "companyCertificateDoc",
+      "company_certificate_doc",
+    ]);
+    return docFields.has(key);
+  };
+
+  const resolveDocumentUrl = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (/^(https?:\/\/|data:|blob:)/i.test(raw)) return raw;
+    if (raw.startsWith("/")) return `${window.location.origin}${raw}`;
+    return raw;
+  };
+
+  const closeAbout = () => {
+    setAboutUser(null);
+    setExpandedDocs({});
+  };
+
   const openAbout = (u) => {
     setAboutUser(u);
+    setExpandedDocs({});
   };
 
   return (
@@ -2358,7 +2245,7 @@ function Usuarios() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id}>
+                <tr key={u.rowKey || `${u.id}:${u.role}`}>
                   <td><strong>{u.name}</strong></td>
                   <td>
                     <span className="badge badge-primary">{roleLabel(u.role)}</span>
@@ -2376,13 +2263,13 @@ function Usuarios() {
                     >
                       Sobre
                     </button>
-                    {canModerate(u.role) ? (
+                    {canModerate(u) ? (
                       <>
                         <button
                           className="btn btn-primary admin-users-btn"
                           type="button"
-                          disabled={savingUserId === u.id || u.verificationStatus === "approved"}
-                          onClick={() => handleVerification(u.id, "approved")}
+                          disabled={savingUserId === `${u.id}:${u.role}` || u.verificationStatus === "approved"}
+                          onClick={() => handleVerification(u.id, u.role, "approved")}
                         >
                           Aprovar
                         </button>
@@ -2390,8 +2277,8 @@ function Usuarios() {
                           className="btn btn-outline admin-users-btn"
                           type="button"
                           style={{ color: "red" }}
-                          disabled={savingUserId === u.id || u.verificationStatus === "rejected"}
-                          onClick={() => handleVerification(u.id, "rejected")}
+                          disabled={savingUserId === `${u.id}:${u.role}` || u.verificationStatus === "rejected"}
+                          onClick={() => handleVerification(u.id, u.role, "rejected")}
                         >
                           Rejeitar
                         </button>
@@ -2410,7 +2297,7 @@ function Usuarios() {
     </div>
 
     {aboutUser && (
-      <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setAboutUser(null)}>
+      <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={closeAbout}>
         <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(860px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
           <h3 style={{ marginTop: 0 }}>Dados do utilizador</h3>
           <div style={{ display: "grid", gap: "10px" }}>
@@ -2430,15 +2317,77 @@ function Usuarios() {
                 {Object.entries(aboutUser.profile || {}).length === 0 ? (
                   <span>Sem dados de perfil disponíveis.</span>
                 ) : (
-                  Object.entries(aboutUser.profile || {}).map(([k, v]) => (
-                    <div key={k}><strong>{profileFieldLabel(k)}:</strong> {v == null || v === "" ? "-" : String(v)}</div>
-                  ))
+                  Object.entries(aboutUser.profile || {}).map(([k, v]) => {
+                    const hasValue = !(v == null || v === "");
+                    if (!isDocumentField(k)) {
+                      return <div key={k}><strong>{profileFieldLabel(k)}:</strong> {hasValue ? String(v) : "-"}</div>;
+                    }
+                    if (!hasValue) {
+                      return <div key={k}><strong>{profileFieldLabel(k)}:</strong> -</div>;
+                    }
+
+                    const docKey = `${aboutUser.id}:${aboutUser.role}:${k}`;
+                    const isExpanded = !!expandedDocs[docKey];
+                    const rawValue = String(v);
+                    const docUrl = resolveDocumentUrl(rawValue);
+                    const clean = docUrl.toLowerCase().split("?")[0].split("#")[0];
+                    const isImage = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(clean);
+                    const isPdf = /\.pdf$/i.test(clean);
+
+                    return (
+                      <div key={k} style={{ border: "1px solid var(--dm-border)", borderRadius: "10px", padding: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+                          <div><strong>{profileFieldLabel(k)}:</strong> <span style={{ color: "var(--neutral-500)" }}>{rawValue.split("/").pop() || "Documento"}</span></div>
+                          <button
+                            className="btn btn-outline"
+                            type="button"
+                            style={{ width: "auto", padding: "6px 10px" }}
+                            onClick={() => setExpandedDocs((prev) => ({ ...prev, [docKey]: !isExpanded }))}
+                          >
+                            {isExpanded ? "Fechar" : "Expandir"}
+                          </button>
+                        </div>
+
+                        {isExpanded && (
+                          <div style={{ marginTop: "10px", border: "1px solid var(--dm-border)", borderRadius: "8px", background: "var(--dm-bg)", padding: "8px" }}>
+                            {isImage ? (
+                              <img
+                                src={docUrl}
+                                alt={profileFieldLabel(k)}
+                                style={{ width: "100%", maxHeight: "420px", objectFit: "contain", borderRadius: "6px", display: "block" }}
+                              />
+                            ) : isPdf ? (
+                              <iframe
+                                src={docUrl}
+                                title={profileFieldLabel(k)}
+                                style={{ width: "100%", height: "420px", border: "none", borderRadius: "6px", background: "#fff" }}
+                              />
+                            ) : (
+                              <>
+                                <iframe
+                                  src={docUrl}
+                                  title={profileFieldLabel(k)}
+                                  style={{ width: "100%", height: "420px", border: "none", borderRadius: "6px", background: "#fff" }}
+                                />
+                                <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "var(--neutral-500)" }}>
+                                  Se não visualizar corretamente, use o link direto abaixo.
+                                </div>
+                              </>
+                            )}
+                            <a href={docUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: "8px" }}>
+                              Abrir em nova aba
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
           </div>
           <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end" }}>
-            <button className="btn btn-primary" style={{ width: "auto" }} onClick={() => setAboutUser(null)}>Fechar</button>
+            <button className="btn btn-primary" style={{ width: "auto" }} onClick={closeAbout}>Fechar</button>
           </div>
         </div>
       </div>
@@ -3548,171 +3497,99 @@ function AgendaMentorDynamic() {
 }
 
 function MensagensMentorDynamic() {
-  const { requests, loading, error } = useMentorRequestsData();
-  const ordered = [...requests].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const ctx = useContext(AppContext);
+  const { requests } = useMentorRequestsData();
+  const currentUserId = Number(ctx?.currentUser?.id || 0);
+  const allowedUserIds = useMemo(
+    () => (requests || [])
+      .filter((r) => r.status === "accepted")
+      .map((r) => Number(r.entrepreneurUserId))
+      .filter(Boolean),
+    [requests]
+  );
+  const contacts = useMemo(() => {
+    const map = new Map();
+    for (const req of requests || []) {
+      const uid = Number(req.entrepreneurUserId || 0);
+      if (!uid) continue;
+      if (!map.has(uid)) {
+        map.set(uid, {
+          userId: uid,
+          name: req?.entrepreneur?.name || "Empreendedor",
+          role: "empreendedor",
+          subtitle: `${mentorStatusLabel(req.status)} • ${req.topic || "Mentoria"}`,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [requests]);
+
   return (
-    <div style={{ padding: "10px" }}>
-      <div className="dashboard-card" style={{ marginBottom: "16px" }}>
-        <h2 className="dashboard-card-title">Mensagens e Atualizações</h2>
-        <p className="dashboard-card-description">Resumo das alterações e confirmações feitas pelo mentor.</p>
-      </div>
-      {loading ? (
-        <p>A carregar atualizações...</p>
-      ) : error ? (
-        <p style={{ color: "var(--error-500)" }}>{error}</p>
-      ) : ordered.length === 0 ? (
-        <div className="dashboard-card"><p>Sem mensagens de mentoria no momento.</p></div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {ordered.map((req) => (
-            <div key={req.id} className="dashboard-card" style={{ borderLeft: "4px solid var(--primary-600)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-                <strong>{req?.entrepreneur?.name || "Empreendedor"} • {req.topic}</strong>
-                <span className={`badge ${mentorStatusBadgeClass(req.status)}`}>{mentorStatusLabel(req.status)}</span>
-              </div>
-              <div style={{ marginTop: "6px", color: "var(--neutral-600)", fontSize: "0.9rem" }}>
-                Última atualização: {formatDateTime(req.updatedAt)}
-              </div>
-              <div style={{ marginTop: "6px", color: "var(--neutral-600)", fontSize: "0.9rem" }}>
-                Nota do mentor: {req.mentorNotes || "Sem nota adicionada."}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <ChatWindow
+      title="Mensagens de Mentoria"
+      contacts={contacts}
+      currentUserId={currentUserId}
+      allowedUserIds={allowedUserIds}
+      emptyText="Sem mentorias aceites para conversar no momento."
+    />
   );
 }
 
 function MensagensEmpreendedorLegacy() {
+  const ctx = useContext(AppContext);
+  const currentUserId = Number(ctx?.currentUser?.id || 0);
+  const [requests, setRequests] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await getMyMentorshipRequests();
+        if (!mounted) return;
+        setRequests(data || []);
+      } catch {
+        if (!mounted) return;
+        setRequests([]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const contacts = useMemo(() => {
+    const map = new Map();
+    for (const req of requests || []) {
+      const uid = Number(req.mentorUserId || 0);
+      if (!uid) continue;
+      if (!map.has(uid)) {
+        map.set(uid, {
+          userId: uid,
+          name: req?.mentor?.name || "Mentor",
+          role: "mentor",
+          subtitle: `${mentorStatusLabel(req.status)} • ${req.topic || "Mentoria"}`,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [requests]);
+
+  const allowedUserIds = useMemo(
+    () => (requests || [])
+      .filter((r) => r.status === "accepted")
+      .map((r) => Number(r.mentorUserId))
+      .filter(Boolean),
+    [requests]
+  );
+
   return (
-    <div
-      className="responsive-split-layout"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '320px 1fr',
-        gap: '20px',
-        height: 'calc(100vh - 200px)', // Ajuste para caber sob a top-bar
-        minHeight: '550px'
-      }}
-    >
-      {/* LISTA DE CONVERSAS / PROPOSTAS */}
-      <div
-        className="dashboard-card"
-        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
-      >
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--neutral-200)' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--neutral-900)' }}>Solicitações</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '0.8rem', color: 'var(--neutral-500)' }}>
-            2 propostas aguardando retorno
-          </p>
-        </div>
-
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          {/* ITEM ATIVO */}
-          <div
-            style={{
-              padding: '15px',
-              borderBottom: '1px solid var(--neutral-100)',
-              cursor: 'pointer',
-              background: 'var(--primary-50)',
-              borderLeft: '4px solid var(--primary-600)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--neutral-900)' }}>SolarPay Angola</strong>
-              <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)' }}>10:30</span>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--neutral-600)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-               Olá, Mentor! Enviamos nosso pitch deck atualizado...
-            </p>
-            <span className="badge badge-warning" style={{ fontSize: '0.6rem', marginTop: '8px' }}>Pendente</span>
-          </div>
-
-          {/* ITEM INATIVO */}
-          <div
-            style={{ padding: '15px', borderBottom: '1px solid var(--neutral-100)', cursor: 'pointer' }}
-            onMouseOver={(e) => e.currentTarget.style.background = 'var(--neutral-50)'}
-            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-              <strong style={{ fontSize: '0.9rem', color: 'var(--neutral-900)' }}>AgroFácil</strong>
-              <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)' }}>Ontem</span>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--neutral-600)' }}>Solicitação de Mentoria...</p>
-            <span className="badge badge-success" style={{ fontSize: '0.6rem', marginTop: '8px' }}>Em conversa</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ÁREA DO CHAT */}
-      <div
-        className="dashboard-card"
-        style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}
-      >
-        {/* HEADER DO CHAT */}
-        <div
-          style={{
-            padding: '15px 20px',
-            borderBottom: '1px solid var(--neutral-200)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'var(--neutral-white)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 40, height: 40, background: 'var(--primary-600)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-primary)', fontWeight: 'bold' }}>
-              S
-            </div>
-            <div>
-              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--neutral-900)' }}>SolarPay Angola</h4>
-              <span style={{ fontSize: '0.75rem', color: 'var(--success-500)', fontWeight: '600' }}>Score IA: 92/100</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CORPO DAS MENSAGENS */}
-        <div
-          style={{
-            flex: 1,
-            padding: '20px',
-            background: 'var(--neutral-50)',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '15px'
-          }}
-        >
-          {/* MENSAGEM RECEBIDA */}
-          <div style={{ alignSelf: 'flex-start', background: 'var(--dm-surface)', padding: '12px', borderRadius: '12px', borderBottomLeftRadius: '2px', maxWidth: '70%', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: '1px solid var(--neutral-200)' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--neutral-800)' }}>
-              Olá, Mentor! Enviamos nosso pitch deck atualizado. Estamos buscando expansão em Benguela.
-            </p>
-            <span style={{ fontSize: '0.7rem', color: 'var(--neutral-400)', marginTop: '5px', display: 'block' }}>10:30 AM</span>
-          </div>
-
-          {/* MENSAGEM ENVIADA */}
-          <div style={{ alignSelf: 'flex-end', background: 'var(--primary-600)', color: 'var(--on-primary)', padding: '12px', borderRadius: '12px', borderBottomRightRadius: '2px', maxWidth: '70%' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
-              Obrigada pelo envio! Analisando o Score IA de vocês, parece promissor. Podemos agendar uma call?
-            </p>
-            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', marginTop: '5px', display: 'block' }}>10:45 AM</span>
-          </div>
-        </div>
-
-        {/* INPUT DE MENSAGEM */}
-        <div style={{ padding: '15px', borderTop: '1px solid var(--neutral-200)', background: 'var(--neutral-white)', display: 'flex', gap: '10px' }}>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Escreva sua mensagem..."
-            style={{ flex: 1, paddingLeft: '15px' }}
-          />
-          <button className="btn btn-primary" style={{ padding: '0 20px' }}>Enviar</button>
-        </div>
-      </div>
-    </div>
+    <ChatWindow
+      title="Mensagens de Mentoria"
+      contacts={contacts}
+      currentUserId={currentUserId}
+      allowedUserIds={allowedUserIds}
+      emptyText="Sem mentorias aceites para conversar no momento."
+    />
   );
 }
 
@@ -5552,6 +5429,17 @@ function Mentoria() {
     return 20000;
   };
 
+  const getNowDateTimeLocal = () => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mi = String(now.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  };
+
   const openBooking = (mentor) => {
     setBooking({
       mentorId: mentor?.id || null,
@@ -5573,6 +5461,15 @@ function Mentoria() {
       ctx?.setModal?.({ open: true, message: "Selecione a data e hora da mentoria." });
       return;
     }
+    const selectedDate = new Date(booking.dataHora);
+    if (Number.isNaN(selectedDate.getTime())) {
+      ctx?.setModal?.({ open: true, message: "A data/hora selecionada é inválida." });
+      return;
+    }
+    if (selectedDate.getTime() < Date.now()) {
+      ctx?.setModal?.({ open: true, message: "Não é possível marcar mentoria para uma data/hora que já passou." });
+      return;
+    }
     if (!booking.pagamento) {
       ctx?.setModal?.({ open: true, message: "Selecione a forma de pagamento." });
       return;
@@ -5591,6 +5488,7 @@ function Mentoria() {
         priceKz: preco,
         entrepreneurNotes: booking.observacoes || "",
       });
+      await ctx?.refreshNavBadges?.();
       setBookingOpen(false);
       ctx?.setModal?.({
         open: true,
@@ -5753,7 +5651,13 @@ function Mentoria() {
               </div>
               <div>
                 <label className="form-label">Data e hora</label>
-                <input className="form-input" type="datetime-local" value={booking.dataHora} onChange={(e) => setBooking((p) => ({ ...p, dataHora: e.target.value }))} />
+                <input
+                  className="form-input"
+                  type="datetime-local"
+                  min={getNowDateTimeLocal()}
+                  value={booking.dataHora}
+                  onChange={(e) => setBooking((p) => ({ ...p, dataHora: e.target.value }))}
+                />
               </div>
               <div>
                 <label className="form-label">Forma de pagamento</label>

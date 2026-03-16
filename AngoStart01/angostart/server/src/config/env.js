@@ -18,4 +18,7 @@ export const env = {
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   MAIL_FROM: process.env.MAIL_FROM || "",
   PASSWORD_RESET_TTL_MINUTES: Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30),
+  AGORA_APP_ID: process.env.AGORA_APP_ID || "",
+  AGORA_APP_CERTIFICATE: process.env.AGORA_APP_CERTIFICATE || "",
+  AGORA_TOKEN_TTL_SECONDS: Number(process.env.AGORA_TOKEN_TTL_SECONDS || 3600),
 };

@@ -11,6 +11,8 @@ import strategyRoutes from "./routes/strategyRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import mentorshipRoutes from "./routes/mentorshipRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import agoraRoutes from "./routes/agoraRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { env } from "./config/env.js";
 
@@ -56,6 +58,8 @@ app.use("/api/v1/strategy", strategyRoutes);
 app.use("/api/v1/subscription", subscriptionRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/mentorship", mentorshipRoutes);
+app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/agora", agoraRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
