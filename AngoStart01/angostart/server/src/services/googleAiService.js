@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "../config/env.js";
 
 function safeParseJson(text) {
@@ -19,29 +18,45 @@ function safeParseJson(text) {
 }
 
 export async function generateJsonWithGemini(prompt, options = {}) {
-  const apiKey = String(env.GOOGLE_AI_STUDIO_API_KEY || "").trim();
+  const apiKey = String(env.GROQ_API_KEY || "").trim();
   if (!apiKey) {
-    return { data: null, error: "GOOGLE_AI_STUDIO_API_KEY não configurada." };
+    return { data: null, error: "GROQ_API_KEY não configurada." };
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: env.GEMINI_MODEL || "gemini-1.5-flash" });
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: Number(options.temperature ?? 0.2),
-        responseMimeType: "application/json",
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        model: env.GROQ_MODEL || "llama-3.3-70b-versatile",
+        temperature: Number(options.temperature ?? 0.2),
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content: String(prompt || "") }],
+      }),
     });
 
-    const text = result?.response?.text?.() || "";
+    if (!response.ok) {
+      let reason = `Groq API HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        reason = body?.error?.message || reason;
+      } catch {
+        // ignora parse de erro
+      }
+      return { data: null, error: reason };
+    }
+
+    const payload = await response.json();
+    const text = payload?.choices?.[0]?.message?.content || "";
     const parsed = safeParseJson(String(text).trim());
     if (!parsed) {
-      return { data: null, error: "Resposta do Gemini não retornou JSON válido." };
+      return { data: null, error: "Resposta do Groq não retornou JSON válido." };
     }
     return { data: parsed, error: "" };
   } catch (err) {
-    return { data: null, error: err?.message || "Falha ao conectar ao Google Generative AI." };
+    return { data: null, error: err?.message || "Falha ao conectar ao Groq Cloud." };
   }
 }

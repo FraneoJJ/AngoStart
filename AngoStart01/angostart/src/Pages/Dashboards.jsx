@@ -388,12 +388,12 @@ export default function Dashboard() {
   }, [user?.id, user?.role, refreshNavBadges]);
 
   useEffect(() => {
-    if (!user?.role) return;
+    if (!user?.role || currentPage === "submeter-ideia") return;
     const timer = setInterval(() => {
       refreshNavBadges(user);
-    }, 20000);
+    }, 60000);
     return () => clearInterval(timer);
-  }, [user?.id, user?.role, refreshNavBadges]);
+  }, [user?.id, user?.role, currentPage, refreshNavBadges]);
 
   useEffect(() => {
     if (currentPage !== "perfil") {
@@ -3720,6 +3720,7 @@ function MensagensEmpreendedorLegacy() {
 
 function SubmeterIdeia() {
   const ctx = useContext(AppContext);
+  const WIZARD_STORAGE_KEY = "angostart_submit_ideia_wizard";
   const initialDados = {
     nome: "", descricao: "", setor: "",
     cidade: "", localizacao: "",
@@ -3730,9 +3731,11 @@ function SubmeterIdeia() {
     problema: "", diferencial: "", publico: "",
     arquivos: [],
   };
-  const [etapa, setEtapa] = useState(1);
+  const savedWizardState = parseJsonSafe(localStorage.getItem(WIZARD_STORAGE_KEY), null);
+  const initialEtapa = Number(savedWizardState?.etapa || 1);
+  const [etapa, setEtapa] = useState(Number.isFinite(initialEtapa) && initialEtapa >= 1 && initialEtapa <= 8 ? initialEtapa : 1);
   const [analisando, setAnalisando] = useState(false);
-  const [resultadoIA, setResultadoIA] = useState(null);
+  const [resultadoIA, setResultadoIA] = useState(savedWizardState?.resultadoIA || null);
   const [mensagemFluxo, setMensagemFluxo] = useState("");
   const [ultimaIdeiaId, setUltimaIdeiaId] = useState(null);
   const [publicandoMarketplace, setPublicandoMarketplace] = useState(false);
@@ -3742,7 +3745,27 @@ function SubmeterIdeia() {
   const [gerandoQuestionario, setGerandoQuestionario] = useState(false);
   const [avisoQuestionario, setAvisoQuestionario] = useState("");
 
-  const [dados, setDados] = useState(initialDados);
+  const [dados, setDados] = useState(() => ({
+    ...initialDados,
+    ...(savedWizardState?.dados || {}),
+  }));
+
+  useEffect(() => {
+    localStorage.setItem(
+      WIZARD_STORAGE_KEY,
+      JSON.stringify({
+        etapa,
+        dados,
+        resultadoIA,
+      })
+    );
+  }, [etapa, dados, resultadoIA]);
+
+  useEffect(() => {
+    if (etapa === 8 && !resultadoIA) {
+      setEtapa(7);
+    }
+  }, [etapa, resultadoIA]);
 
   const proximaEtapa = () => {
     if (etapa === 1) {
@@ -3783,12 +3806,6 @@ function SubmeterIdeia() {
       // Perguntas adicionais são opcionais: ao avançar daqui, vai direto para uploads.
       setEtapa(6);
       return;
-    }
-    if (etapa === 6) {
-      if (!Array.isArray(dados.arquivos) || dados.arquivos.length === 0) {
-        ctx?.setModal?.({ open: true, message: "Adicione pelo menos um arquivo sobre a ideia para continuar." });
-        return;
-      }
     }
     setEtapa(etapa + 1);
   };
@@ -3860,6 +3877,7 @@ function SubmeterIdeia() {
     setQuestionarioRespostas({});
     setAvisoQuestionario("");
     setEtapa(1);
+    localStorage.removeItem(WIZARD_STORAGE_KEY);
   };
 
   const gerarPlanoNegocioPdf = () => {
@@ -4125,8 +4143,10 @@ function SubmeterIdeia() {
     setResultadoIA({
       viabilidade: report.viabilityStatus === "viavel" ? "Viável" : "Inviável",
       origemAnalise:
-        report.analysisSource === "google_generative_ai" || report.analysisSource === "google_ai_studio"
-          ? "Google Generative AI (Gemini 1.5 Flash)"
+        report.analysisSource === "groq_cloud"
+          ? "Groq Cloud"
+          : report.analysisSource === "google_generative_ai" || report.analysisSource === "google_ai_studio"
+            ? "Google Generative AI (Gemini)"
             : "Análise Local (Fallback)",
       notaAnalise: report.analysisNote || "",
       pontosFortes: report.strengths?.length ? report.strengths : ["Estrutura inicial adequada."],
@@ -4384,7 +4404,22 @@ function SubmeterIdeia() {
     </div>
   );
 
-  const renderResultado = () => (
+  const renderResultado = () => {
+    if (!resultadoIA) {
+      return (
+        <div className="dashboard-card" style={{ textAlign: "center" }}>
+          <h3 style={{ marginTop: 0 }}>Resultado indisponível</h3>
+          <p style={{ color: "var(--neutral-600)" }}>
+            O resultado da análise não está disponível no momento. Volte para revisão e envie novamente.
+          </p>
+          <button className="btn btn-primary" onClick={() => setEtapa(7)} style={{ width: "auto" }}>
+            Voltar para Revisão
+          </button>
+        </div>
+      );
+    }
+
+    return (
     <div className="dashboard-card" style={{ animation: 'fadeIn 0.5s' }}>
       {mensagemFluxo && (
         <p style={{ marginBottom: '12px', color: 'var(--success-500)', fontWeight: 600 }}>{mensagemFluxo}</p>
@@ -4505,7 +4540,8 @@ function SubmeterIdeia() {
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>

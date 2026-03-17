@@ -306,8 +306,8 @@ export async function analyzeViability(payload) {
     const { data: aiRaw, error: aiError } = await generateJsonWithGemini(prompt, { temperature: 0.2 });
     if (aiRaw) {
       report = normalizeAiReport(aiRaw, fallbackReport);
-      analysisSource = "google_generative_ai";
-      analysisNote = `Análise gerada pelo Google Generative AI (${env.GEMINI_MODEL || "gemini-1.5-flash"}).`;
+      analysisSource = "groq_cloud";
+      analysisNote = `Análise gerada pelo Groq Cloud (${env.GROQ_MODEL || "llama-3.3-70b-versatile"}).`;
     } else if (aiError) {
       analysisSource = "fallback_local";
       analysisNote = `Fallback local: ${aiError}`;
@@ -316,7 +316,7 @@ export async function analyzeViability(payload) {
     // Se API externa falhar, mantém fallback heurístico.
     report = fallbackReport;
     analysisSource = "fallback_local";
-    analysisNote = "Fallback local: falha inesperada ao chamar Google Generative AI.";
+    analysisNote = "Fallback local: falha inesperada ao chamar Groq Cloud.";
   }
 
   // Persistência best-effort: se tabela não existir, retorna análise mesmo assim.
