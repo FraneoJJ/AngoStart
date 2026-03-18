@@ -612,106 +612,147 @@ function RenderAdminPage() {
   // =========================
   function Investidor() {
     const ctx = useContext(AppContext);
-    const t = ctx?.t ?? (k => k);
-    return(
+    const [loading, setLoading] = useState(true);
+    const [ideas, setIdeas] = useState([]);
+    const [conversations, setConversations] = useState([]);
+
+    useEffect(() => {
+      let mounted = true;
+      (async () => {
+        setLoading(true);
+        try {
+          const [marketplaceIdeas, chatConversations] = await Promise.all([
+            getMarketplaceIdeas(),
+            getChatConversations().catch(() => []),
+          ]);
+          if (!mounted) return;
+          setIdeas(marketplaceIdeas || []);
+          setConversations(chatConversations || []);
+        } catch (err) {
+          if (!mounted) return;
+          setIdeas([]);
+          setConversations([]);
+          ctx?.setModal?.({ open: true, message: `Falha ao carregar dashboard do investidor: ${err.message}` });
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      })();
+      return () => {
+        mounted = false;
+      };
+    }, []);
+
+    const scoredIdeas = (ideas || []).filter((i) => Number.isFinite(Number(i?.viability_score)));
+    const featuredIdeas = [...(ideas || [])]
+      .sort((a, b) => Number(b?.viability_score || 0) - Number(a?.viability_score || 0))
+      .slice(0, 8);
+    const totalOportunidades = ideas.length;
+    const propostasAtivas = conversations.length;
+    const scoreMedio = scoredIdeas.length
+      ? Math.round(scoredIdeas.reduce((sum, i) => sum + Number(i?.viability_score || 0), 0) / scoredIdeas.length)
+      : 0;
+    const capitalTotalSolicitado = ideas.reduce((sum, i) => sum + Number(i?.initial_capital || 0), 0);
+    const pendentes = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+    const formatKz = (v) => `${Number(v || 0).toLocaleString("pt-PT")} Kz`;
+
+    return (
       <>
-    <div className="stats-grid">
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Investimentos Ativos</div>
-            <div className="stat-value">8</div>
-            <div className="stat-change">+2 este trimestre</div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Oportunidades Ativas</div>
+                <div className="stat-value">{loading ? "..." : totalOportunidades}</div>
+                <div className="stat-change">Projetos no marketplace</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-primary">{icons.briefcase}</div>
+            </div>
           </div>
-          <div className="stat-icon-wrapper stat-icon-primary">
-           {icons.briefcase}
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Capital Solicitado</div>
+                <div className="stat-value">{loading ? "..." : formatKz(capitalTotalSolicitado)}</div>
+                <div className="stat-change">Soma de ideias publicadas</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-success">{icons["dollar-sign"]}</div>
+            </div>
           </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Valor Total Investido</div>
-            <div className="stat-value">Kz 485.000</div>
-            <div className="stat-change">Portfolio total</div>
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Propostas Pendentes</div>
+                <div className="stat-value">{loading ? "..." : pendentes}</div>
+                <div className="stat-change">Ideias em submissão/análise</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-secondary">{icons.inbox}</div>
+            </div>
           </div>
-          <div className="stat-icon-wrapper stat-icon-success">
-            {icons['dollar-sign']}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Propostas Pendentes</div>
-            <div className="stat-value">12</div>
-            <div className="stat-change">+5 esta semana</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-secondary">
-            {icons.inbox}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">ROI Médio</div>
-            <div className="stat-value">18.5%</div>
-            <div className="stat-change">+2.3% este ano</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-info">
-            {icons['trending-up']}
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Conversas / Score IA</div>
+                <div className="stat-value">{loading ? "..." : `${propostasAtivas} / ${scoreMedio}`}</div>
+                <div className="stat-change">Dados atualizados da base</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-info">{icons["trending-up"]}</div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <div className="dashboard-card">
-      <div className="dashboard-card-header">
-        <h3 className="dashboard-card-title">Oportunidades em Destaque</h3>
-        <p className="dashboard-card-description">Ideias com maior pontuação IA</p>
-      </div>
-      
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Startup</th>
-            <th>Setor</th>
-            <th>Score IA</th>
-            <th>Investimento</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>TechEdu Angola</td>
-            <td>EdTech</td>
-            <td><span className="badge badge-success">92</span></td>
-            <td>Kz 50.000 - Kz 100.000</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
-          </tr>
-          <tr>
-            <td>AgriConnect</td>
-            <td>AgriTech</td>
-            <td><span className="badge badge-success">88</span></td>
-            <td>Kz 30.000 - Kz 75.000</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
-          </tr>
-          <tr>
-            <td>HealthPlus</td>
-            <td>HealthTech</td>
-            <td><span className="badge badge-success">85</span></td>
-            <td>Kz 75.000 - Kz 150.000</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  
-  </>);
+
+        <div className="dashboard-card">
+          <div className="dashboard-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div>
+              <h3 className="dashboard-card-title">Oportunidades em Destaque</h3>
+              <p className="dashboard-card-description">Ideias com maior score de viabilidade na base de dados.</p>
+            </div>
+            <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setCurrentPage("marketplace")}>
+              Abrir Marketplace
+            </button>
+          </div>
+
+          {loading ? (
+            <p>A carregar oportunidades...</p>
+          ) : featuredIdeas.length === 0 ? (
+            <p>Sem oportunidades disponíveis no momento.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Startup</th>
+                  <th>Setor</th>
+                  <th>Score IA</th>
+                  <th>Capital</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {featuredIdeas.map((idea) => {
+                  const score = Number(idea?.viability_score || 0);
+                  return (
+                    <tr key={idea.id}>
+                      <td>{idea.title || "-"}</td>
+                      <td>{idea.sector || "-"}</td>
+                      <td>
+                        <span className={`badge ${score >= 80 ? "badge-success" : score >= 60 ? "badge-warning" : "badge-info"}`}>
+                          {score || "-"}
+                        </span>
+                      </td>
+                      <td>{formatKz(idea.initial_capital)}</td>
+                      <td>
+                        <span className={`badge ${idea.status === "active" ? "badge-success" : "badge-warning"}`}>
+                          {idea.status || "-"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </>
+    );
   }
 
   function Empreendedor() {
@@ -1499,12 +1540,50 @@ function Marketplace() {
   );
 }
 function Investimentos() {
- 
-  const myPortfolio = [
-    { id: 1, startup: "Kwanza Pay", equity: "5%", invested: "Kz 25.000", currentVal: "Kz 45.000", status: "Em Crescimento", roi: "+80%" },
-    { id: 2, startup: "AgroFácil", equity: "10%", invested: "Kz 15.000", currentVal: "Kz 18.500", status: "Estável", roi: "+23%" },
-    { id: 3, startup: "TechEdu Angola", equity: "2%", invested: "Kz 10.000", currentVal: "Kz 9.000", status: "Risco", roi: "-10%" }
-  ];
+  const ctx = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const [ideas, conversations] = await Promise.all([
+          getMarketplaceIdeas(),
+          getChatConversations().catch(() => []),
+        ]);
+        if (!mounted) return;
+        const conversationUserIds = new Set((conversations || []).map((c) => Number(c.userId)).filter(Boolean));
+        const normalized = (ideas || [])
+          .filter((i) => conversationUserIds.has(Number(i.owner_user_id)))
+          .map((i) => ({
+            id: Number(i.id),
+            startup: i.title || "Projeto",
+            sector: i.sector || "-",
+            requested: Number(i.initial_capital || 0),
+            score: Number(i.viability_score || 0),
+            status: i.status || "-",
+            owner: i.owner_name || "Empreendedor",
+          }))
+          .sort((a, b) => b.score - a.score);
+        setRows(normalized);
+      } catch (err) {
+        if (!mounted) return;
+        setRows([]);
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar carteira de investimentos: ${err.message}` });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatKz = (v) => `${Number(v || 0).toLocaleString("pt-PT")} Kz`;
+  const totalAlocado = rows.reduce((sum, r) => sum + Number(r.requested || 0), 0);
+  const avgScore = rows.length ? Math.round(rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / rows.length) : 0;
 
   return (<>
     <div className="portfolio-container">
@@ -1513,8 +1592,8 @@ function Investimentos() {
           <div className="stat-card-content" >
             <div className="stat-info">
               <div className="stat-label">Total Alocado</div>
-              <div className="stat-value">Kz 50.000</div>
-              <div className="stat-change">3 Startups ativas</div>
+              <div className="stat-value">{loading ? "..." : formatKz(totalAlocado)}</div>
+              <div className="stat-change">{loading ? "A carregar..." : `${rows.length} startups em conversa`}</div>
             </div>
             <div className="stat-icon-wrapper stat-icon-success">
               {icons['dollar-sign']}
@@ -1525,10 +1604,10 @@ function Investimentos() {
         <div className="stat-card">
           <div className="stat-card-content">
             <div className="stat-info">
-              <div className="stat-label">Valorização Total</div>
-              <div className="stat-value">Kz 72.500</div>
+              <div className="stat-label">Score Médio IA</div>
+              <div className="stat-value">{loading ? "..." : avgScore}</div>
               <div className="stat-change" style={{ color: '#10b981' }}>
-                ↑ Kz 22.500 (45%)
+                Qualidade média das oportunidades
               </div>
             </div>
             <div className="stat-icon-wrapper stat-icon-primary">
@@ -1542,192 +1621,304 @@ function Investimentos() {
         <div className="dashboard-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h3 className="dashboard-card-title">Detalhamento do Portfólio</h3>
-            <p className="dashboard-card-description">Acompanhamento de participação e ROI por startup.</p>
+            <p className="dashboard-card-description">Projetos do marketplace com quem já existe conversa/proposta.</p>
           </div>
-          <button
-            className="btn"
-            style={{
-              background: 'var(--primary-100)',
-              color: 'var(--primary-600)',
-              fontWeight: 600,
-              border: 'none',
-              padding: '10px 15px',
-              borderRadius: '8px'
-            }}
-          >
-            Baixar Extrato
-          </button>
+          <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setCurrentPage("propostas")}>Abrir Propostas</button>
         </div>
 
         <div style={{ overflowX: 'auto', marginTop: '20px' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Startup</th>
-                <th>Equity (%)</th>
-                <th>Valor Investido</th>
-                <th>Valuation Atual</th>
-                <th>ROI</th>
-                <th>Status</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {myPortfolio.map(item => (
-                <tr key={item.id}>
-                  <td><strong>{item.startup}</strong></td>
-                  <td>{item.equity}</td>
-                  <td>{item.invested}</td>
-                  <td>{item.currentVal}</td>
-                  <td
-                    style={{
-                      color: item.roi.startsWith('+') ? '#10b981' : '#ef4444',
-                      fontWeight: 600
-                    }}
-                  >
-                    {item.roi}
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        item.status === 'Risco' ? 'badge-warning' : 'badge-success'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="btn"
-                      style={{ padding: '5px 10px', fontSize: '0.75rem', background: 'var(--dm-bg)' }}
-                      onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingReports') + ' ' + item.startup })}
-                    >
-                      Relatórios
-                    </button>
-                  </td>
+          {loading ? (
+            <p>A carregar carteira...</p>
+          ) : rows.length === 0 ? (
+            <p>Sem oportunidades com conversa ativa no momento.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Startup</th>
+                  <th>Setor</th>
+                  <th>Capital Solicitado</th>
+                  <th>Score IA</th>
+                  <th>Status</th>
+                  <th>Empreendedor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((item) => (
+                  <tr key={item.id}>
+                    <td><strong>{item.startup}</strong></td>
+                    <td>{item.sector}</td>
+                    <td>{formatKz(item.requested)}</td>
+                    <td>
+                      <span className={`badge ${item.score >= 80 ? "badge-success" : item.score >= 60 ? "badge-warning" : "badge-info"}`}>
+                        {item.score || "-"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${item.status === "active" ? "badge-success" : "badge-warning"}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td>{item.owner}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
   </>);
 }
 function Analytics() {
-  return( <>
-    <div className="analytics-container">
-      <div className="dashboard-card" style={{marginBottom: '25px', display: 'flex', justifyContent:' space-between', alignItems: 'center'}}>
-        <div>
-          <h3 style={{margin: '0'}}>Análise de Mercado & Performance</h3>
-          <p style={{margin:' 5px 0 0 0', color:' var(--dm-text-muted)', fontSize: '0.85rem'}}>Dados baseados em tendências reais do ecossistema AngoStart.</p>
-        </div>
-        <select className="input-field form-input" style={{padding: '8px 15px' , borderRadius: '8px', border:' 1px solid var(--dm-border)'}}>
-          <option>Últimos 12 meses</option>
-          <option>Últimos 6 meses</option>
-          <option>Este Ano (2026)</option>
-        </select>
-      </div>
+  const ctx = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("12m");
+  const [ideas, setIdeas] = useState([]);
 
-      <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '25px'}}>
-        
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getMarketplaceIdeas();
+        if (!mounted) return;
+        setIdeas(data || []);
+      } catch (err) {
+        if (!mounted) return;
+        setIdeas([]);
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar analytics: ${err.message}` });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const now = new Date();
+  const monthsToShow = period === "6m" ? 6 : period === "year" ? 12 : 12;
+  const monthBuckets = [];
+  for (let i = monthsToShow - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    monthBuckets.push({ key, label: d.toLocaleDateString("pt-PT", { month: "short" }), count: 0 });
+  }
+  const monthMap = new Map(monthBuckets.map((m) => [m.key, m]));
+  for (const idea of ideas || []) {
+    const dt = new Date(idea?.created_at || "");
+    if (Number.isNaN(dt.getTime())) continue;
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    const row = monthMap.get(key);
+    if (row) row.count += 1;
+  }
+  const maxMonthCount = Math.max(1, ...monthBuckets.map((m) => m.count));
+
+  const sectorMap = new Map();
+  for (const idea of ideas || []) {
+    const s = String(idea?.sector || "outros").trim() || "outros";
+    sectorMap.set(s, (sectorMap.get(s) || 0) + 1);
+  }
+  const topSectors = Array.from(sectorMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  const maxSector = Math.max(1, ...(topSectors.map(([, count]) => count)));
+  const sectorPalette = [
+    "var(--primary-600)",
+    "var(--primary-500)",
+    "var(--primary-400)",
+    "var(--primary-300)",
+  ];
+
+  const scoredIdeas = [...(ideas || [])]
+    .filter((i) => Number.isFinite(Number(i?.viability_score)))
+    .sort((a, b) => Number(b?.viability_score || 0) - Number(a?.viability_score || 0))
+    .slice(0, 8);
+
+  const toRisk = (score) => {
+    const n = Number(score || 0);
+    if (n >= 80) return { label: "Baixo", color: "#10b981", badge: "badge-success" };
+    if (n >= 60) return { label: "Médio", color: "#f59e0b", badge: "badge-warning" };
+    return { label: "Alto", color: "#ef4444", badge: "badge-info" };
+  };
+  const toTraction = (idea) => {
+    const status = String(idea?.status || "");
+    if (status === "active") return { text: "↑ 8%", color: "#10b981" };
+    if (status === "submitted") return { text: "↑ 3%", color: "#10b981" };
+    if (status === "analyzing") return { text: "↓ 1%", color: "#ef4444" };
+    return { text: "0%", color: "var(--dm-text-muted)" };
+  };
+
+  return (
+    <>
+      <div className="analytics-container">
+        <div className="dashboard-card" style={{ marginBottom: '25px', display: 'flex', justifyContent: ' space-between', alignItems: 'center', gap: "10px", flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ margin: '0' }}>Análise de Mercado & Performance</h3>
+            <p style={{ margin: ' 5px 0 0 0', color: ' var(--dm-text-muted)', fontSize: '0.85rem' }}>Dados dinâmicos do marketplace da base de dados.</p>
+          </div>
+          <select
+            className="input-field form-input"
+            style={{ padding: '8px 15px', borderRadius: '8px', border: ' 1px solid var(--dm-border)' }}
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          >
+            <option value="12m">Últimos 12 meses</option>
+            <option value="6m">Últimos 6 meses</option>
+            <option value="year">Este Ano</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '25px' }}>
+          <div className="dashboard-card">
+            <h4 className="dashboard-card-title">Crescimento Médio do Portfólio</h4>
+            <p className="dashboard-card-description">Evolução de oportunidades publicadas no período selecionado.</p>
+            {loading ? (
+              <p style={{ marginTop: "18px" }}>A carregar gráfico...</p>
+            ) : (
+              <>
+                <div style={{ height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 10px', borderBottom: '2px solid var(--dm-border)', borderLeft: '2px solid var(--dm-border)', background: 'linear-gradient(180deg, var(--primary-50) 0%, transparent 70%)', borderRadius: '8px 8px 0 0' }}>
+                  {monthBuckets.map((m) => {
+                    const barHeight = Math.max(8, Math.round((m.count / maxMonthCount) * 100));
+                    return (
+                      <div
+                        key={m.key}
+                        style={{
+                          width: `${Math.max(5, Math.floor(90 / monthsToShow))}%`,
+                          height: `${barHeight}%`,
+                          position: 'relative',
+                          transform: 'perspective(500px) rotateX(0deg)',
+                          transformStyle: 'preserve-3d',
+                        }}
+                        title={`${m.label}: ${m.count}`}
+                      >
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(180deg, var(--primary-500) 0%, var(--primary-700) 100%)',
+                            border: '1px solid var(--primary-600)',
+                            borderRadius: '4px 4px 0 0',
+                            boxShadow: '0 4px 10px rgba(15, 23, 42, 0.12)',
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            left: '0',
+                            width: '100%',
+                            height: '6px',
+                            background: 'linear-gradient(180deg, var(--primary-200) 0%, var(--primary-400) 100%)',
+                            borderTopLeftRadius: '4px',
+                            borderTopRightRadius: '4px',
+                            transform: 'skewX(-35deg)',
+                            transformOrigin: 'left bottom',
+                            opacity: 0.95,
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '0',
+                            right: '-6px',
+                            width: '6px',
+                            height: '100%',
+                            background: 'linear-gradient(180deg, var(--primary-700) 0%, var(--primary-900) 100%)',
+                            transform: 'skewY(-35deg)',
+                            transformOrigin: 'left top',
+                            opacity: 0.9,
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--dm-text-muted)' }}>
+                  {monthBuckets.map((m) => <span key={`${m.key}-lb`}>{m.label}</span>)}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="dashboard-card">
+            <h4 className="dashboard-card-title">Setores em Alta (Angola)</h4>
+            <div style={{ marginTop: '15px' }}>
+              {loading ? (
+                <p>A carregar setores...</p>
+              ) : topSectors.length === 0 ? (
+                <p>Sem dados suficientes.</p>
+              ) : (
+                topSectors.map(([sector, count], idx) => (
+                  <div key={sector} style={{ marginBottom: '15px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
+                      <span>{sector}</span>
+                      <span style={{ color: sectorPalette[idx % sectorPalette.length], fontWeight: 'bold' }}>
+                        {count} {count === 1 ? "ideia" : "ideias"}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px' }}>
+                      <div
+                        style={{
+                          width: `${Math.max(8, Math.round((count / maxSector) * 100))}%`,
+                          background: sectorPalette[idx % sectorPalette.length],
+                          height: '100%',
+                          borderRadius: '4px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="dashboard-card">
-          <h4 className="dashboard-card-title">Crescimento Médio do Portfólio</h4>
-          <p className="dashboard-card-description">Evolução do valuation das suas startups investidas.</p>
-          
-          <div style={{height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding:' 0 10px', borderBottom:' 2px solid var(--dm-border)', borderLeft: '2px solid var(--dm-border)'}}>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jan"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Fev"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Mar"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Abr"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Maio"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jun"></div>
-
-          </div>
-          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--dm-text-muted)'}}>
-            <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
-          </div>
-        </div>
-
-        <div className="dashboard-card">
-          <h4 className="dashboard-card-title">Setores em Alta (Angola)</h4>
-          <div style={{marginTop:' 15px'}}>
-            <div style={{marginBottom: '15px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px'}}>
-                <span>Fintech</span>
-                <span style={{color: '#10b981', fontWeight: 'bold'}}>+42%</span>
-              </div>
-              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
-                <div style={{width: '90%', background:' #10b981', height: '100%', borderRadius: '4px'}}></div>
-              </div>
-            </div>
-            <div style={{marginBottom: '15px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px'}}>
-                <span>AgriTech</span>
-                <span style={{color: '#10b981', fontWeight: 'bold'}}>+28%</span>
-              </div>
-              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
-                <div style={{width:' 65%', background: 'var(--primary-600)', height: '100%', borderRadius: '4px'}}></div>
-              </div>
-            </div>
-            <div style={{marginBottom: '15px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px'}}>
-                <span>EdTech</span>
-                <span style={{color: '#f59e0b', fontWeight: 'bold'}}>+12%</span>
-              </div>
-              <div style={{width: '100%', background: 'var(--dm-bg)', height:' 8px', borderRadius: '4px'}}>
-                <div style={{width: '40%', background: '#f59e0b', height: '100%', borderRadius: '4px'}}></div>
-              </div>
-            </div>
+          <h3 className="dashboard-card-title">Análise Comparativa de Risco (Score IA)</h3>
+          <div style={{ overflowX: 'auto', marginTop: '20px' }}>
+            {loading ? (
+              <p>A carregar análise de risco...</p>
+            ) : scoredIdeas.length === 0 ? (
+              <p>Sem ideias com score IA disponível.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Startup</th>
+                    <th>Setor</th>
+                    <th>Tração Mensal</th>
+                    <th>Score IA Atual</th>
+                    <th>Projeção 6m</th>
+                    <th>Nível de Risco</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scoredIdeas.map((idea) => {
+                    const score = Number(idea?.viability_score || 0);
+                    const projection = Math.min(100, Math.max(0, score + (score >= 80 ? 3 : score >= 60 ? 2 : 1)));
+                    const risk = toRisk(score);
+                    const traction = toTraction(idea);
+                    return (
+                      <tr key={idea.id}>
+                        <td><strong>{idea.title || "-"}</strong></td>
+                        <td>{idea.sector || "-"}</td>
+                        <td><span style={{ color: traction.color }}>{traction.text}</span></td>
+                        <td><span className={`badge ${risk.badge}`}>{score || "-"}</span></td>
+                        <td>{projection.toFixed(1)}</td>
+                        <td style={{ color: risk.color }}>{risk.label}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
-
-      <div className="dashboard-card">
-        <h3 className="dashboard-card-title">Análise Comparativa de Risco (Score IA)</h3>
-        <div style={{overflowX: 'auto', marginTop: '20px'}}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Startup</th>
-                <th>Setor</th>
-                <th>Tração Mensal</th>
-                <th>Score IA Atual</th>
-                <th>Projeção 6m</th>
-                <th>Nível de Risco</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>SolarPay</strong></td>
-                <td>Energia</td>
-                <td><span style={{color: '#10b981'}}>↑ 15%</span></td>
-                <td><span className="badge badge-success">92</span></td>
-                <td>95.5</td>
-                <td style={{color: '#10b981'}}>Baixo</td>
-              </tr>
-              <tr>
-                <td><strong>Kwanza Pay</strong></td>
-                <td>Fintech</td>
-                <td><span style={{color: '#10b981'}}>↑ 8%</span></td>
-                <td><span className="badge badge-success">88</span></td>
-                <td>91.2</td>
-                <td style={{color: '#10b981'}}>Baixo</td>
-              </tr>
-              <tr>
-                <td><strong>AgroFácil</strong></td>
-                <td>AgriTech</td>
-                <td><span style={{color: '#ef4444'}}>↓ 2%</span></td>
-                <td><span className="badge badge-warning">75</span></td>
-                <td>78.0</td>
-                <td style={{color: '#f59e0b'}}>Médio</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </>);
+    </>
+  );
 }
 function Propostas() {
   const ctx = useContext(AppContext);
