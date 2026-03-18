@@ -263,6 +263,18 @@ export default function Dashboard() {
     return s?.idioma || 'pt';
   });
   const [modal, setModal] = useState({ open: false, title: '', message: '', onClose: undefined });
+  const setNavBadgesSafe = useCallback((next) => {
+    setNavBadges((prev) => {
+      const a = prev || {};
+      const b = next || {};
+      const aKeys = Object.keys(a);
+      const bKeys = Object.keys(b);
+      if (aKeys.length === bKeys.length && aKeys.every((k) => a[k] === b[k])) {
+        return prev;
+      }
+      return b;
+    });
+  }, []);
   const t = (key) => {
     const parts = key.split('.');
     let v = translations[idioma] || translations.pt;
@@ -317,7 +329,7 @@ export default function Dashboard() {
         ]);
         const pendingSubmission = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
         const mentoriasAgendadas = mentorshipRequests.filter((r) => r.status === "accepted").length;
-        setNavBadges({
+        setNavBadgesSafe({
           "submeter-ideia": pendingSubmission,
           "minhas-ideias": ideas.length,
           mensagens: conversations.length,
@@ -331,7 +343,7 @@ export default function Dashboard() {
           getMarketplaceIdeas(),
           getChatConversations().catch(() => []),
         ]);
-        setNavBadges({
+        setNavBadgesSafe({
           marketplace: marketplaceIdeas.length,
           propostas: conversations.length,
         });
@@ -344,7 +356,7 @@ export default function Dashboard() {
           getChatConversations().catch(() => []),
         ]);
         const mentoringRequests = requests.filter((r) => r.status === "accepted").length;
-        setNavBadges({
+        setNavBadgesSafe({
           sessoes: mentoringRequests,
           mensagens: conversations.length,
         });
@@ -353,18 +365,18 @@ export default function Dashboard() {
 
       if (role === "admin") {
         const adminIdeas = await getAdminIdeas();
-        setNavBadges({
+        setNavBadgesSafe({
           ideias: adminIdeas.length,
         });
         return;
       }
 
-      setNavBadges({});
+      setNavBadgesSafe({});
     } catch {
       // Não interrompe o dashboard se alguma contagem falhar.
-      setNavBadges({});
+      setNavBadgesSafe({});
     }
-  }, [user]);
+  }, [user, setNavBadgesSafe]);
 
   const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, currentUser: user }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user]);
 
@@ -1355,7 +1367,7 @@ return (
                 </div>
               </div>
             )}
-            <RenderArea />
+            {RenderArea()}
           </div>
         </main>
       </div>

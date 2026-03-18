@@ -189,14 +189,23 @@ export default function ChatWindow({
       setIncomingCall(payload || null);
     };
     const onCallAccepted = (payload) => {
+      if (activeCall?.channelName && payload?.channelName && payload.channelName !== activeCall.channelName) {
+        return;
+      }
       setCallBanner(`Chamada aceite por ${payload?.byUserId || "utilizador"}.`);
       setTimeout(() => setCallBanner(""), 3000);
     };
-    const onCallRejected = () => {
+    const onCallRejected = (payload) => {
+      if (activeCall?.channelName && payload?.channelName && payload.channelName !== activeCall.channelName) {
+        return;
+      }
       setCallBanner("A chamada foi rejeitada.");
       setTimeout(() => setCallBanner(""), 3000);
     };
-    const onCallEnded = () => {
+    const onCallEnded = (payload) => {
+      if (activeCall?.channelName && payload?.channelName && payload.channelName !== activeCall.channelName) {
+        return;
+      }
       setCallBanner("A chamada foi terminada pelo outro utilizador.");
       setTimeout(() => setCallBanner(""), 3000);
       setActiveCall(null);
@@ -217,7 +226,7 @@ export default function ChatWindow({
       socket.off("call:rejected", onCallRejected);
       socket.off("call:ended", onCallEnded);
     };
-  }, [selectedUserId]);
+  }, [selectedUserId, activeCall?.channelName]);
 
   useEffect(() => {
     return () => {
