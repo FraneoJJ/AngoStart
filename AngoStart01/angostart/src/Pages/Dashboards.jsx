@@ -555,6 +555,12 @@ export default function Dashboard() {
     setPendingChatTarget(null);
   }, []);
 
+  const goToPage = useCallback((pageId) => {
+    if (!pageId) return;
+    setCurrentPage(pageId);
+    closeSidebarOnMobile();
+  }, []);
+
   const ctxValue = useMemo(() => ({
     idioma,
     setIdioma,
@@ -568,7 +574,8 @@ export default function Dashboard() {
     openChatConversation,
     pendingChatTarget,
     clearPendingChatTarget,
-  }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user, openChatConversation, pendingChatTarget, clearPendingChatTarget]);
+    goToPage,
+  }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user, openChatConversation, pendingChatTarget, clearPendingChatTarget, goToPage]);
 
   async function handleLogin(e) {
     e?.preventDefault();
@@ -1717,17 +1724,27 @@ function Investimentos() {
           getChatConversations().catch(() => []),
         ]);
         if (!mounted) return;
-        const conversationUserIds = new Set((conversations || []).map((c) => Number(c.userId)).filter(Boolean));
+        const conversationUserIds = new Set(
+          (conversations || [])
+            .filter((c) => String(c?.role || "").toLowerCase() === "empreendedor")
+            .map((c) => Number(c.userId))
+            .filter(Boolean)
+        );
         const normalized = (ideas || [])
-          .filter((i) => conversationUserIds.has(Number(i.owner_user_id)))
+          .filter((i) => {
+            const ownerUserId = Number(i.owner_user_id || i.ownerUserId || i.owner_id || 0);
+            return ownerUserId > 0 && conversationUserIds.has(ownerUserId);
+          })
           .map((i) => ({
             id: Number(i.id),
+            ownerUserId: Number(i.owner_user_id || i.ownerUserId || i.owner_id || 0),
             startup: i.title || "Projeto",
             sector: i.sector || "-",
             requested: Number(i.initial_capital || 0),
             score: Number(i.viability_score || 0),
             status: i.status || "-",
             owner: i.owner_name || "Empreendedor",
+            ownerAvatarUrl: i.owner_avatar_url || null,
           }))
           .sort((a, b) => b.score - a.score);
         setRows(normalized);
@@ -1786,7 +1803,13 @@ function Investimentos() {
             <h3 className="dashboard-card-title">Detalhamento do Portfólio</h3>
             <p className="dashboard-card-description">Projetos do marketplace com quem já existe conversa/proposta.</p>
           </div>
-          <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setCurrentPage("propostas")}>Abrir Propostas</button>
+          <button
+            className="btn btn-outline"
+            style={{ width: "auto" }}
+            onClick={() => ctx?.goToPage?.("propostas")}
+          >
+            Abrir Propostas
+          </button>
         </div>
 
         <div style={{ overflowX: 'auto', marginTop: '20px' }}>
@@ -1804,6 +1827,7 @@ function Investimentos() {
                   <th>Score IA</th>
                   <th>Status</th>
                   <th>Empreendedor</th>
+                  <th>Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -1823,6 +1847,22 @@ function Investimentos() {
                       </span>
                     </td>
                     <td>{item.owner}</td>
+                    <td>
+                      <button
+                        className="btn btn-outline"
+                        style={{ width: "auto", padding: "6px 10px" }}
+                        onClick={() => ctx?.openChatConversation?.({
+                          userId: Number(item.ownerUserId || 0),
+                          name: item.owner || "Empreendedor",
+                          role: "empreendedor",
+                          avatarUrl: item.ownerAvatarUrl || null,
+                          subtitle: `${item.startup || "Projeto"} • ${item.sector || "Setor"}`,
+                        }, { pageId: "propostas" })}
+                        disabled={!Number(item.ownerUserId || 0)}
+                      >
+                        Contactar
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
