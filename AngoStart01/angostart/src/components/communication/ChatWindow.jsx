@@ -46,6 +46,8 @@ export default function ChatWindow({
   currentUserId = 0,
   allowedUserIds = [],
   emptyText = "Sem conversas disponíveis.",
+  initialContact = null,
+  onInitialContactConsumed = null,
 }) {
   const [localContacts, setLocalContacts] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -61,6 +63,19 @@ export default function ChatWindow({
   const [callHistory, setCallHistory] = useState([]);
   const bottomRef = useRef(null);
   const ringtoneIntervalRef = useRef(null);
+  const initialContactAppliedRef = useRef(false);
+
+  const normalizedInitialContact = useMemo(() => {
+    const id = Number(initialContact?.userId || initialContact?.id || 0);
+    if (!id) return null;
+    return {
+      userId: id,
+      name: initialContact?.name || "Utilizador",
+      role: initialContact?.role || "",
+      subtitle: initialContact?.subtitle || "",
+      avatarUrl: initialContact?.avatarUrl || null,
+    };
+  }, [initialContact]);
 
   const contactMap = useMemo(() => {
     const map = new Map();
@@ -75,11 +90,14 @@ export default function ChatWindow({
         avatarUrl: c.avatarUrl || null,
       });
     }
+    if (normalizedInitialContact?.userId) {
+      map.set(normalizedInitialContact.userId, normalizedInitialContact);
+    }
     for (const c of localContacts) {
       map.set(c.userId, c);
     }
     return map;
-  }, [contacts, localContacts]);
+  }, [contacts, localContacts, normalizedInitialContact]);
 
   const mergedContacts = useMemo(() => {
     const list = Array.from(contactMap.values());
@@ -129,6 +147,44 @@ export default function ChatWindow({
       setSelectedUserId(mergedContacts[0].userId);
     }
   }, [mergedContacts, selectedUserId]);
+
+  useEffect(() => {
+    if (!normalizedInitialContact?.userId) {
+      initialContactAppliedRef.current = false;
+      return;
+    }
+    const targetId = Number(normalizedInitialContact.userId);
+    const exists = mergedContacts.some((c) => Number(c.userId) === targetId);
+    if (!exists) return;
+    setSelectedUserId(targetId);
+    if (!initialContactAppliedRef.current) {
+      initialContactAppliedRef.current = true;
+      if (typeof onInitialContactConsumed === "function") {
+        onInitialContactConsumed();
+      }
+    }
+  }, [mergedContacts, normalizedInitialContact, onInitialContactConsumed]);
+
+  const groupedContacts = useMemo(() => {
+    const byKey = new Map();
+    const keyMeta = {
+      investidor: "Investidores",
+      mentor: "Mentores",
+      empreendedor: "Empreendedores",
+      admin: "Administração",
+      other: "Outros",
+    };
+    for (const c of mergedContacts) {
+      const roleKey = String(c.role || "").toLowerCase();
+      const key = keyMeta[roleKey] ? roleKey : "other";
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(c);
+    }
+    const order = ["investidor", "mentor", "empreendedor", "admin", "other"];
+    return order
+      .filter((k) => byKey.has(k))
+      .map((k) => ({ key: k, label: keyMeta[k], items: byKey.get(k) }));
+  }, [mergedContacts]);
 
   useEffect(() => {
     if (!selectedUserId) {
@@ -373,37 +429,44 @@ export default function ChatWindow({
             ) : mergedContacts.length === 0 ? (
               <div style={{ padding: "12px", color: "var(--neutral-500)" }}>{emptyText}</div>
             ) : (
-              mergedContacts.map((c) => {
-                const active = Number(selectedUserId) === Number(c.userId);
-                return (
-                  <div
-                    key={c.userId}
-                    onClick={() => setSelectedUserId(c.userId)}
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid var(--neutral-100)",
-                      cursor: "pointer",
-                      background: active ? "var(--primary-50)" : "transparent",
-                      borderLeft: active ? "3px solid var(--primary-600)" : "3px solid transparent",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ width: "28px", height: "28px", borderRadius: "50%", overflow: "hidden", background: "var(--primary-100)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-700)" }}>
-                          {c.avatarUrl ? (
-                            <img src={c.avatarUrl} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            String(c.name || "U").charAt(0).toUpperCase()
-                          )}
-                        </div>
-                        <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
-                      </div>
-                      <UserOnlineIndicator online={onlineSet.has(Number(c.userId))} />
-                    </div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{c.subtitle || c.role || "-"}</div>
+              groupedContacts.map((group) => (
+                <div key={group.key}>
+                  <div style={{ padding: "10px 12px 6px", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--neutral-500)", background: "var(--neutral-50)" }}>
+                    {group.label}
                   </div>
-                );
-              })
+                  {group.items.map((c) => {
+                    const active = Number(selectedUserId) === Number(c.userId);
+                    return (
+                      <div
+                        key={c.userId}
+                        onClick={() => setSelectedUserId(c.userId)}
+                        style={{
+                          padding: "12px",
+                          borderBottom: "1px solid var(--neutral-100)",
+                          cursor: "pointer",
+                          background: active ? "var(--primary-50)" : "transparent",
+                          borderLeft: active ? "3px solid var(--primary-600)" : "3px solid transparent",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ width: "28px", height: "28px", borderRadius: "50%", overflow: "hidden", background: "var(--primary-100)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-700)" }}>
+                              {c.avatarUrl ? (
+                                <img src={c.avatarUrl} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              ) : (
+                                String(c.name || "U").charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
+                          </div>
+                          <UserOnlineIndicator online={onlineSet.has(Number(c.userId))} />
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{c.subtitle || c.role || "-"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
         </div>

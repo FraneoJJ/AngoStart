@@ -133,7 +133,7 @@ const navigationConfig = {
   empreendedor: [
     { sectionKey: 'principal', items: [
       { id: 'dashboard', icon: 'home' },
-      { id: 'submeter-ideia', icon: 'lightbulb', badge: 3 },
+      { id: 'submeter-ideia', icon: 'lightbulb' },
       { id: 'minhas-ideias', icon: 'folder', badge: 3 },
     ]},
     { sectionKey: 'crescimento', items: [
@@ -225,6 +225,77 @@ function ConfirmModal() {
   const ctx = useContext(AppContext);
   if (!ctx || !ctx.modal.open) return null;
   const { modal, setModal, t } = ctx;
+  const modalText = `${modal?.title || ""} ${modal?.message || ""}`.toLowerCase();
+  const modalTone = modalText.includes("erro") || modalText.includes("falha") || modalText.includes("rejeitada")
+    ? "danger"
+    : modalText.includes("sucesso") || modalText.includes("aprovad")
+      ? "success"
+      : "info";
+  const toneStyles = {
+    danger: { accent: "#ef4444", soft: "rgba(239, 68, 68, 0.12)" },
+    success: { accent: "#10b981", soft: "rgba(16, 185, 129, 0.12)" },
+    info: { accent: "#3b82f6", soft: "rgba(59, 130, 246, 0.12)" },
+  };
+  const { accent, soft } = toneStyles[modalTone];
+  const detailEntries = typeof modal?.message === "string"
+    ? modal.message
+        .split("|")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => {
+          const idx = part.indexOf(":");
+          if (idx === -1) return null;
+          const label = part.slice(0, idx).trim();
+          const value = part.slice(idx + 1).trim();
+          if (!label || !value) return null;
+          return { label, value };
+        })
+        .filter(Boolean)
+    : [];
+  const hasStructuredDetails = detailEntries.length >= 2;
+  const renderDetailIcon = (label) => {
+    const key = String(label || "").toLowerCase();
+    if (key.includes("setor")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21h18" />
+          <path d="M5 21V7l8-4v18" />
+          <path d="M19 21V11l-6-4" />
+        </svg>
+      );
+    }
+    if (key.includes("cidade")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    }
+    if (key.includes("empreendedor")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    }
+    if (key.includes("status")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    }
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+    );
+  };
   const close = () => {
     if (typeof modal.onClose === "function") {
       modal.onClose();
@@ -232,13 +303,56 @@ function ConfirmModal() {
     setModal({ ...modal, open: false, onClose: undefined });
   };
   return (
-    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '10px 0' }}>
-      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)', margin: '10px 0', maxHeight: 'calc(100vh - 20px)', overflowY: 'auto' }}>
-        {modal.title && <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{modal.title}</h3>}
-        {modal.message && <p style={{ margin: modal.content ? '0 0 12px 0' : 0, color: 'var(--dm-text)', fontSize: '0.95rem' }}>{modal.message}</p>}
+    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(11, 18, 32, 0.30)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px 0' }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: '18px', padding: '22px', maxWidth: '440px', width: '92%', boxShadow: '0 18px 48px rgba(15, 23, 42, 0.24)', border: '1px solid var(--dm-border)', margin: '10px 0', maxHeight: 'calc(100vh - 24px)', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: modal.title || modal.message ? '14px' : 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '999px', background: soft, color: accent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {modalTone === "danger" && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            )}
+            {modalTone === "success" && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            )}
+            {modalTone === "info" && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {modal.title && <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 700, color: 'var(--neutral-900)', lineHeight: 1.35 }}>{modal.title}</h3>}
+            {modal.message && !hasStructuredDetails && <p style={{ margin: 0, color: 'var(--dm-text)', fontSize: '0.95rem', lineHeight: 1.5 }}>{modal.message}</p>}
+            {hasStructuredDetails && (
+              <div style={{ display: "grid", gap: "8px" }}>
+                {detailEntries.map((entry) => (
+                  <div key={entry.label} style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--dm-text)", fontSize: "0.92rem", lineHeight: 1.4 }}>
+                    <span style={{ width: "20px", height: "20px", borderRadius: "999px", background: soft, color: accent, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {renderDetailIcon(entry.label)}
+                    </span>
+                    <span style={{ fontWeight: 600, color: "var(--neutral-900)" }}>{entry.label}:</span>
+                    <span>{entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         {modal.content ? <div>{modal.content}</div> : null}
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-primary" onClick={close}>{t ? t('common.close') : 'Fechar'}</button>
+          <button type="button" className="btn btn-primary" onClick={close} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', paddingInline: '14px' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            {t ? t('common.close') : 'Fechar'}
+          </button>
         </div>
       </div>
     </div>
@@ -248,6 +362,7 @@ function ConfirmModal() {
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [navBadges, setNavBadges] = useState({});
+  const [pendingChatTarget, setPendingChatTarget] = useState(null);
   const [dismissedVerificationNotice, setDismissedVerificationNotice] = useState(false);
   const profileRefreshRef = useRef("");
   const [selectedRoleForSwitch, setSelectedRoleForSwitch] = useState("");
@@ -327,10 +442,8 @@ export default function Dashboard() {
           getMyMentorshipRequests(),
           getChatConversations().catch(() => []),
         ]);
-        const pendingSubmission = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
         const mentoriasAgendadas = mentorshipRequests.filter((r) => r.status === "accepted").length;
         setNavBadgesSafe({
-          "submeter-ideia": pendingSubmission,
           "minhas-ideias": ideas.length,
           mensagens: conversations.length,
           mentoria: mentoriasAgendadas,
@@ -378,8 +491,6 @@ export default function Dashboard() {
     }
   }, [user, setNavBadgesSafe]);
 
-  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, currentUser: user }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user]);
-
   useEffect(() => {
     const s = loadSettings();
     if (s.dark) document.body.classList.add('dark-theme');
@@ -424,6 +535,40 @@ export default function Dashboard() {
       setIsSidebarOpen(false);
     }
   };
+
+  const openChatConversation = useCallback((targetUser, options = {}) => {
+    const targetId = Number(targetUser?.userId || targetUser?.id || 0);
+    if (!targetId) return;
+    setPendingChatTarget({
+      userId: targetId,
+      name: targetUser?.name || "Utilizador",
+      role: targetUser?.role || "",
+      subtitle: targetUser?.subtitle || "",
+      avatarUrl: targetUser?.avatarUrl || null,
+    });
+    const defaultPage = user?.role === "investidor" ? "propostas" : "mensagens";
+    setCurrentPage(options?.pageId || defaultPage);
+    closeSidebarOnMobile();
+  }, [user?.role]);
+
+  const clearPendingChatTarget = useCallback(() => {
+    setPendingChatTarget(null);
+  }, []);
+
+  const ctxValue = useMemo(() => ({
+    idioma,
+    setIdioma,
+    t,
+    modal,
+    setModal,
+    refreshNavBadges,
+    refreshCurrentUser,
+    applyAuthenticatedUser,
+    currentUser: user,
+    openChatConversation,
+    pendingChatTarget,
+    clearPendingChatTarget,
+  }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user, openChatConversation, pendingChatTarget, clearPendingChatTarget]);
 
   async function handleLogin(e) {
     e?.preventDefault();
@@ -1306,9 +1451,11 @@ return (
                 </div>
                 {group.items.map((item) => (
                   (() => {
-                    const badgeValue = Object.prototype.hasOwnProperty.call(navBadges, item.id)
+                    const rawBadge = Object.prototype.hasOwnProperty.call(navBadges, item.id)
                       ? navBadges[item.id]
                       : null;
+                    const badgeNum = Number(rawBadge);
+                    const showNavBadge = rawBadge != null && Number.isFinite(badgeNum) && badgeNum > 0;
                     return (
                   <div
                     key={item.id}
@@ -1331,7 +1478,7 @@ return (
                   >
                     <span className="nav-icon">{icons[item.icon]}</span>
                     <span className="nav-label">{t('nav.item.' + item.id)}</span>
-                    {badgeValue != null && <span className="nav-badge">{badgeValue}</span>}
+                    {showNavBadge ? <span className="nav-badge">{badgeNum}</span> : null}
                   </div>
                     );
                   })()
@@ -1514,24 +1661,40 @@ function Marketplace() {
               </p>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
               <div>
                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--dm-text-muted)', textTransform: 'uppercase' }}>
                   Capital inicial
                 </span>
                 <strong style={{ color: '#10b981' }}>{formatCapital(s.initial_capital)} AOA</strong>
               </div>
-              <button
-                className="btn btn-primary"
-                style={{ padding: '8px 15px', fontSize: '0.85rem' }}
-                onClick={() => ctx?.setModal?.({
-                  open: true,
-                  title: s.title,
-                  message: `Setor: ${s.sector || "-"} | Cidade: ${s.city || "-"} | Empreendedor: ${s.owner_name || "-"} | Status: ${s.status}`,
-                })}
-              >
-                Ver mais
-              </button>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button
+                  className="btn btn-outline"
+                  style={{ width: "auto", padding: "8px 12px", fontSize: "0.82rem" }}
+                  onClick={() => ctx?.openChatConversation?.({
+                    userId: Number(s.owner_user_id || 0),
+                    name: s.owner_name || "Empreendedor",
+                    avatarUrl: s.owner_avatar_url || null,
+                    role: "empreendedor",
+                    subtitle: `${s.title || "Projeto"} • ${s.sector || "Setor"}`,
+                  }, { pageId: "propostas" })}
+                  disabled={!Number(s.owner_user_id || 0)}
+                >
+                  Contactar
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: "auto", padding: '8px 15px', fontSize: '0.85rem' }}
+                  onClick={() => ctx?.setModal?.({
+                    open: true,
+                    title: s.title,
+                    message: `Setor: ${s.sector || "-"} | Cidade: ${s.city || "-"} | Empreendedor: ${s.owner_name || "-"} | Status: ${s.status}`,
+                  })}
+                >
+                  Ver mais
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -1961,6 +2124,8 @@ function Propostas() {
       title="Propostas e Conversas"
       contacts={contacts}
       currentUserId={currentUserId}
+      initialContact={ctx?.pendingChatTarget}
+      onInitialContactConsumed={ctx?.clearPendingChatTarget}
       emptyText="Sem propostas disponíveis para conversa no momento."
     />
   );
@@ -3866,17 +4031,23 @@ function MensagensEmpreendedorLegacy() {
   const ctx = useContext(AppContext);
   const currentUserId = Number(ctx?.currentUser?.id || 0);
   const [requests, setRequests] = useState([]);
+  const [investors, setInvestors] = useState([]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await getMyMentorshipRequests();
+        const [mentorshipData, investorData] = await Promise.all([
+          getMyMentorshipRequests(),
+          getAvailableInvestors().catch(() => []),
+        ]);
         if (!mounted) return;
-        setRequests(data || []);
+        setRequests(mentorshipData || []);
+        setInvestors(investorData || []);
       } catch {
         if (!mounted) return;
         setRequests([]);
+        setInvestors([]);
       }
     })();
     return () => {
@@ -3902,6 +4073,34 @@ function MensagensEmpreendedorLegacy() {
     return Array.from(map.values());
   }, [requests]);
 
+  const investorContacts = useMemo(() => {
+    const map = new Map();
+    for (const inv of investors || []) {
+      const uid = Number(inv?.id || 0);
+      if (!uid || uid === currentUserId) continue;
+      if (!map.has(uid)) {
+        map.set(uid, {
+          userId: uid,
+          name: inv?.name || "Investidor",
+          avatarUrl: inv?.avatarUrl || null,
+          role: "investidor",
+          subtitle: inv?.profile?.investmentExperienceArea || "Investidor da plataforma",
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [investors, currentUserId]);
+
+  const allContacts = useMemo(() => {
+    const unique = new Map();
+    for (const c of [...investorContacts, ...contacts]) {
+      const uid = Number(c.userId || 0);
+      if (!uid) continue;
+      if (!unique.has(uid)) unique.set(uid, c);
+    }
+    return Array.from(unique.values());
+  }, [investorContacts, contacts]);
+
   const allowedUserIds = useMemo(
     () => (requests || [])
       .filter((r) => r.status === "accepted")
@@ -3912,11 +4111,13 @@ function MensagensEmpreendedorLegacy() {
 
   return (
     <ChatWindow
-      title="Mensagens de Mentoria"
-      contacts={contacts}
+      title="Mensagens com Investidores e Mentores"
+      contacts={allContacts}
       currentUserId={currentUserId}
-      allowedUserIds={allowedUserIds}
-      emptyText="Sem mentorias aceites para conversar no momento."
+      allowedUserIds={[...allowedUserIds, ...allContacts.map((c) => Number(c.userId)).filter(Boolean)]}
+      initialContact={ctx?.pendingChatTarget}
+      onInitialContactConsumed={ctx?.clearPendingChatTarget}
+      emptyText="Sem contactos disponíveis para conversa no momento."
     />
   );
 }
@@ -5666,15 +5867,29 @@ function Investidores() {
               "{inv.descricao}"
             </p>
 
-            {/* BOTÃO SABER MAIS */}
-            <button 
-              className="btn btn-primary" 
-              style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => handleOpenInvestorDetails(inv.id)}
-              disabled={loadingDetailsId === Number(inv.id)}
-            >
-              {loadingDetailsId === Number(inv.id) ? "A carregar..." : "Saber Mais"}
-            </button>
+            <div style={{ width: "100%", marginTop: "auto", display: "grid", gap: "8px" }}>
+              <button
+                className="btn btn-outline"
+                style={{ width: "100%" }}
+                onClick={() => ctx?.openChatConversation?.({
+                  userId: inv.id,
+                  name: inv.nome,
+                  avatarUrl: inv.imagem || null,
+                  role: "investidor",
+                  subtitle: inv.tipo || "Investidor",
+                }, { pageId: "mensagens" })}
+              >
+                Contactar
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ width: '100%' }}
+                onClick={() => handleOpenInvestorDetails(inv.id)}
+                disabled={loadingDetailsId === Number(inv.id)}
+              >
+                {loadingDetailsId === Number(inv.id) ? "A carregar..." : "Saber Mais"}
+              </button>
+            </div>
           </div>
         ))}
       </div>
