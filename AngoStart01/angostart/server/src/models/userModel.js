@@ -16,7 +16,7 @@ export async function findUserByEmail(email) {
 
 export async function findUserPublicById(id) {
   const [rows] = await pool.execute(
-    `SELECT id, name, email, role, avatar_url, created_at
+    `SELECT id, name, email, role, admin_category, avatar_url, created_at
      FROM users
      WHERE id = ?
      LIMIT 1`,

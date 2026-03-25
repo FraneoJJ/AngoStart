@@ -22,6 +22,39 @@ export async function updateVerification(req, res, next) {
   }
 }
 
+export async function createSecondaryAdmin(req, res, next) {
+  try {
+    const actingAdminCategory = req.user?.adminCategory || "primary";
+    if (actingAdminCategory !== "primary") {
+      return next({ status: 403, message: "Somente o Administrador Principal pode adicionar administradores secundários." });
+    }
+    const created = await adminService.createSecondaryAdmin(req.body);
+    res.status(201).json({ success: true, admin: created?.admin || null, adminCategorySet: created?.adminCategorySet !== false });
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return next({ status: 400, message: err.issues?.[0]?.message || "Payload inválido." });
+    }
+    next(err);
+  }
+}
+
+export async function removeSecondaryAdmin(req, res, next) {
+  try {
+    const actingAdminCategory = req.user?.adminCategory || "primary";
+    if (actingAdminCategory !== "primary") {
+      return next({ status: 403, message: "Somente o Administrador Principal pode remover administradores secundários." });
+    }
+    const actingAdminUserId = req.user?.sub;
+    const removed = await adminService.removeSecondaryAdmin(req.params.id, actingAdminUserId);
+    res.status(200).json({ success: true, result: removed });
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return next({ status: 400, message: err.issues?.[0]?.message || "Payload inválido." });
+    }
+    next(err);
+  }
+}
+
 export async function investors(req, res, next) {
   try {
     const data = await adminService.listInvestorsForEntrepreneur();

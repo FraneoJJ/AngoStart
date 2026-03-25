@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   avatar_url LONGTEXT NULL,
   role ENUM('admin', 'empreendedor', 'mentor', 'investidor') NOT NULL DEFAULT 'empreendedor',
+  admin_category ENUM('primary', 'secondary') NOT NULL DEFAULT 'primary',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

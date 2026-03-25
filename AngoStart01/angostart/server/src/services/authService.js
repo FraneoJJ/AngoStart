@@ -139,6 +139,7 @@ async function enrichUserWithVerification(user, activeRole = null) {
     verificationId: verification?.verification_id || null,
     avatarUrl: user?.avatar_url || null,
     profileData: profileData || {},
+    adminCategory: typeof user?.admin_category === "string" ? user.admin_category : null,
   };
 }
 
@@ -271,6 +272,7 @@ export async function register(input) {
     sub: userWithVerification.id,
     role: data.role,
     email: userWithVerification.email,
+    adminCategory: userWithVerification.adminCategory,
   });
   return { user: userWithVerification, token, verification };
 }
@@ -292,8 +294,8 @@ export async function login(input) {
   const selectedRole = data.role && availableRoles.includes(data.role)
     ? data.role
     : (availableRoles.includes(publicUser.role) ? publicUser.role : (availableRoles[0] || publicUser.role));
-  const token = signAccessToken({ sub: user.id, role: selectedRole, email: user.email });
   const userWithVerification = await enrichUserWithVerification(publicUser, selectedRole);
+  const token = signAccessToken({ sub: user.id, role: selectedRole, email: user.email, adminCategory: userWithVerification.adminCategory });
   return { user: userWithVerification, token };
 }
 
@@ -318,7 +320,7 @@ export async function switchRole(authUser, input) {
     throw { status: 403, message: "Este usuário não possui o papel solicitado." };
   }
   const userWithVerification = await enrichUserWithVerification(user, data.role);
-  const token = signAccessToken({ sub: user.id, role: data.role, email: user.email });
+  const token = signAccessToken({ sub: user.id, role: data.role, email: user.email, adminCategory: userWithVerification.adminCategory });
   return { user: userWithVerification, token };
 }
 

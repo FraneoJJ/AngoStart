@@ -37,3 +37,25 @@ export async function getAdminIdeas() {
   });
   return data.ideas || [];
 }
+
+export async function createAdmin({ name, email, password, adminCategory = "secondary" }) {
+  const data = await requestJson(`${API_BASE}/admin/admins`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify({ name, email, password, adminCategory }),
+  });
+  return data || null;
+}
+
+export async function removeSecondaryAdmin(adminId) {
+  const data = await requestJson(`${API_BASE}/admin/admins/${encodeURIComponent(adminId)}`, {
+    method: "DELETE",
+    headers: {
+      ...getAuthHeader(),
+    },
+  });
+  return data?.result || null;
+}

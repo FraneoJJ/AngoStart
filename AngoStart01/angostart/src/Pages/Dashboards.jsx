@@ -7,7 +7,7 @@ import { analyzeViability } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
-import { getAdminIdeas, getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
+import { createAdmin, getAdminIdeas, getAdminUsers, removeSecondaryAdmin, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import { getAvailableMentors, getMentorById } from "../services/mentorApi";
 import { createMentorshipRequest, getMentorMentorshipRequests, getMyMentorshipRequests, updateMentorMentorshipRequest } from "../services/mentorshipApi";
@@ -68,7 +68,7 @@ const translations = {
   pt: {
     nav: {
       section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'administradores': 'Administradores', 'admin-mensagens': 'Mensagens de Admins', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
     },
     common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
     config: {
@@ -98,7 +98,7 @@ const translations = {
   en: {
     nav: {
       section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'administradores': 'Administrators', 'admin-mensagens': 'Admin Messages', 'ideias': 'Ideas', 'relatorios': 'Reports' },
     },
     common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
     config: {
@@ -185,6 +185,8 @@ const navigationConfig = {
     { sectionKey: 'administracao', items: [
       { id: 'dashboard', icon: 'home' },
       { id: 'usuarios', icon: 'users' },
+      { id: 'administradores', icon: 'users' },
+      { id: 'admin-mensagens', icon: 'message-square-text' },
       { id: 'ideias', icon: 'lightbulb', badge: 8 },
     ]},
     { sectionKey: 'analytics', items: [
@@ -403,6 +405,7 @@ export default function Dashboard() {
     email: apiUser.email,
     role: apiUser.role,
     primaryRole: apiUser.primaryRole || apiUser.role,
+    adminCategory: apiUser.adminCategory || apiUser.admin_category || null,
     availableRoles: apiUser.availableRoles || [apiUser.role],
     verificationStatus: apiUser.verificationStatus || (apiUser.role === "admin" ? "approved" : "pending"),
     verificationId: apiUser.verificationId || null,
@@ -752,11 +755,76 @@ function RenderAdminPage() {
   switch(currentPage) {
     case 'dashboard': return <Admin />;
     case 'usuarios': return <Usuarios />;
+    case 'administradores': return <Administradores />;
+    case 'admin-mensagens': return <MensagensAdmins />;
     case 'ideias': return <Ideias />;
     case 'relatorios': return <Relatorio />;
     case 'configuracoes': return <Configuracoes />;
     default: return <Admin />;
   }
+}
+
+function MensagensAdmins() {
+  const ctx = useContext(AppContext);
+  const currentUserId = Number(ctx?.currentUser?.id || 0);
+  const [loading, setLoading] = useState(true);
+  const [admins, setAdmins] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getAdminUsers();
+        const onlyAdmins = (data || []).filter((u) => u.role === "admin");
+        if (!mounted) return;
+        setAdmins(onlyAdmins);
+      } catch {
+        if (!mounted) return;
+        setAdmins([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const contacts = useMemo(() => {
+    return (admins || []).map((a) => {
+      const cat = a.adminCategory || "primary";
+      return {
+        userId: Number(a.id),
+        name: a.name || "Admin",
+        role: "admin",
+        subtitle: cat === "secondary" ? "Administrador Secundário" : "Administrador Principal",
+        avatarUrl: a.avatarUrl || null,
+      };
+    }).filter((c) => Number(c.userId) !== Number(currentUserId));
+  }, [admins]);
+
+  const allowedUserIds = useMemo(() => contacts.map((c) => Number(c.userId)).filter(Boolean), [contacts]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "10px" }}>
+        <div className="dashboard-card">
+          <p>A carregar chat de admins...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ChatWindow
+      title="Chat de Admins"
+      contacts={contacts}
+      currentUserId={currentUserId}
+      allowedUserIds={allowedUserIds}
+      emptyText="Sem admins disponíveis para conversas."
+    />
+  );
 }
 
   // =========================
@@ -2161,7 +2229,7 @@ function Propostas() {
 
   return (
     <ChatWindow
-      title="Propostas e Conversas"
+      title="Propostas"
       contacts={contacts}
       currentUserId={currentUserId}
       initialContact={ctx?.pendingChatTarget}
@@ -2924,6 +2992,214 @@ function Usuarios() {
     </>
   );
 }
+
+function Administradores() {
+  const ctx = useContext(AppContext);
+// Se a coluna admin_category ainda não existir na BD, adminCategory pode vir null.
+// Nesse caso, por segurança assumimos que qualquer admin logado é "primary".
+const currentAdminCategory = ctx?.currentUser?.adminCategory || "primary";
+  const isPrimary = currentAdminCategory === "primary";
+
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("adicionar");
+
+  const [form, setForm] = useState({ name: "", email: "", password: "", adminCategory: "secondary" });
+  const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const loadAdmins = async () => {
+    setLoading(true);
+    try {
+      const data = await getAdminUsers();
+      const onlyAdmins = (data || []).filter((u) => u.role === "admin");
+      setAdmins(onlyAdmins);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar administradores: ${err.message}` });
+      setAdmins([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAdmins();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const categoryLabel = (cat) => {
+    if (cat === "primary") return "Administrador Principal";
+    if (cat === "secondary") return "Administrador Secundário";
+    return "Categoria desconhecida";
+  };
+
+  const categoryBadgeClass = (cat) => (cat === "primary" ? "badge-primary" : cat === "secondary" ? "badge-info" : "badge-warning");
+
+  const handleAddAdmin = async () => {
+    if (!isPrimary) return;
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+      ctx?.setModal?.({ open: true, message: "Preencha Nome, Email e Senha do novo admin." });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await createAdmin(form);
+      setForm({ name: "", email: "", password: "", adminCategory: "secondary" });
+      setActiveTab("ver");
+      await loadAdmins();
+      if (res?.adminCategorySet === false) {
+        ctx?.setModal?.({
+          open: true,
+          message: "Admin criado, mas não foi possível guardar o tipo (a coluna admin_category ainda pode não existir na BD).",
+        });
+      } else {
+        ctx?.setModal?.({ open: true, message: "Admin criado com sucesso." });
+      }
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err?.message || "Falha ao criar administrador." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (adminId) => {
+    if (!isPrimary) return;
+    setRemovingId(Number(adminId));
+    try {
+      await removeSecondaryAdmin(adminId);
+      await loadAdmins();
+      ctx?.setModal?.({ open: true, message: "Administrador secundário removido com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err?.message || "Falha ao remover administrador." });
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <div>
+          <h2 className="dashboard-card-title">Administradores</h2>
+          <p className="dashboard-card-description">Gerencie administradores principais e secundários.</p>
+        </div>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+          <span className={`badge ${categoryBadgeClass(currentAdminCategory)}`}>{categoryLabel(currentAdminCategory)}</span>
+          <button className={activeTab === "adicionar" ? "btn btn-primary" : "btn btn-outline"} style={{ width: "auto" }} onClick={() => setActiveTab("adicionar")}>Adicionar</button>
+          <button className={activeTab === "ver" ? "btn btn-primary" : "btn btn-outline"} style={{ width: "auto" }} onClick={() => setActiveTab("ver")}>Ver admins</button>
+        </div>
+      </div>
+
+      {activeTab === "adicionar" && (
+        <div className="dashboard-card" style={{ marginBottom: "16px" }}>
+          <h3 className="dashboard-card-title" style={{ fontSize: "1.1rem" }}>Adicionar administrador</h3>
+          <p className="dashboard-card-description">Escolhe o tipo de admin. Apenas o Administrador Principal pode adicionar.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginTop: "14px" }}>
+            <div>
+              <label className="form-label">Nome</label>
+              <input className="form-input" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ex: Nome Completo" />
+            </div>
+            <div>
+              <label className="form-label">Email</label>
+              <input className="form-input" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="ex: nomecompleto@gmail.com" />
+            </div>
+            <div>
+              <label className="form-label">Tipo de admin</label>
+              <select
+                className="form-input"
+                value={form.adminCategory}
+                onChange={(e) => setForm((p) => ({ ...p, adminCategory: e.target.value }))}
+              >
+                <option value="primary">Administrador Principal</option>
+                <option value="secondary">Administrador Secundário</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Senha</label>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <input
+                  className="form-input"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                  placeholder="••••••••"
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ width: "auto", padding: "6px 10px" }}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPassword ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn btn-primary" onClick={handleAddAdmin} disabled={!isPrimary || saving}>
+              {saving ? "A criar..." : "Criar admin secundário"}
+            </button>
+          </div>
+          {!isPrimary && (
+            <div style={{ marginTop: "12px", color: "var(--neutral-500)", fontSize: "0.9rem" }}>
+              O teu perfil é secundário. Não podes adicionar administradores.
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="dashboard-card">
+        <h3 className="dashboard-card-title" style={{ fontSize: "1.1rem" }}>Lista de administradores</h3>
+        {loading ? (
+          <p>A carregar administradores...</p>
+        ) : admins.length === 0 ? (
+          <p>Sem administradores encontrados.</p>
+        ) : (
+          <div style={{ overflowX: "auto", marginTop: "12px" }}>
+            <table className="data-table" style={{ minWidth: "680px" }}>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Email</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {admins.map((a) => {
+                  const isSecondary = (a.adminCategory || "secondary") === "secondary";
+                  return (
+                    <tr key={a.id}>
+                      <td><strong>{a.name}</strong></td>
+                      <td><span className={`badge ${categoryBadgeClass(a.adminCategory || "secondary")}`}>{categoryLabel(a.adminCategory || "secondary")}</span></td>
+                      <td>{a.email}</td>
+                      <td>
+                        {isSecondary && isPrimary && (
+                          <button
+                            className="btn btn-outline"
+                            style={{ width: "auto", padding: "6px 10px" }}
+                            disabled={removingId === Number(a.id)}
+                            onClick={() => handleRemoveAdmin(a.id)}
+                          >
+                            {removingId === Number(a.id) ? "A remover..." : "Remover"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Ideias() {
   const ctx = useContext(AppContext);
   const [loading, setLoading] = useState(true);
@@ -3949,11 +4225,35 @@ function MentoradosDynamic() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {grouped.map(([entrepreneurId, items]) => {
             const first = items[0];
+            const entrepreneur = first?.entrepreneur || {};
             return (
               <div key={entrepreneurId} className="dashboard-card">
-                <h4 style={{ marginTop: 0 }}>{first?.entrepreneur?.name || "Empreendedor"}</h4>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                  <div>
+                    <h4 style={{ marginTop: 0 }}>{entrepreneur?.name || "Empreendedor"}</h4>
                 <div style={{ fontSize: "0.9rem", color: "var(--neutral-600)" }}>
-                  {first?.entrepreneur?.email || "-"} • Negócio: {first?.entrepreneur?.businessName || "-"}
+                    {entrepreneur?.email || "-"} • Negócio: {entrepreneur?.businessName || "-"}
+                </div>
+                  </div>
+                  <button
+                    className="btn btn-outline"
+                    style={{ width: "auto", padding: "8px 12px", height: "fit-content" }}
+                    onClick={() =>
+                      ctx?.openChatConversation?.(
+                        {
+                          userId: Number(entrepreneurId),
+                          name: entrepreneur?.name || "Empreendedor",
+                          avatarUrl: entrepreneur?.avatarUrl || null,
+                          role: "empreendedor",
+                          subtitle: entrepreneur?.businessName ? `Negócio: ${entrepreneur.businessName}` : "Empreendedor",
+                        },
+                        { pageId: "mensagens" }
+                      )
+                    }
+                    disabled={!Number(entrepreneurId)}
+                  >
+                    Contactar
+                  </button>
                 </div>
                 <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "8px" }}>
                   <Info label="Total de sessões" value={items.length} />
@@ -4058,7 +4358,7 @@ function MensagensMentorDynamic() {
 
   return (
     <ChatWindow
-      title="Mensagens de Mentoria"
+      title="Mensagens"
       contacts={contacts}
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
@@ -4151,7 +4451,7 @@ function MensagensEmpreendedorLegacy() {
 
   return (
     <ChatWindow
-      title="Mensagens com Investidores e Mentores"
+      title="Mensagens"
       contacts={allContacts}
       currentUserId={currentUserId}
       allowedUserIds={[...allowedUserIds, ...allContacts.map((c) => Number(c.userId)).filter(Boolean)]}
@@ -5264,6 +5564,7 @@ function AssinaturaPlano() {
           onSelectPlan={handleChangePlan}
           currentPlanCode={current?.planCode || ""}
           loadingPlanCode={savingPlan}
+          userRole={ctx?.currentUser?.role || "empreendedor"}
         />
       )}
     </div>
