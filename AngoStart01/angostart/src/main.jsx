@@ -3,7 +3,7 @@ import App from './App.jsx'
 import './index.css'
 
 // Para navegar em todas apaginas 
-import { BrowserRouter, RouterProvider, Route, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider, createHashRouter } from 'react-router-dom'
 
 // Pagina de erro 
 import ErrorPage from './Pages/ErrorPage.jsx'
@@ -14,7 +14,7 @@ import RecuperarSenhaPage from './Pages/RecuperarSenhaPage.jsx'
 import RedefinirSenhaPage from './Pages/RedefinirSenhaPage.jsx'
 import DashboardPage from './Pages/Dashboards.jsx'
 
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     path: "/",
     element: <App />,
