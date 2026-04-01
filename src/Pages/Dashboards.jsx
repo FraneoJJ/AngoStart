@@ -20,6 +20,7 @@ import Planos from "../components/SecoesApp/Planos";
 import ChatWindow from "../components/communication/ChatWindow";
 
 const STORAGE_KEY = 'angostart_settings';
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 
 function parseJsonSafe(raw, fallback) {
   if (!raw) return fallback;
@@ -1357,7 +1358,7 @@ function MensagensAdmins() {
       {/* <!-- Header --> */}
       <div className="auth-header">
         <div className="auth-logo">
-          <img src="..//logo.png" alt="AngoStart"/>
+          <img src={logoUrl} alt="AngoStart"/>
         </div>
         <h1 className="auth-title">Bem-vindo de volta!</h1>
         <p className="auth-subtitle">Entre para continuar sua jornada empreendedora</p>
@@ -1502,11 +1503,11 @@ return (
               )}
             </svg>
           </button>
-          <img src="/logo.png" alt="AngoStart" className="sidebar-logo" />
+          <img src={logoUrl} alt="AngoStart" className="sidebar-logo" />
         </header>
         <aside className={`sidebar ${isSidebarOpen ? "active" : ""}`}>
           <div className="sidebar-header">
-            <img src="/logo.png" alt="AngoStart" className="sidebar-logo" />
+            <img src={logoUrl} alt="AngoStart" className="sidebar-logo" />
             <button
               type="button"
               className="sidebar-close"

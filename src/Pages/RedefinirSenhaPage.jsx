@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPassword, validateResetToken } from "../services/authApi";
 import "../style/auth.css";
 
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
+
 function validatePasswordStrength(password) {
   if (password.length < 8) return "A senha deve ter no mínimo 8 caracteres.";
   if (!/[A-Z]/.test(password)) return "A senha deve conter pelo menos uma letra maiúscula.";
@@ -79,7 +81,7 @@ const RedefinirSenhaPage = () => {
         <div className="auth-content">
           <div className="auth-header">
             <div className="auth-logo">
-              <img src="/logo.png" alt="AngoStart" />
+              <img src={logoUrl} alt="AngoStart" />
             </div>
             <h1 className="auth-title">Redefinir senha</h1>
             <p className="auth-subtitle">Crie uma nova senha segura para sua conta</p>

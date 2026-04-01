@@ -4,6 +4,8 @@ import '../style/auth.css'
 
 import { useRouteError } from 'react-router-dom'
 
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`
+
 const ErrorPage = () => {
   const error = useRouteError()
   console.error(error)
@@ -15,7 +17,7 @@ const ErrorPage = () => {
       {/* <!-- Header --> */}
       <div className="auth-header">
         <div className="auth-logo">
-          <img src="/logo.png" alt="AngoStart"/>
+          <img src={logoUrl} alt="AngoStart"/>
         </div>
       </div>
 

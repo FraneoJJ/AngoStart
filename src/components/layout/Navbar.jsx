@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`
+
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -36,7 +38,7 @@ const Navbar = () => {
 
           {/* Logo */}
           <button onClick={() => scrollToSection('#hero')} className="navbar-logo">
-            <img src="/logo.png" alt="AngoStart" className="logo-image" />
+            <img src={logoUrl} alt="AngoStart" className="logo-image" />
           </button>
 
           {/* Desktop Links */}

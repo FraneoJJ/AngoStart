@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { requestPasswordReset } from "../services/authApi";
 import "../style/auth.css";
 
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
+
 const RecuperarSenha = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ const RecuperarSenha = () => {
         <div className="auth-content">
           <div className="auth-header">
             <div className="auth-logo">
-              <img src="/logo.png" alt="AngoStart" />
+              <img src={logoUrl} alt="AngoStart" />
             </div>
             <h1 className="auth-title">Recuperar senha</h1>
             <p className="auth-subtitle">Digite seu email para receber instruções</p>

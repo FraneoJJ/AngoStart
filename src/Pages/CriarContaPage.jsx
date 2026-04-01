@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../style/auth.css';
 import { registerUser } from '../services/authApi';
 
+const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
+
 const CriarConta = () => {
   const navigate = useNavigate();
   
@@ -1373,7 +1375,7 @@ const CriarConta = () => {
         <div className="auth-content auth-content-wide">
           <div className="auth-header">
             <div className="auth-logo">
-              <img src="/logo.png" alt="AngoStart" />
+              <img src={logoUrl} alt="AngoStart" />
             </div>
             <h1 className="auth-title">Criar conta AngoStart</h1>
             <p className="auth-subtitle">Junte-se à comunidade AngoStart</p>

@@ -5096,7 +5096,7 @@ a {
 }
 
 .stat-label {
-  color: var(--neutral-500);
+  color: var(--neutral-500) !important;
   margin-bottom: .5rem;
   font-size: .875rem;
 }
