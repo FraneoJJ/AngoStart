@@ -15,6 +15,9 @@ import {
   updateInvestidorVerificationStatus,
   updateMentorVerificationStatus,
 } from "../models/adminModel.js";
+import bcrypt from "bcryptjs";
+import { pool } from "../config/db.js";
+import { findUserByEmail, findUserPublicById } from "../models/userModel.js";
 
 const verificationSchema = z.object({
   status: z.enum(["approved", "rejected"]),
@@ -108,6 +111,7 @@ export async function listAdminUsers() {
         name: row.name,
         email: row.email,
         role: row.role,
+        adminCategory: row.admin_category || "primary",
         profileExists: false,
         createdAt: row.created_at,
         verificationStatus: "approved",
@@ -117,6 +121,100 @@ export async function listAdminUsers() {
     }
   }
   return out;
+}
+
+const createSecondaryAdminSchema = z.object({
+  name: z.string().min(2).max(120),
+  email: z.string().email(),
+  password: z.string().min(6).max(120),
+  adminCategory: z.enum(["primary", "secondary"]).optional(),
+});
+
+export async function createSecondaryAdmin(payload) {
+  const data = createSecondaryAdminSchema.parse(payload || {});
+  const adminCategory = data.adminCategory || "secondary";
+  const existing = await findUserByEmail(data.email);
+  if (existing) {
+    throw { status: 409, message: "Já existe um utilizador com este email." };
+  }
+
+  const passwordHash = await bcrypt.hash(data.password, 10);
+  let result;
+  let adminCategorySet = true;
+  try {
+    [result] = await pool.execute(
+      `INSERT INTO users (name, email, password_hash, role, admin_category)
+       VALUES (?, ?, ?, 'admin', ?)`,
+      [data.name, data.email, passwordHash, adminCategory]
+    );
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    if (msg.includes("Unknown column") && msg.includes("admin_category")) {
+      // Fallback: coluna ainda não foi migrada na BD.
+      adminCategorySet = false;
+      [result] = await pool.execute(
+        `INSERT INTO users (name, email, password_hash, role)
+         VALUES (?, ?, ?, 'admin')`,
+        [data.name, data.email, passwordHash]
+      );
+    } else {
+      throw err;
+    }
+  }
+
+  const created = await findUserPublicById(Number(result.insertId));
+  const admin = created
+    ? {
+        id: Number(created.id),
+        name: created.name,
+        email: created.email,
+        role: created.role,
+        adminCategory: created.admin_category || adminCategory,
+      }
+    : null;
+  return { admin, adminCategorySet };
+}
+
+export async function removeSecondaryAdmin(targetUserId, actingAdminUserId) {
+  const targetId = Number(targetUserId);
+  const actorId = Number(actingAdminUserId);
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw { status: 400, message: "ID de utilizador inválido." };
+  }
+  if (!Number.isInteger(actorId) || actorId <= 0) {
+    throw { status: 400, message: "Utilizador atual inválido." };
+  }
+  if (targetId === actorId) {
+    throw { status: 400, message: "Não é possível remover a própria conta." };
+  }
+
+  let rows;
+  try {
+    [rows] = await pool.execute(`SELECT id, role, admin_category FROM users WHERE id = ? LIMIT 1`, [targetId]);
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    if (msg.includes("Unknown column") && msg.includes("admin_category")) {
+      // Fallback: coluna ainda não foi migrada na BD.
+      [rows] = await pool.execute(`SELECT id, role FROM users WHERE id = ? LIMIT 1`, [targetId]);
+    } else {
+      throw err;
+    }
+  }
+  const target = rows?.[0];
+  if (!target || target.role !== "admin") {
+    throw { status: 404, message: "Administrador não encontrado." };
+  }
+
+  // Se a coluna existir, respeita a regra. Caso contrário, permite (mas avisa no front via adminCategory indisponível).
+  if (typeof target.admin_category !== "undefined") {
+    if (target.admin_category !== "secondary") {
+      throw { status: 403, message: "Apenas administradores secundários podem ser removidos." };
+    }
+    await pool.execute(`DELETE FROM users WHERE id = ? AND role = 'admin' AND admin_category = 'secondary'`, [targetId]);
+  } else {
+    await pool.execute(`DELETE FROM users WHERE id = ? AND role = 'admin'`, [targetId]);
+  }
+  return { success: true };
 }
 
 export async function setUserVerification(userId, payload) {

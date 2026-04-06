@@ -7,7 +7,7 @@ import { analyzeViability } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
-import { getAdminIdeas, getAdminUsers, updateAdminUserVerification } from "../services/adminApi";
+import { createAdmin, getAdminIdeas, getAdminUsers, removeSecondaryAdmin, updateAdminUserVerification } from "../services/adminApi";
 import { getAvailableInvestors, getInvestorById } from "../services/investorApi";
 import { getAvailableMentors, getMentorById } from "../services/mentorApi";
 import { createMentorshipRequest, getMentorMentorshipRequests, getMyMentorshipRequests, updateMentorMentorshipRequest } from "../services/mentorshipApi";
@@ -68,7 +68,7 @@ const translations = {
   pt: {
     nav: {
       section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'administradores': 'Administradores', 'admin-mensagens': 'Mensagens de Admins', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
     },
     common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
     config: {
@@ -98,7 +98,7 @@ const translations = {
   en: {
     nav: {
       section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'administradores': 'Administrators', 'admin-mensagens': 'Admin Messages', 'ideias': 'Ideas', 'relatorios': 'Reports' },
     },
     common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
     config: {
@@ -133,7 +133,7 @@ const navigationConfig = {
   empreendedor: [
     { sectionKey: 'principal', items: [
       { id: 'dashboard', icon: 'home' },
-      { id: 'submeter-ideia', icon: 'lightbulb', badge: 3 },
+      { id: 'submeter-ideia', icon: 'lightbulb' },
       { id: 'minhas-ideias', icon: 'folder', badge: 3 },
     ]},
     { sectionKey: 'crescimento', items: [
@@ -185,6 +185,8 @@ const navigationConfig = {
     { sectionKey: 'administracao', items: [
       { id: 'dashboard', icon: 'home' },
       { id: 'usuarios', icon: 'users' },
+      { id: 'administradores', icon: 'users' },
+      { id: 'admin-mensagens', icon: 'message-square-text' },
       { id: 'ideias', icon: 'lightbulb', badge: 8 },
     ]},
     { sectionKey: 'analytics', items: [
@@ -225,6 +227,77 @@ function ConfirmModal() {
   const ctx = useContext(AppContext);
   if (!ctx || !ctx.modal.open) return null;
   const { modal, setModal, t } = ctx;
+  const modalText = `${modal?.title || ""} ${modal?.message || ""}`.toLowerCase();
+  const modalTone = modalText.includes("erro") || modalText.includes("falha") || modalText.includes("rejeitada")
+    ? "danger"
+    : modalText.includes("sucesso") || modalText.includes("aprovad")
+      ? "success"
+      : "info";
+  const toneStyles = {
+    danger: { accent: "#ef4444", soft: "rgba(239, 68, 68, 0.12)" },
+    success: { accent: "#10b981", soft: "rgba(16, 185, 129, 0.12)" },
+    info: { accent: "#3b82f6", soft: "rgba(59, 130, 246, 0.12)" },
+  };
+  const { accent, soft } = toneStyles[modalTone];
+  const detailEntries = typeof modal?.message === "string"
+    ? modal.message
+        .split("|")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => {
+          const idx = part.indexOf(":");
+          if (idx === -1) return null;
+          const label = part.slice(0, idx).trim();
+          const value = part.slice(idx + 1).trim();
+          if (!label || !value) return null;
+          return { label, value };
+        })
+        .filter(Boolean)
+    : [];
+  const hasStructuredDetails = detailEntries.length >= 2;
+  const renderDetailIcon = (label) => {
+    const key = String(label || "").toLowerCase();
+    if (key.includes("setor")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21h18" />
+          <path d="M5 21V7l8-4v18" />
+          <path d="M19 21V11l-6-4" />
+        </svg>
+      );
+    }
+    if (key.includes("cidade")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    }
+    if (key.includes("empreendedor")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    }
+    if (key.includes("status")) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    }
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+    );
+  };
   const close = () => {
     if (typeof modal.onClose === "function") {
       modal.onClose();
@@ -232,13 +305,56 @@ function ConfirmModal() {
     setModal({ ...modal, open: false, onClose: undefined });
   };
   return (
-    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '10px 0' }}>
-      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: '400px', width: '90%', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--dm-border)', margin: '10px 0', maxHeight: 'calc(100vh - 20px)', overflowY: 'auto' }}>
-        {modal.title && <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--neutral-900)' }}>{modal.title}</h3>}
-        {modal.message && <p style={{ margin: modal.content ? '0 0 12px 0' : 0, color: 'var(--dm-text)', fontSize: '0.95rem' }}>{modal.message}</p>}
+    <div className="modal-overlay" onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(11, 18, 32, 0.30)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px 0' }}>
+      <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: 'var(--dm-surface)', borderRadius: '18px', padding: '22px', maxWidth: '440px', width: '92%', boxShadow: '0 18px 48px rgba(15, 23, 42, 0.24)', border: '1px solid var(--dm-border)', margin: '10px 0', maxHeight: 'calc(100vh - 24px)', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: modal.title || modal.message ? '14px' : 0 }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '999px', background: soft, color: accent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {modalTone === "danger" && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            )}
+            {modalTone === "success" && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            )}
+            {modalTone === "info" && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {modal.title && <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 700, color: 'var(--neutral-900)', lineHeight: 1.35 }}>{modal.title}</h3>}
+            {modal.message && !hasStructuredDetails && <p style={{ margin: 0, color: 'var(--dm-text)', fontSize: '0.95rem', lineHeight: 1.5 }}>{modal.message}</p>}
+            {hasStructuredDetails && (
+              <div style={{ display: "grid", gap: "8px" }}>
+                {detailEntries.map((entry) => (
+                  <div key={entry.label} style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--dm-text)", fontSize: "0.92rem", lineHeight: 1.4 }}>
+                    <span style={{ width: "20px", height: "20px", borderRadius: "999px", background: soft, color: accent, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {renderDetailIcon(entry.label)}
+                    </span>
+                    <span style={{ fontWeight: 600, color: "var(--neutral-900)" }}>{entry.label}:</span>
+                    <span>{entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         {modal.content ? <div>{modal.content}</div> : null}
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-primary" onClick={close}>{t ? t('common.close') : 'Fechar'}</button>
+          <button type="button" className="btn btn-primary" onClick={close} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', paddingInline: '14px' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            {t ? t('common.close') : 'Fechar'}
+          </button>
         </div>
       </div>
     </div>
@@ -248,6 +364,7 @@ function ConfirmModal() {
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [navBadges, setNavBadges] = useState({});
+  const [pendingChatTarget, setPendingChatTarget] = useState(null);
   const [dismissedVerificationNotice, setDismissedVerificationNotice] = useState(false);
   const profileRefreshRef = useRef("");
   const [selectedRoleForSwitch, setSelectedRoleForSwitch] = useState("");
@@ -288,6 +405,7 @@ export default function Dashboard() {
     email: apiUser.email,
     role: apiUser.role,
     primaryRole: apiUser.primaryRole || apiUser.role,
+    adminCategory: apiUser.adminCategory || apiUser.admin_category || null,
     availableRoles: apiUser.availableRoles || [apiUser.role],
     verificationStatus: apiUser.verificationStatus || (apiUser.role === "admin" ? "approved" : "pending"),
     verificationId: apiUser.verificationId || null,
@@ -327,10 +445,8 @@ export default function Dashboard() {
           getMyMentorshipRequests(),
           getChatConversations().catch(() => []),
         ]);
-        const pendingSubmission = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
         const mentoriasAgendadas = mentorshipRequests.filter((r) => r.status === "accepted").length;
         setNavBadgesSafe({
-          "submeter-ideia": pendingSubmission,
           "minhas-ideias": ideas.length,
           mensagens: conversations.length,
           mentoria: mentoriasAgendadas,
@@ -378,8 +494,6 @@ export default function Dashboard() {
     }
   }, [user, setNavBadgesSafe]);
 
-  const ctxValue = useMemo(() => ({ idioma, setIdioma, t, modal, setModal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, currentUser: user }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user]);
-
   useEffect(() => {
     const s = loadSettings();
     if (s.dark) document.body.classList.add('dark-theme');
@@ -424,6 +538,47 @@ export default function Dashboard() {
       setIsSidebarOpen(false);
     }
   };
+
+  const openChatConversation = useCallback((targetUser, options = {}) => {
+    const targetId = Number(targetUser?.userId || targetUser?.id || 0);
+    if (!targetId) return;
+    setPendingChatTarget({
+      userId: targetId,
+      name: targetUser?.name || "Utilizador",
+      role: targetUser?.role || "",
+      subtitle: targetUser?.subtitle || "",
+      avatarUrl: targetUser?.avatarUrl || null,
+    });
+    const defaultPage = user?.role === "investidor" ? "propostas" : "mensagens";
+    setCurrentPage(options?.pageId || defaultPage);
+    closeSidebarOnMobile();
+  }, [user?.role]);
+
+  const clearPendingChatTarget = useCallback(() => {
+    setPendingChatTarget(null);
+  }, []);
+
+  const goToPage = useCallback((pageId) => {
+    if (!pageId) return;
+    setCurrentPage(pageId);
+    closeSidebarOnMobile();
+  }, []);
+
+  const ctxValue = useMemo(() => ({
+    idioma,
+    setIdioma,
+    t,
+    modal,
+    setModal,
+    refreshNavBadges,
+    refreshCurrentUser,
+    applyAuthenticatedUser,
+    currentUser: user,
+    openChatConversation,
+    pendingChatTarget,
+    clearPendingChatTarget,
+    goToPage,
+  }), [idioma, modal, refreshNavBadges, refreshCurrentUser, applyAuthenticatedUser, user, openChatConversation, pendingChatTarget, clearPendingChatTarget, goToPage]);
 
   async function handleLogin(e) {
     e?.preventDefault();
@@ -600,6 +755,8 @@ function RenderAdminPage() {
   switch(currentPage) {
     case 'dashboard': return <Admin />;
     case 'usuarios': return <Usuarios />;
+    case 'administradores': return <Administradores />;
+    case 'admin-mensagens': return <MensagensAdmins />;
     case 'ideias': return <Ideias />;
     case 'relatorios': return <Relatorio />;
     case 'configuracoes': return <Configuracoes />;
@@ -607,111 +764,215 @@ function RenderAdminPage() {
   }
 }
 
+function MensagensAdmins() {
+  const ctx = useContext(AppContext);
+  const currentUserId = Number(ctx?.currentUser?.id || 0);
+  const [loading, setLoading] = useState(true);
+  const [admins, setAdmins] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getAdminUsers();
+        const onlyAdmins = (data || []).filter((u) => u.role === "admin");
+        if (!mounted) return;
+        setAdmins(onlyAdmins);
+      } catch {
+        if (!mounted) return;
+        setAdmins([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const contacts = useMemo(() => {
+    return (admins || []).map((a) => {
+      const cat = a.adminCategory || "primary";
+      return {
+        userId: Number(a.id),
+        name: a.name || "Admin",
+        role: "admin",
+        subtitle: cat === "secondary" ? "Administrador Secundário" : "Administrador Principal",
+        avatarUrl: a.avatarUrl || null,
+      };
+    }).filter((c) => Number(c.userId) !== Number(currentUserId));
+  }, [admins]);
+
+  const allowedUserIds = useMemo(() => contacts.map((c) => Number(c.userId)).filter(Boolean), [contacts]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "10px" }}>
+        <div className="dashboard-card">
+          <p>A carregar chat de admins...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ChatWindow
+      title="Chat de Admins"
+      contacts={contacts}
+      currentUserId={currentUserId}
+      allowedUserIds={allowedUserIds}
+      emptyText="Sem admins disponíveis para conversas."
+    />
+  );
+}
+
   // =========================
   // ÁREAS (FUNCTIONS)
   // =========================
   function Investidor() {
     const ctx = useContext(AppContext);
-    const t = ctx?.t ?? (k => k);
-    return(
+    const [loading, setLoading] = useState(true);
+    const [ideas, setIdeas] = useState([]);
+    const [conversations, setConversations] = useState([]);
+
+    useEffect(() => {
+      let mounted = true;
+      (async () => {
+        setLoading(true);
+        try {
+          const [marketplaceIdeas, chatConversations] = await Promise.all([
+            getMarketplaceIdeas(),
+            getChatConversations().catch(() => []),
+          ]);
+          if (!mounted) return;
+          setIdeas(marketplaceIdeas || []);
+          setConversations(chatConversations || []);
+        } catch (err) {
+          if (!mounted) return;
+          setIdeas([]);
+          setConversations([]);
+          ctx?.setModal?.({ open: true, message: `Falha ao carregar dashboard do investidor: ${err.message}` });
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      })();
+      return () => {
+        mounted = false;
+      };
+    }, []);
+
+    const scoredIdeas = (ideas || []).filter((i) => Number.isFinite(Number(i?.viability_score)));
+    const featuredIdeas = [...(ideas || [])]
+      .sort((a, b) => Number(b?.viability_score || 0) - Number(a?.viability_score || 0))
+      .slice(0, 8);
+    const totalOportunidades = ideas.length;
+    const propostasAtivas = conversations.length;
+    const scoreMedio = scoredIdeas.length
+      ? Math.round(scoredIdeas.reduce((sum, i) => sum + Number(i?.viability_score || 0), 0) / scoredIdeas.length)
+      : 0;
+    const capitalTotalSolicitado = ideas.reduce((sum, i) => sum + Number(i?.initial_capital || 0), 0);
+    const pendentes = ideas.filter((i) => i.status === "submitted" || i.status === "analyzing").length;
+    const formatKz = (v) => `${Number(v || 0).toLocaleString("pt-PT")} Kz`;
+
+    return (
       <>
-    <div className="stats-grid">
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Investimentos Ativos</div>
-            <div className="stat-value">8</div>
-            <div className="stat-change">+2 este trimestre</div>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Oportunidades Ativas</div>
+                <div className="stat-value">{loading ? "..." : totalOportunidades}</div>
+                <div className="stat-change">Projetos no marketplace</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-primary">{icons.briefcase}</div>
+            </div>
           </div>
-          <div className="stat-icon-wrapper stat-icon-primary">
-           {icons.briefcase}
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Capital Solicitado</div>
+                <div className="stat-value">{loading ? "..." : formatKz(capitalTotalSolicitado)}</div>
+                <div className="stat-change">Soma de ideias publicadas</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-success">{icons["dollar-sign"]}</div>
+            </div>
           </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Valor Total Investido</div>
-            <div className="stat-value">Kz 485.000</div>
-            <div className="stat-change">Portfolio total</div>
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Propostas Pendentes</div>
+                <div className="stat-value">{loading ? "..." : pendentes}</div>
+                <div className="stat-change">Ideias em submissão/análise</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-secondary">{icons.inbox}</div>
+            </div>
           </div>
-          <div className="stat-icon-wrapper stat-icon-success">
-            {icons['dollar-sign']}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">Propostas Pendentes</div>
-            <div className="stat-value">12</div>
-            <div className="stat-change">+5 esta semana</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-secondary">
-            {icons.inbox}
-          </div>
-        </div>
-      </div>
-      
-      <div className="stat-card">
-        <div className="stat-card-content">
-          <div className="stat-info">
-            <div className="stat-label">ROI Médio</div>
-            <div className="stat-value">18.5%</div>
-            <div className="stat-change">+2.3% este ano</div>
-          </div>
-          <div className="stat-icon-wrapper stat-icon-info">
-            {icons['trending-up']}
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div className="stat-info">
+                <div className="stat-label">Conversas / Score IA</div>
+                <div className="stat-value">{loading ? "..." : `${propostasAtivas} / ${scoreMedio}`}</div>
+                <div className="stat-change">Dados atualizados da base</div>
+              </div>
+              <div className="stat-icon-wrapper stat-icon-info">{icons["trending-up"]}</div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <div className="dashboard-card">
-      <div className="dashboard-card-header">
-        <h3 className="dashboard-card-title">Oportunidades em Destaque</h3>
-        <p className="dashboard-card-description">Ideias com maior pontuação IA</p>
-      </div>
-      
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Startup</th>
-            <th>Setor</th>
-            <th>Score IA</th>
-            <th>Investimento</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>TechEdu Angola</td>
-            <td>EdTech</td>
-            <td><span className="badge badge-success">92</span></td>
-            <td>Kz 50.000 - Kz 100.000</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
-          </tr>
-          <tr>
-            <td>AgriConnect</td>
-            <td>AgriTech</td>
-            <td><span className="badge badge-success">88</span></td>
-            <td>Kz 30.000 - Kz 75.000</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
-          </tr>
-          <tr>
-            <td>HealthPlus</td>
-            <td>HealthTech</td>
-            <td><span className="badge badge-success">85</span></td>
-            <td>Kz 75.000 - Kz 150.000</td>
-            <td><button className="btn btn-primary" style={{padding:'0.5rem 1rem', fontSize: '0.875rem'}}>Ver Detalhes</button></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  
-  </>);
+
+        <div className="dashboard-card">
+          <div className="dashboard-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div>
+              <h3 className="dashboard-card-title">Oportunidades em Destaque</h3>
+              <p className="dashboard-card-description">Ideias com maior score de viabilidade na base de dados.</p>
+            </div>
+            <button className="btn btn-outline" style={{ width: "auto" }} onClick={() => setCurrentPage("marketplace")}>
+              Abrir Marketplace
+            </button>
+          </div>
+
+          {loading ? (
+            <p>A carregar oportunidades...</p>
+          ) : featuredIdeas.length === 0 ? (
+            <p>Sem oportunidades disponíveis no momento.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Startup</th>
+                  <th>Setor</th>
+                  <th>Score IA</th>
+                  <th>Capital</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {featuredIdeas.map((idea) => {
+                  const score = Number(idea?.viability_score || 0);
+                  return (
+                    <tr key={idea.id}>
+                      <td>{idea.title || "-"}</td>
+                      <td>{idea.sector || "-"}</td>
+                      <td>
+                        <span className={`badge ${score >= 80 ? "badge-success" : score >= 60 ? "badge-warning" : "badge-info"}`}>
+                          {score || "-"}
+                        </span>
+                      </td>
+                      <td>{formatKz(idea.initial_capital)}</td>
+                      <td>
+                        <span className={`badge ${idea.status === "active" ? "badge-success" : "badge-warning"}`}>
+                          {idea.status || "-"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </>
+    );
   }
 
   function Empreendedor() {
@@ -1265,9 +1526,11 @@ return (
                 </div>
                 {group.items.map((item) => (
                   (() => {
-                    const badgeValue = Object.prototype.hasOwnProperty.call(navBadges, item.id)
+                    const rawBadge = Object.prototype.hasOwnProperty.call(navBadges, item.id)
                       ? navBadges[item.id]
                       : null;
+                    const badgeNum = Number(rawBadge);
+                    const showNavBadge = rawBadge != null && Number.isFinite(badgeNum) && badgeNum > 0;
                     return (
                   <div
                     key={item.id}
@@ -1290,7 +1553,7 @@ return (
                   >
                     <span className="nav-icon">{icons[item.icon]}</span>
                     <span className="nav-label">{t('nav.item.' + item.id)}</span>
-                    {badgeValue != null && <span className="nav-badge">{badgeValue}</span>}
+                    {showNavBadge ? <span className="nav-badge">{badgeNum}</span> : null}
                   </div>
                     );
                   })()
@@ -1473,24 +1736,40 @@ function Marketplace() {
               </p>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ borderTop: '1px solid var(--dm-border)', paddingTop: 15, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
               <div>
                 <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--dm-text-muted)', textTransform: 'uppercase' }}>
                   Capital inicial
                 </span>
                 <strong style={{ color: '#10b981' }}>{formatCapital(s.initial_capital)} AOA</strong>
               </div>
-              <button
-                className="btn btn-primary"
-                style={{ padding: '8px 15px', fontSize: '0.85rem' }}
-                onClick={() => ctx?.setModal?.({
-                  open: true,
-                  title: s.title,
-                  message: `Setor: ${s.sector || "-"} | Cidade: ${s.city || "-"} | Empreendedor: ${s.owner_name || "-"} | Status: ${s.status}`,
-                })}
-              >
-                Ver mais
-              </button>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button
+                  className="btn btn-outline"
+                  style={{ width: "auto", padding: "8px 12px", fontSize: "0.82rem" }}
+                  onClick={() => ctx?.openChatConversation?.({
+                    userId: Number(s.owner_user_id || 0),
+                    name: s.owner_name || "Empreendedor",
+                    avatarUrl: s.owner_avatar_url || null,
+                    role: "empreendedor",
+                    subtitle: `${s.title || "Projeto"} • ${s.sector || "Setor"}`,
+                  }, { pageId: "propostas" })}
+                  disabled={!Number(s.owner_user_id || 0)}
+                >
+                  Contactar
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: "auto", padding: '8px 15px', fontSize: '0.85rem' }}
+                  onClick={() => ctx?.setModal?.({
+                    open: true,
+                    title: s.title,
+                    message: `Setor: ${s.sector || "-"} | Cidade: ${s.city || "-"} | Empreendedor: ${s.owner_name || "-"} | Status: ${s.status}`,
+                  })}
+                >
+                  Ver mais
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -1499,12 +1778,60 @@ function Marketplace() {
   );
 }
 function Investimentos() {
- 
-  const myPortfolio = [
-    { id: 1, startup: "Kwanza Pay", equity: "5%", invested: "Kz 25.000", currentVal: "Kz 45.000", status: "Em Crescimento", roi: "+80%" },
-    { id: 2, startup: "AgroFácil", equity: "10%", invested: "Kz 15.000", currentVal: "Kz 18.500", status: "Estável", roi: "+23%" },
-    { id: 3, startup: "TechEdu Angola", equity: "2%", invested: "Kz 10.000", currentVal: "Kz 9.000", status: "Risco", roi: "-10%" }
-  ];
+  const ctx = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const [ideas, conversations] = await Promise.all([
+          getMarketplaceIdeas(),
+          getChatConversations().catch(() => []),
+        ]);
+        if (!mounted) return;
+        const conversationUserIds = new Set(
+          (conversations || [])
+            .filter((c) => String(c?.role || "").toLowerCase() === "empreendedor")
+            .map((c) => Number(c.userId))
+            .filter(Boolean)
+        );
+        const normalized = (ideas || [])
+          .filter((i) => {
+            const ownerUserId = Number(i.owner_user_id || i.ownerUserId || i.owner_id || 0);
+            return ownerUserId > 0 && conversationUserIds.has(ownerUserId);
+          })
+          .map((i) => ({
+            id: Number(i.id),
+            ownerUserId: Number(i.owner_user_id || i.ownerUserId || i.owner_id || 0),
+            startup: i.title || "Projeto",
+            sector: i.sector || "-",
+            requested: Number(i.initial_capital || 0),
+            score: Number(i.viability_score || 0),
+            status: i.status || "-",
+            owner: i.owner_name || "Empreendedor",
+            ownerAvatarUrl: i.owner_avatar_url || null,
+          }))
+          .sort((a, b) => b.score - a.score);
+        setRows(normalized);
+      } catch (err) {
+        if (!mounted) return;
+        setRows([]);
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar carteira de investimentos: ${err.message}` });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatKz = (v) => `${Number(v || 0).toLocaleString("pt-PT")} Kz`;
+  const totalAlocado = rows.reduce((sum, r) => sum + Number(r.requested || 0), 0);
+  const avgScore = rows.length ? Math.round(rows.reduce((sum, r) => sum + Number(r.score || 0), 0) / rows.length) : 0;
 
   return (<>
     <div className="portfolio-container">
@@ -1513,8 +1840,8 @@ function Investimentos() {
           <div className="stat-card-content" >
             <div className="stat-info">
               <div className="stat-label">Total Alocado</div>
-              <div className="stat-value">Kz 50.000</div>
-              <div className="stat-change">3 Startups ativas</div>
+              <div className="stat-value">{loading ? "..." : formatKz(totalAlocado)}</div>
+              <div className="stat-change">{loading ? "A carregar..." : `${rows.length} startups em conversa`}</div>
             </div>
             <div className="stat-icon-wrapper stat-icon-success">
               {icons['dollar-sign']}
@@ -1525,10 +1852,10 @@ function Investimentos() {
         <div className="stat-card">
           <div className="stat-card-content">
             <div className="stat-info">
-              <div className="stat-label">Valorização Total</div>
-              <div className="stat-value">Kz 72.500</div>
+              <div className="stat-label">Score Médio IA</div>
+              <div className="stat-value">{loading ? "..." : avgScore}</div>
               <div className="stat-change" style={{ color: '#10b981' }}>
-                ↑ Kz 22.500 (45%)
+                Qualidade média das oportunidades
               </div>
             </div>
             <div className="stat-icon-wrapper stat-icon-primary">
@@ -1542,192 +1869,327 @@ function Investimentos() {
         <div className="dashboard-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h3 className="dashboard-card-title">Detalhamento do Portfólio</h3>
-            <p className="dashboard-card-description">Acompanhamento de participação e ROI por startup.</p>
+            <p className="dashboard-card-description">Projetos do marketplace com quem já existe conversa/proposta.</p>
           </div>
           <button
-            className="btn"
-            style={{
-              background: 'var(--primary-100)',
-              color: 'var(--primary-600)',
-              fontWeight: 600,
-              border: 'none',
-              padding: '10px 15px',
-              borderRadius: '8px'
-            }}
+            className="btn btn-outline"
+            style={{ width: "auto" }}
+            onClick={() => ctx?.goToPage?.("propostas")}
           >
-            Baixar Extrato
+            Abrir Propostas
           </button>
         </div>
 
         <div style={{ overflowX: 'auto', marginTop: '20px' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Startup</th>
-                <th>Equity (%)</th>
-                <th>Valor Investido</th>
-                <th>Valuation Atual</th>
-                <th>ROI</th>
-                <th>Status</th>
-                <th>Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {myPortfolio.map(item => (
-                <tr key={item.id}>
-                  <td><strong>{item.startup}</strong></td>
-                  <td>{item.equity}</td>
-                  <td>{item.invested}</td>
-                  <td>{item.currentVal}</td>
-                  <td
-                    style={{
-                      color: item.roi.startsWith('+') ? '#10b981' : '#ef4444',
-                      fontWeight: 600
-                    }}
-                  >
-                    {item.roi}
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        item.status === 'Risco' ? 'badge-warning' : 'badge-success'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="btn"
-                      style={{ padding: '5px 10px', fontSize: '0.75rem', background: 'var(--dm-bg)' }}
-                      onClick={() => ctx?.setModal?.({ open: true, message: t('config.openingReports') + ' ' + item.startup })}
-                    >
-                      Relatórios
-                    </button>
-                  </td>
+          {loading ? (
+            <p>A carregar carteira...</p>
+          ) : rows.length === 0 ? (
+            <p>Sem oportunidades com conversa ativa no momento.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Startup</th>
+                  <th>Setor</th>
+                  <th>Capital Solicitado</th>
+                  <th>Score IA</th>
+                  <th>Status</th>
+                  <th>Empreendedor</th>
+                  <th>Ação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((item) => (
+                  <tr key={item.id}>
+                    <td><strong>{item.startup}</strong></td>
+                    <td>{item.sector}</td>
+                    <td>{formatKz(item.requested)}</td>
+                    <td>
+                      <span className={`badge ${item.score >= 80 ? "badge-success" : item.score >= 60 ? "badge-warning" : "badge-info"}`}>
+                        {item.score || "-"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge ${item.status === "active" ? "badge-success" : "badge-warning"}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td>{item.owner}</td>
+                    <td>
+                      <button
+                        className="btn btn-outline"
+                        style={{ width: "auto", padding: "6px 10px" }}
+                        onClick={() => ctx?.openChatConversation?.({
+                          userId: Number(item.ownerUserId || 0),
+                          name: item.owner || "Empreendedor",
+                          role: "empreendedor",
+                          avatarUrl: item.ownerAvatarUrl || null,
+                          subtitle: `${item.startup || "Projeto"} • ${item.sector || "Setor"}`,
+                        }, { pageId: "propostas" })}
+                        disabled={!Number(item.ownerUserId || 0)}
+                      >
+                        Contactar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
   </>);
 }
 function Analytics() {
-  return( <>
-    <div className="analytics-container">
-      <div className="dashboard-card" style={{marginBottom: '25px', display: 'flex', justifyContent:' space-between', alignItems: 'center'}}>
-        <div>
-          <h3 style={{margin: '0'}}>Análise de Mercado & Performance</h3>
-          <p style={{margin:' 5px 0 0 0', color:' var(--dm-text-muted)', fontSize: '0.85rem'}}>Dados baseados em tendências reais do ecossistema AngoStart.</p>
-        </div>
-        <select className="input-field form-input" style={{padding: '8px 15px' , borderRadius: '8px', border:' 1px solid var(--dm-border)'}}>
-          <option>Últimos 12 meses</option>
-          <option>Últimos 6 meses</option>
-          <option>Este Ano (2026)</option>
-        </select>
-      </div>
+  const ctx = useContext(AppContext);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("12m");
+  const [ideas, setIdeas] = useState([]);
 
-      <div style={{display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '25px'}}>
-        
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getMarketplaceIdeas();
+        if (!mounted) return;
+        setIdeas(data || []);
+      } catch (err) {
+        if (!mounted) return;
+        setIdeas([]);
+        ctx?.setModal?.({ open: true, message: `Falha ao carregar analytics: ${err.message}` });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const now = new Date();
+  const monthsToShow = period === "6m" ? 6 : period === "year" ? 12 : 12;
+  const monthBuckets = [];
+  for (let i = monthsToShow - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    monthBuckets.push({ key, label: d.toLocaleDateString("pt-PT", { month: "short" }), count: 0 });
+  }
+  const monthMap = new Map(monthBuckets.map((m) => [m.key, m]));
+  for (const idea of ideas || []) {
+    const dt = new Date(idea?.created_at || "");
+    if (Number.isNaN(dt.getTime())) continue;
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    const row = monthMap.get(key);
+    if (row) row.count += 1;
+  }
+  const maxMonthCount = Math.max(1, ...monthBuckets.map((m) => m.count));
+
+  const sectorMap = new Map();
+  for (const idea of ideas || []) {
+    const s = String(idea?.sector || "outros").trim() || "outros";
+    sectorMap.set(s, (sectorMap.get(s) || 0) + 1);
+  }
+  const topSectors = Array.from(sectorMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  const maxSector = Math.max(1, ...(topSectors.map(([, count]) => count)));
+  const sectorPalette = [
+    "var(--primary-600)",
+    "var(--primary-500)",
+    "var(--primary-400)",
+    "var(--primary-300)",
+  ];
+
+  const scoredIdeas = [...(ideas || [])]
+    .filter((i) => Number.isFinite(Number(i?.viability_score)))
+    .sort((a, b) => Number(b?.viability_score || 0) - Number(a?.viability_score || 0))
+    .slice(0, 8);
+
+  const toRisk = (score) => {
+    const n = Number(score || 0);
+    if (n >= 80) return { label: "Baixo", color: "#10b981", badge: "badge-success" };
+    if (n >= 60) return { label: "Médio", color: "#f59e0b", badge: "badge-warning" };
+    return { label: "Alto", color: "#ef4444", badge: "badge-info" };
+  };
+  const toTraction = (idea) => {
+    const status = String(idea?.status || "");
+    if (status === "active") return { text: "↑ 8%", color: "#10b981" };
+    if (status === "submitted") return { text: "↑ 3%", color: "#10b981" };
+    if (status === "analyzing") return { text: "↓ 1%", color: "#ef4444" };
+    return { text: "0%", color: "var(--dm-text-muted)" };
+  };
+
+  return (
+    <>
+      <div className="analytics-container">
+        <div className="dashboard-card" style={{ marginBottom: '25px', display: 'flex', justifyContent: ' space-between', alignItems: 'center', gap: "10px", flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ margin: '0' }}>Análise de Mercado & Performance</h3>
+            <p style={{ margin: ' 5px 0 0 0', color: ' var(--dm-text-muted)', fontSize: '0.85rem' }}>Dados dinâmicos do marketplace da base de dados.</p>
+          </div>
+          <select
+            className="input-field form-input"
+            style={{ padding: '8px 15px', borderRadius: '8px', border: ' 1px solid var(--dm-border)' }}
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+          >
+            <option value="12m">Últimos 12 meses</option>
+            <option value="6m">Últimos 6 meses</option>
+            <option value="year">Este Ano</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '25px' }}>
+          <div className="dashboard-card">
+            <h4 className="dashboard-card-title">Crescimento Médio do Portfólio</h4>
+            <p className="dashboard-card-description">Evolução de oportunidades publicadas no período selecionado.</p>
+            {loading ? (
+              <p style={{ marginTop: "18px" }}>A carregar gráfico...</p>
+            ) : (
+              <>
+                <div style={{ height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 10px', borderBottom: '2px solid var(--dm-border)', borderLeft: '2px solid var(--dm-border)', background: 'linear-gradient(180deg, var(--primary-50) 0%, transparent 70%)', borderRadius: '8px 8px 0 0' }}>
+                  {monthBuckets.map((m) => {
+                    const barHeight = Math.max(8, Math.round((m.count / maxMonthCount) * 100));
+                    return (
+                      <div
+                        key={m.key}
+                        style={{
+                          width: `${Math.max(5, Math.floor(90 / monthsToShow))}%`,
+                          height: `${barHeight}%`,
+                          position: 'relative',
+                          transform: 'perspective(500px) rotateX(0deg)',
+                          transformStyle: 'preserve-3d',
+                        }}
+                        title={`${m.label}: ${m.count}`}
+                      >
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(180deg, var(--primary-500) 0%, var(--primary-700) 100%)',
+                            border: '1px solid var(--primary-600)',
+                            borderRadius: '4px 4px 0 0',
+                            boxShadow: '0 4px 10px rgba(15, 23, 42, 0.12)',
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            left: '0',
+                            width: '100%',
+                            height: '6px',
+                            background: 'linear-gradient(180deg, var(--primary-200) 0%, var(--primary-400) 100%)',
+                            borderTopLeftRadius: '4px',
+                            borderTopRightRadius: '4px',
+                            transform: 'skewX(-35deg)',
+                            transformOrigin: 'left bottom',
+                            opacity: 0.95,
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '0',
+                            right: '-6px',
+                            width: '6px',
+                            height: '100%',
+                            background: 'linear-gradient(180deg, var(--primary-700) 0%, var(--primary-900) 100%)',
+                            transform: 'skewY(-35deg)',
+                            transformOrigin: 'left top',
+                            opacity: 0.9,
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--dm-text-muted)' }}>
+                  {monthBuckets.map((m) => <span key={`${m.key}-lb`}>{m.label}</span>)}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="dashboard-card">
+            <h4 className="dashboard-card-title">Setores em Alta (Angola)</h4>
+            <div style={{ marginTop: '15px' }}>
+              {loading ? (
+                <p>A carregar setores...</p>
+              ) : topSectors.length === 0 ? (
+                <p>Sem dados suficientes.</p>
+              ) : (
+                topSectors.map(([sector, count], idx) => (
+                  <div key={sector} style={{ marginBottom: '15px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
+                      <span>{sector}</span>
+                      <span style={{ color: sectorPalette[idx % sectorPalette.length], fontWeight: 'bold' }}>
+                        {count} {count === 1 ? "ideia" : "ideias"}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px' }}>
+                      <div
+                        style={{
+                          width: `${Math.max(8, Math.round((count / maxSector) * 100))}%`,
+                          background: sectorPalette[idx % sectorPalette.length],
+                          height: '100%',
+                          borderRadius: '4px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="dashboard-card">
-          <h4 className="dashboard-card-title">Crescimento Médio do Portfólio</h4>
-          <p className="dashboard-card-description">Evolução do valuation das suas startups investidas.</p>
-          
-          <div style={{height: '200px', marginTop: '30px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding:' 0 10px', borderBottom:' 2px solid var(--dm-border)', borderLeft: '2px solid var(--dm-border)'}}>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jan"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Fev"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Mar"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Abr"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Maio"></div>
-            <div style={{width: '10%', background: '#e0e7ff', height:' 30%', borderRadius:' 4px 4px 0 0'}} title="Jun"></div>
-
-          </div>
-          <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--dm-text-muted)'}}>
-            <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
-          </div>
-        </div>
-
-        <div className="dashboard-card">
-          <h4 className="dashboard-card-title">Setores em Alta (Angola)</h4>
-          <div style={{marginTop:' 15px'}}>
-            <div style={{marginBottom: '15px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px'}}>
-                <span>Fintech</span>
-                <span style={{color: '#10b981', fontWeight: 'bold'}}>+42%</span>
-              </div>
-              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
-                <div style={{width: '90%', background:' #10b981', height: '100%', borderRadius: '4px'}}></div>
-              </div>
-            </div>
-            <div style={{marginBottom: '15px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px'}}>
-                <span>AgriTech</span>
-                <span style={{color: '#10b981', fontWeight: 'bold'}}>+28%</span>
-              </div>
-              <div style={{width: '100%', background: 'var(--dm-bg)', height: '8px', borderRadius: '4px'}}>
-                <div style={{width:' 65%', background: 'var(--primary-600)', height: '100%', borderRadius: '4px'}}></div>
-              </div>
-            </div>
-            <div style={{marginBottom: '15px'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px'}}>
-                <span>EdTech</span>
-                <span style={{color: '#f59e0b', fontWeight: 'bold'}}>+12%</span>
-              </div>
-              <div style={{width: '100%', background: 'var(--dm-bg)', height:' 8px', borderRadius: '4px'}}>
-                <div style={{width: '40%', background: '#f59e0b', height: '100%', borderRadius: '4px'}}></div>
-              </div>
-            </div>
+          <h3 className="dashboard-card-title">Análise Comparativa de Risco (Score IA)</h3>
+          <div style={{ overflowX: 'auto', marginTop: '20px' }}>
+            {loading ? (
+              <p>A carregar análise de risco...</p>
+            ) : scoredIdeas.length === 0 ? (
+              <p>Sem ideias com score IA disponível.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Startup</th>
+                    <th>Setor</th>
+                    <th>Tração Mensal</th>
+                    <th>Score IA Atual</th>
+                    <th>Projeção 6m</th>
+                    <th>Nível de Risco</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scoredIdeas.map((idea) => {
+                    const score = Number(idea?.viability_score || 0);
+                    const projection = Math.min(100, Math.max(0, score + (score >= 80 ? 3 : score >= 60 ? 2 : 1)));
+                    const risk = toRisk(score);
+                    const traction = toTraction(idea);
+                    return (
+                      <tr key={idea.id}>
+                        <td><strong>{idea.title || "-"}</strong></td>
+                        <td>{idea.sector || "-"}</td>
+                        <td><span style={{ color: traction.color }}>{traction.text}</span></td>
+                        <td><span className={`badge ${risk.badge}`}>{score || "-"}</span></td>
+                        <td>{projection.toFixed(1)}</td>
+                        <td style={{ color: risk.color }}>{risk.label}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
-
-      <div className="dashboard-card">
-        <h3 className="dashboard-card-title">Análise Comparativa de Risco (Score IA)</h3>
-        <div style={{overflowX: 'auto', marginTop: '20px'}}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Startup</th>
-                <th>Setor</th>
-                <th>Tração Mensal</th>
-                <th>Score IA Atual</th>
-                <th>Projeção 6m</th>
-                <th>Nível de Risco</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>SolarPay</strong></td>
-                <td>Energia</td>
-                <td><span style={{color: '#10b981'}}>↑ 15%</span></td>
-                <td><span className="badge badge-success">92</span></td>
-                <td>95.5</td>
-                <td style={{color: '#10b981'}}>Baixo</td>
-              </tr>
-              <tr>
-                <td><strong>Kwanza Pay</strong></td>
-                <td>Fintech</td>
-                <td><span style={{color: '#10b981'}}>↑ 8%</span></td>
-                <td><span className="badge badge-success">88</span></td>
-                <td>91.2</td>
-                <td style={{color: '#10b981'}}>Baixo</td>
-              </tr>
-              <tr>
-                <td><strong>AgroFácil</strong></td>
-                <td>AgriTech</td>
-                <td><span style={{color: '#ef4444'}}>↓ 2%</span></td>
-                <td><span className="badge badge-warning">75</span></td>
-                <td>78.0</td>
-                <td style={{color: '#f59e0b'}}>Médio</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </>);
+    </>
+  );
 }
 function Propostas() {
   const ctx = useContext(AppContext);
@@ -1767,9 +2229,11 @@ function Propostas() {
 
   return (
     <ChatWindow
-      title="Propostas e Conversas"
+      title="Propostas"
       contacts={contacts}
       currentUserId={currentUserId}
+      initialContact={ctx?.pendingChatTarget}
+      onInitialContactConsumed={ctx?.clearPendingChatTarget}
       emptyText="Sem propostas disponíveis para conversa no momento."
     />
   );
@@ -2528,6 +2992,214 @@ function Usuarios() {
     </>
   );
 }
+
+function Administradores() {
+  const ctx = useContext(AppContext);
+// Se a coluna admin_category ainda não existir na BD, adminCategory pode vir null.
+// Nesse caso, por segurança assumimos que qualquer admin logado é "primary".
+const currentAdminCategory = ctx?.currentUser?.adminCategory || "primary";
+  const isPrimary = currentAdminCategory === "primary";
+
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("adicionar");
+
+  const [form, setForm] = useState({ name: "", email: "", password: "", adminCategory: "secondary" });
+  const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const loadAdmins = async () => {
+    setLoading(true);
+    try {
+      const data = await getAdminUsers();
+      const onlyAdmins = (data || []).filter((u) => u.role === "admin");
+      setAdmins(onlyAdmins);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: `Falha ao carregar administradores: ${err.message}` });
+      setAdmins([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAdmins();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const categoryLabel = (cat) => {
+    if (cat === "primary") return "Administrador Principal";
+    if (cat === "secondary") return "Administrador Secundário";
+    return "Categoria desconhecida";
+  };
+
+  const categoryBadgeClass = (cat) => (cat === "primary" ? "badge-primary" : cat === "secondary" ? "badge-info" : "badge-warning");
+
+  const handleAddAdmin = async () => {
+    if (!isPrimary) return;
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+      ctx?.setModal?.({ open: true, message: "Preencha Nome, Email e Senha do novo admin." });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await createAdmin(form);
+      setForm({ name: "", email: "", password: "", adminCategory: "secondary" });
+      setActiveTab("ver");
+      await loadAdmins();
+      if (res?.adminCategorySet === false) {
+        ctx?.setModal?.({
+          open: true,
+          message: "Admin criado, mas não foi possível guardar o tipo (a coluna admin_category ainda pode não existir na BD).",
+        });
+      } else {
+        ctx?.setModal?.({ open: true, message: "Admin criado com sucesso." });
+      }
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err?.message || "Falha ao criar administrador." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (adminId) => {
+    if (!isPrimary) return;
+    setRemovingId(Number(adminId));
+    try {
+      await removeSecondaryAdmin(adminId);
+      await loadAdmins();
+      ctx?.setModal?.({ open: true, message: "Administrador secundário removido com sucesso." });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err?.message || "Falha ao remover administrador." });
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  return (
+    <div style={{ padding: "10px" }}>
+      <div className="dashboard-card" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <div>
+          <h2 className="dashboard-card-title">Administradores</h2>
+          <p className="dashboard-card-description">Gerencie administradores principais e secundários.</p>
+        </div>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+          <span className={`badge ${categoryBadgeClass(currentAdminCategory)}`}>{categoryLabel(currentAdminCategory)}</span>
+          <button className={activeTab === "adicionar" ? "btn btn-primary" : "btn btn-outline"} style={{ width: "auto" }} onClick={() => setActiveTab("adicionar")}>Adicionar</button>
+          <button className={activeTab === "ver" ? "btn btn-primary" : "btn btn-outline"} style={{ width: "auto" }} onClick={() => setActiveTab("ver")}>Ver admins</button>
+        </div>
+      </div>
+
+      {activeTab === "adicionar" && (
+        <div className="dashboard-card" style={{ marginBottom: "16px" }}>
+          <h3 className="dashboard-card-title" style={{ fontSize: "1.1rem" }}>Adicionar administrador</h3>
+          <p className="dashboard-card-description">Escolhe o tipo de admin. Apenas o Administrador Principal pode adicionar.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginTop: "14px" }}>
+            <div>
+              <label className="form-label">Nome</label>
+              <input className="form-input" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ex: Nome Completo" />
+            </div>
+            <div>
+              <label className="form-label">Email</label>
+              <input className="form-input" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="ex: nomecompleto@gmail.com" />
+            </div>
+            <div>
+              <label className="form-label">Tipo de admin</label>
+              <select
+                className="form-input"
+                value={form.adminCategory}
+                onChange={(e) => setForm((p) => ({ ...p, adminCategory: e.target.value }))}
+              >
+                <option value="primary">Administrador Principal</option>
+                <option value="secondary">Administrador Secundário</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Senha</label>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <input
+                  className="form-input"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                  placeholder="••••••••"
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ width: "auto", padding: "6px 10px" }}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showPassword ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn btn-primary" onClick={handleAddAdmin} disabled={!isPrimary || saving}>
+              {saving ? "A criar..." : "Criar admin secundário"}
+            </button>
+          </div>
+          {!isPrimary && (
+            <div style={{ marginTop: "12px", color: "var(--neutral-500)", fontSize: "0.9rem" }}>
+              O teu perfil é secundário. Não podes adicionar administradores.
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="dashboard-card">
+        <h3 className="dashboard-card-title" style={{ fontSize: "1.1rem" }}>Lista de administradores</h3>
+        {loading ? (
+          <p>A carregar administradores...</p>
+        ) : admins.length === 0 ? (
+          <p>Sem administradores encontrados.</p>
+        ) : (
+          <div style={{ overflowX: "auto", marginTop: "12px" }}>
+            <table className="data-table" style={{ minWidth: "680px" }}>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Email</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {admins.map((a) => {
+                  const isSecondary = (a.adminCategory || "secondary") === "secondary";
+                  return (
+                    <tr key={a.id}>
+                      <td><strong>{a.name}</strong></td>
+                      <td><span className={`badge ${categoryBadgeClass(a.adminCategory || "secondary")}`}>{categoryLabel(a.adminCategory || "secondary")}</span></td>
+                      <td>{a.email}</td>
+                      <td>
+                        {isSecondary && isPrimary && (
+                          <button
+                            className="btn btn-outline"
+                            style={{ width: "auto", padding: "6px 10px" }}
+                            disabled={removingId === Number(a.id)}
+                            onClick={() => handleRemoveAdmin(a.id)}
+                          >
+                            {removingId === Number(a.id) ? "A remover..." : "Remover"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Ideias() {
   const ctx = useContext(AppContext);
   const [loading, setLoading] = useState(true);
@@ -3553,11 +4225,35 @@ function MentoradosDynamic() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {grouped.map(([entrepreneurId, items]) => {
             const first = items[0];
+            const entrepreneur = first?.entrepreneur || {};
             return (
               <div key={entrepreneurId} className="dashboard-card">
-                <h4 style={{ marginTop: 0 }}>{first?.entrepreneur?.name || "Empreendedor"}</h4>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                  <div>
+                    <h4 style={{ marginTop: 0 }}>{entrepreneur?.name || "Empreendedor"}</h4>
                 <div style={{ fontSize: "0.9rem", color: "var(--neutral-600)" }}>
-                  {first?.entrepreneur?.email || "-"} • Negócio: {first?.entrepreneur?.businessName || "-"}
+                    {entrepreneur?.email || "-"} • Negócio: {entrepreneur?.businessName || "-"}
+                </div>
+                  </div>
+                  <button
+                    className="btn btn-outline"
+                    style={{ width: "auto", padding: "8px 12px", height: "fit-content" }}
+                    onClick={() =>
+                      ctx?.openChatConversation?.(
+                        {
+                          userId: Number(entrepreneurId),
+                          name: entrepreneur?.name || "Empreendedor",
+                          avatarUrl: entrepreneur?.avatarUrl || null,
+                          role: "empreendedor",
+                          subtitle: entrepreneur?.businessName ? `Negócio: ${entrepreneur.businessName}` : "Empreendedor",
+                        },
+                        { pageId: "mensagens" }
+                      )
+                    }
+                    disabled={!Number(entrepreneurId)}
+                  >
+                    Contactar
+                  </button>
                 </div>
                 <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "8px" }}>
                   <Info label="Total de sessões" value={items.length} />
@@ -3662,7 +4358,7 @@ function MensagensMentorDynamic() {
 
   return (
     <ChatWindow
-      title="Mensagens de Mentoria"
+      title="Mensagens"
       contacts={contacts}
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
@@ -3675,17 +4371,23 @@ function MensagensEmpreendedorLegacy() {
   const ctx = useContext(AppContext);
   const currentUserId = Number(ctx?.currentUser?.id || 0);
   const [requests, setRequests] = useState([]);
+  const [investors, setInvestors] = useState([]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await getMyMentorshipRequests();
+        const [mentorshipData, investorData] = await Promise.all([
+          getMyMentorshipRequests(),
+          getAvailableInvestors().catch(() => []),
+        ]);
         if (!mounted) return;
-        setRequests(data || []);
+        setRequests(mentorshipData || []);
+        setInvestors(investorData || []);
       } catch {
         if (!mounted) return;
         setRequests([]);
+        setInvestors([]);
       }
     })();
     return () => {
@@ -3711,6 +4413,34 @@ function MensagensEmpreendedorLegacy() {
     return Array.from(map.values());
   }, [requests]);
 
+  const investorContacts = useMemo(() => {
+    const map = new Map();
+    for (const inv of investors || []) {
+      const uid = Number(inv?.id || 0);
+      if (!uid || uid === currentUserId) continue;
+      if (!map.has(uid)) {
+        map.set(uid, {
+          userId: uid,
+          name: inv?.name || "Investidor",
+          avatarUrl: inv?.avatarUrl || null,
+          role: "investidor",
+          subtitle: inv?.profile?.investmentExperienceArea || "Investidor da plataforma",
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [investors, currentUserId]);
+
+  const allContacts = useMemo(() => {
+    const unique = new Map();
+    for (const c of [...investorContacts, ...contacts]) {
+      const uid = Number(c.userId || 0);
+      if (!uid) continue;
+      if (!unique.has(uid)) unique.set(uid, c);
+    }
+    return Array.from(unique.values());
+  }, [investorContacts, contacts]);
+
   const allowedUserIds = useMemo(
     () => (requests || [])
       .filter((r) => r.status === "accepted")
@@ -3721,11 +4451,13 @@ function MensagensEmpreendedorLegacy() {
 
   return (
     <ChatWindow
-      title="Mensagens de Mentoria"
-      contacts={contacts}
+      title="Mensagens"
+      contacts={allContacts}
       currentUserId={currentUserId}
-      allowedUserIds={allowedUserIds}
-      emptyText="Sem mentorias aceites para conversar no momento."
+      allowedUserIds={[...allowedUserIds, ...allContacts.map((c) => Number(c.userId)).filter(Boolean)]}
+      initialContact={ctx?.pendingChatTarget}
+      onInitialContactConsumed={ctx?.clearPendingChatTarget}
+      emptyText="Sem contactos disponíveis para conversa no momento."
     />
   );
 }
@@ -4868,6 +5600,7 @@ function AssinaturaPlano() {
           onSelectPlan={handleChangePlan}
           currentPlanCode={current?.planCode || ""}
           loadingPlanCode={savingPlan}
+          userRole={ctx?.currentUser?.role || "empreendedor"}
         />
       )}
     </div>
@@ -5511,15 +6244,29 @@ function Investidores() {
               "{inv.descricao}"
             </p>
 
-            {/* BOTÃO SABER MAIS */}
-            <button 
-              className="btn btn-primary" 
-              style={{ width: '100%', marginTop: 'auto' }}
-              onClick={() => handleOpenInvestorDetails(inv.id)}
-              disabled={loadingDetailsId === Number(inv.id)}
-            >
-              {loadingDetailsId === Number(inv.id) ? "A carregar..." : "Saber Mais"}
-            </button>
+            <div style={{ width: "100%", marginTop: "auto", display: "grid", gap: "8px" }}>
+              <button
+                className="btn btn-outline"
+                style={{ width: "100%" }}
+                onClick={() => ctx?.openChatConversation?.({
+                  userId: inv.id,
+                  name: inv.nome,
+                  avatarUrl: inv.imagem || null,
+                  role: "investidor",
+                  subtitle: inv.tipo || "Investidor",
+                }, { pageId: "mensagens" })}
+              >
+                Contactar
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ width: '100%' }}
+                onClick={() => handleOpenInvestorDetails(inv.id)}
+                disabled={loadingDetailsId === Number(inv.id)}
+              >
+                {loadingDetailsId === Number(inv.id) ? "A carregar..." : "Saber Mais"}
+              </button>
+            </div>
           </div>
         ))}
       </div>

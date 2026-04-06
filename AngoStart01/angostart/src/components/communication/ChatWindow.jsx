@@ -46,6 +46,9 @@ export default function ChatWindow({
   currentUserId = 0,
   allowedUserIds = [],
   emptyText = "Sem conversas disponíveis.",
+  initialContact = null,
+  onInitialContactConsumed = null,
+  showCalls = true,
 }) {
   const [localContacts, setLocalContacts] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -61,6 +64,21 @@ export default function ChatWindow({
   const [callHistory, setCallHistory] = useState([]);
   const bottomRef = useRef(null);
   const ringtoneIntervalRef = useRef(null);
+  const initialContactAppliedRef = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+
+  const normalizedInitialContact = useMemo(() => {
+    const id = Number(initialContact?.userId || initialContact?.id || 0);
+    if (!id) return null;
+    return {
+      userId: id,
+      name: initialContact?.name || "Utilizador",
+      role: initialContact?.role || "",
+      subtitle: initialContact?.subtitle || "",
+      avatarUrl: initialContact?.avatarUrl || null,
+    };
+  }, [initialContact]);
 
   const contactMap = useMemo(() => {
     const map = new Map();
@@ -75,11 +93,14 @@ export default function ChatWindow({
         avatarUrl: c.avatarUrl || null,
       });
     }
+    if (normalizedInitialContact?.userId) {
+      map.set(normalizedInitialContact.userId, normalizedInitialContact);
+    }
     for (const c of localContacts) {
       map.set(c.userId, c);
     }
     return map;
-  }, [contacts, localContacts]);
+  }, [contacts, localContacts, normalizedInitialContact]);
 
   const mergedContacts = useMemo(() => {
     const list = Array.from(contactMap.values());
@@ -88,6 +109,23 @@ export default function ChatWindow({
     return list.filter((c) => allowed.has(Number(c.userId)));
   }, [contactMap, allowedUserIds]);
   const selectedContact = mergedContacts.find((c) => Number(c.userId) === Number(selectedUserId)) || null;
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const apply = () => {
+      const next = !!mql.matches;
+      setIsMobile(next);
+      if (!next) setMobileChatOpen(false);
+    };
+    apply();
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", apply);
+      return () => mql.removeEventListener("change", apply);
+    }
+    // Safari antigo
+    mql.addListener(apply);
+    return () => mql.removeListener(apply);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -125,10 +163,49 @@ export default function ChatWindow({
   }, []);
 
   useEffect(() => {
-    if (!selectedUserId && mergedContacts.length > 0) {
+    if (!selectedUserId && mergedContacts.length > 0 && !isMobile) {
       setSelectedUserId(mergedContacts[0].userId);
     }
-  }, [mergedContacts, selectedUserId]);
+  }, [mergedContacts, selectedUserId, isMobile]);
+
+  useEffect(() => {
+    if (!normalizedInitialContact?.userId) {
+      initialContactAppliedRef.current = false;
+      return;
+    }
+    const targetId = Number(normalizedInitialContact.userId);
+    const exists = mergedContacts.some((c) => Number(c.userId) === targetId);
+    if (!exists) return;
+    setSelectedUserId(targetId);
+    if (!initialContactAppliedRef.current) {
+      initialContactAppliedRef.current = true;
+      if (isMobile) setMobileChatOpen(true);
+      if (typeof onInitialContactConsumed === "function") {
+        onInitialContactConsumed();
+      }
+    }
+  }, [mergedContacts, normalizedInitialContact, onInitialContactConsumed, isMobile]);
+
+  const groupedContacts = useMemo(() => {
+    const byKey = new Map();
+    const keyMeta = {
+      investidor: "Investidores",
+      mentor: "Mentores",
+      empreendedor: "Empreendedores",
+      admin: "Administração",
+      other: "Outros",
+    };
+    for (const c of mergedContacts) {
+      const roleKey = String(c.role || "").toLowerCase();
+      const key = keyMeta[roleKey] ? roleKey : "other";
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(c);
+    }
+    const order = ["investidor", "mentor", "empreendedor", "admin", "other"];
+    return order
+      .filter((k) => byKey.has(k))
+      .map((k) => ({ key: k, label: keyMeta[k], items: byKey.get(k) }));
+  }, [mergedContacts]);
 
   useEffect(() => {
     if (!selectedUserId) {
@@ -257,7 +334,7 @@ export default function ChatWindow({
   }, []);
 
   useEffect(() => {
-    if (!incomingCall) {
+    if (!showCalls || !incomingCall) {
       if (ringtoneIntervalRef.current) {
         clearInterval(ringtoneIntervalRef.current);
         ringtoneIntervalRef.current = null;
@@ -294,6 +371,7 @@ export default function ChatWindow({
   };
 
   const startCall = async (callType) => {
+    if (!showCalls) return;
     if (!selectedContact) return;
     const min = Math.min(Number(selectedContact.userId), Date.now());
     const channelName = `angostart-${min}-${Date.now()}`;
@@ -361,122 +439,169 @@ export default function ChatWindow({
 
   return (
     <>
-      <div className="responsive-split-layout" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "16px", minHeight: "500px" }}>
-        <div className="dashboard-card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "14px", borderBottom: "1px solid var(--dm-border)" }}>
-            <h3 style={{ margin: 0 }}>{title}</h3>
-            <p style={{ margin: "4px 0 0", color: "var(--neutral-500)", fontSize: "0.82rem" }}>Chat em tempo real e chamadas por Agora</p>
-          </div>
-          <div style={{ overflowY: "auto", flex: 1 }}>
-            {loadingContacts ? (
-              <div style={{ padding: "12px" }}>A carregar contactos...</div>
-            ) : mergedContacts.length === 0 ? (
-              <div style={{ padding: "12px", color: "var(--neutral-500)" }}>{emptyText}</div>
-            ) : (
-              mergedContacts.map((c) => {
-                const active = Number(selectedUserId) === Number(c.userId);
-                return (
-                  <div
-                    key={c.userId}
-                    onClick={() => setSelectedUserId(c.userId)}
-                    style={{
-                      padding: "12px",
-                      borderBottom: "1px solid var(--neutral-100)",
-                      cursor: "pointer",
-                      background: active ? "var(--primary-50)" : "transparent",
-                      borderLeft: active ? "3px solid var(--primary-600)" : "3px solid transparent",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ width: "28px", height: "28px", borderRadius: "50%", overflow: "hidden", background: "var(--primary-100)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-700)" }}>
-                          {c.avatarUrl ? (
-                            <img src={c.avatarUrl} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            String(c.name || "U").charAt(0).toUpperCase()
-                          )}
+      <div
+        className="responsive-split-layout"
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "300px 1fr",
+          gap: isMobile ? "0px" : "16px",
+          minHeight: isMobile ? "98vh" : "500px",
+          height: isMobile ? "98vh" : "calc(100vh - 220px)",
+          overflow: "hidden",
+        }}
+      >
+        {(!isMobile || !mobileChatOpen) && (
+          <div
+            className="dashboard-card"
+            style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0, height: "100%", flex: 1 }}
+          >
+            <div style={{ padding: "14px", borderBottom: "1px solid var(--dm-border)" }}>
+              <h3 style={{ margin: 0 }}>{title}</h3>
+              <p style={{ margin: "4px 0 0", color: "var(--neutral-500)", fontSize: "0.82rem" }}>Chat em tempo real e chamadas por Agora</p>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+              {loadingContacts ? (
+                <div style={{ padding: "12px" }}>A carregar contactos...</div>
+              ) : mergedContacts.length === 0 ? (
+                <div style={{ padding: "12px", color: "var(--neutral-500)" }}>{emptyText}</div>
+              ) : (
+                groupedContacts.map((group) => (
+                  <div key={group.key}>
+                    <div style={{ padding: "10px 12px 6px", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--neutral-500)", background: "var(--neutral-50)" }}>
+                      {group.label}
+                    </div>
+                    {group.items.map((c) => {
+                      const active = Number(selectedUserId) === Number(c.userId);
+                      return (
+                        <div
+                          key={c.userId}
+                          onClick={() => {
+                            setSelectedUserId(c.userId);
+                            if (isMobile) setMobileChatOpen(true);
+                          }}
+                          style={{
+                            padding: "12px",
+                            borderBottom: "1px solid var(--neutral-100)",
+                            cursor: "pointer",
+                            background: active ? "var(--primary-50)" : "transparent",
+                            borderLeft: active ? "3px solid var(--primary-600)" : "3px solid transparent",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{ width: "28px", height: "28px", borderRadius: "50%", overflow: "hidden", background: "var(--primary-100)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--primary-700)" }}>
+                                {c.avatarUrl ? (
+                                  <img src={c.avatarUrl} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                ) : (
+                                  String(c.name || "U").charAt(0).toUpperCase()
+                                )}
+                              </div>
+                              <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
+                            </div>
+                            <UserOnlineIndicator online={onlineSet.has(Number(c.userId))} />
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{c.subtitle || c.role || "-"}</div>
                         </div>
-                        <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
-                      </div>
-                      <UserOnlineIndicator online={onlineSet.has(Number(c.userId))} />
-                    </div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{c.subtitle || c.role || "-"}</div>
+                      );
+                    })}
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="dashboard-card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--dm-border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            <div>
-              <strong>{selectedContact?.name || "Selecione uma conversa"}</strong>
-              {selectedContact ? <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{selectedContact.role || "Utilizador"}</div> : null}
-            </div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button className="btn btn-outline" style={{ width: "auto", padding: "6px 10px" }} onClick={() => startCall("voice")} disabled={!selectedContact}>Chamada de voz</button>
-              <button className="btn btn-primary" style={{ width: "auto", padding: "6px 10px" }} onClick={() => startCall("video")} disabled={!selectedContact}>Videochamada</button>
+                ))
+              )}
             </div>
           </div>
+        )}
 
-          {callBanner ? <div style={{ padding: "8px 14px", background: "var(--primary-50)", color: "var(--primary-700)", borderBottom: "1px solid var(--primary-200)" }}>{callBanner}</div> : null}
-          {error ? <div style={{ padding: "8px 14px", color: "var(--error-500)" }}>{error}</div> : null}
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "var(--neutral-50)" }}>
-            {loadingMessages ? (
-              <div>A carregar mensagens...</div>
-            ) : messages.length === 0 ? (
-              <div style={{ color: "var(--neutral-500)" }}>Sem mensagens nesta conversa.</div>
-            ) : (
-              messages.map((m) => {
-                const mine = Number(m.senderId) === Number(currentUserId);
-                return (
-                  <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "78%" }}>
-                    <div style={{ padding: "10px 12px", borderRadius: "10px", background: mine ? "var(--primary-600)" : "var(--dm-surface)", color: mine ? "var(--on-primary)" : "var(--dm-text)", border: mine ? "none" : "1px solid var(--dm-border)" }}>
-                      {m.message}
-                    </div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--neutral-500)", marginTop: "2px", textAlign: mine ? "right" : "left" }}>{formatDateTime(m.timestamp)}</div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {!!selectedContact && callHistory.length > 0 && (
-            <div style={{ borderTop: "1px solid var(--dm-border)", padding: "8px 10px", background: "var(--dm-surface)" }}>
-              <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)", marginBottom: "4px" }}>Histórico recente de chamadas</div>
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {callHistory.slice(0, 4).map((c) => (
-                  <span key={c.id} className={`badge ${c.status === "accepted" ? "badge-success" : c.status === "rejected" ? "badge-warning" : "badge-primary"}`}>
-                    {c.callType === "voice" ? "Voz" : "Vídeo"} • {c.status}
-                  </span>
-                ))}
+        {(!isMobile || mobileChatOpen) && (
+          <div
+            className="dashboard-card"
+            style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0, height: "100%", flex: 1 }}
+          >
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--dm-border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {isMobile && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ width: "auto", padding: "6px 10px" }}
+                    onClick={() => setMobileChatOpen(false)}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+                      <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                    Voltar
+                  </button>
+                )}
+                <div>
+                  <strong>{selectedContact?.name || "Selecione uma conversa"}</strong>
+                  {selectedContact ? <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{selectedContact.role || "Utilizador"}</div> : null}
+                </div>
               </div>
+              {showCalls ? (
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button className="btn btn-outline" style={{ width: "auto", padding: "6px 10px" }} onClick={() => startCall("voice")} disabled={!selectedContact}>Chamada de voz</button>
+                  <button className="btn btn-primary" style={{ width: "auto", padding: "6px 10px" }} onClick={() => startCall("video")} disabled={!selectedContact}>Videochamada</button>
+                </div>
+              ) : null}
             </div>
-          )}
 
-          <div style={{ borderTop: "1px solid var(--dm-border)", padding: "10px", display: "flex", gap: "8px" }}>
-            <input
-              className="form-input"
-              placeholder={selectedContact ? "Escreva uma mensagem..." : "Selecione um contacto"}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") sendMessage();
-              }}
-              disabled={!selectedContact}
-              style={{ flex: 1 }}
-            />
-            <button className="btn btn-primary" style={{ width: "auto" }} onClick={sendMessage} disabled={!selectedContact || !text.trim()}>
-              Enviar
-            </button>
+            {callBanner ? <div style={{ padding: "8px 14px", background: "var(--primary-50)", color: "var(--primary-700)", borderBottom: "1px solid var(--primary-200)" }}>{callBanner}</div> : null}
+            {error ? <div style={{ padding: "8px 14px", color: "var(--error-500)" }}>{error}</div> : null}
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px", display: "flex", flexDirection: "column", gap: "8px", background: "var(--neutral-50)", minHeight: 0 }}>
+              {loadingMessages ? (
+                <div>A carregar mensagens...</div>
+              ) : messages.length === 0 ? (
+                <div style={{ color: "var(--neutral-500)" }}>Sem mensagens nesta conversa.</div>
+              ) : (
+                messages.map((m) => {
+                  const mine = Number(m.senderId) === Number(currentUserId);
+                  return (
+                    <div key={m.id} style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "78%" }}>
+                      <div style={{ padding: "10px 12px", borderRadius: "10px", background: mine ? "var(--primary-600)" : "var(--dm-surface)", color: mine ? "var(--on-primary)" : "var(--dm-text)", border: mine ? "none" : "1px solid var(--dm-border)" }}>
+                        {m.message}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--neutral-500)", marginTop: "2px", textAlign: mine ? "right" : "left" }}>{formatDateTime(m.timestamp)}</div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            {showCalls && !!selectedContact && callHistory.length > 0 && (
+              <div style={{ borderTop: "1px solid var(--dm-border)", padding: "8px 10px", background: "var(--dm-surface)" }}>
+                <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)", marginBottom: "4px" }}>Histórico recente de chamadas</div>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {callHistory.slice(0, 4).map((c) => (
+                    <span key={c.id} className={`badge ${c.status === "accepted" ? "badge-success" : c.status === "rejected" ? "badge-warning" : "badge-primary"}`}>
+                      {c.callType === "voice" ? "Voz" : "Vídeo"} • {c.status}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ borderTop: "1px solid var(--dm-border)", padding: "10px", display: "flex", gap: "8px" }}>
+              <input
+                className="form-input"
+                placeholder={selectedContact ? "Escreva uma mensagem..." : "Selecione um contacto"}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendMessage();
+                }}
+                disabled={!selectedContact}
+                style={{ flex: 1 }}
+              />
+              <button className="btn btn-primary" style={{ width: "auto" }} onClick={sendMessage} disabled={!selectedContact || !text.trim()}>
+                Enviar
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {incomingCall && (
+      {showCalls && incomingCall && (
         <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10020, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }}>
           <div className="modal-box" style={{ background: "var(--dm-surface)", borderRadius: "10px", border: "1px solid var(--dm-border)", padding: "16px", width: "min(420px, 95vw)" }}>
             <h3 style={{ marginTop: 0 }}>Chamada recebida</h3>
@@ -491,7 +616,7 @@ export default function ChatWindow({
         </div>
       )}
 
-      <VideoCallModal open={!!activeCall} session={activeCall} onClose={closeCall} />
+      {showCalls ? <VideoCallModal open={!!activeCall} session={activeCall} onClose={closeCall} /> : null}
     </>
   );
 }

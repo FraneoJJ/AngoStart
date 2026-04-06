@@ -43,4 +43,18 @@ router.patch(
   adminController.updateVerification
 );
 
+router.post(
+  "/admins",
+  requireAuth,
+  requireRole("admin"),
+  adminController.createSecondaryAdmin
+);
+
+router.delete(
+  "/admins/:id",
+  requireAuth,
+  requireRole("admin"),
+  adminController.removeSecondaryAdmin
+);
+
 export default router;

@@ -3,7 +3,7 @@ import { pool } from "../config/db.js";
 export async function listUsersWithProfiles() {
   const [rows] = await pool.execute(
     `SELECT
-      u.id, u.name, u.email, u.role, u.created_at,
+      u.id, u.name, u.email, u.role, u.admin_category, u.created_at,
       ep.user_id AS ep_user_id,
       ep.phone AS ep_phone, ep.business_name, ep.business_sector, ep.business_stage, ep.business_location,
       ep.verification_status AS ep_verification_status, ep.verification_id AS ep_verification_id,
