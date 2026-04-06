@@ -17,27 +17,40 @@ import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { env } from "./config/env.js";
 
 const app = express();
-const allowedOrigins = [
-  env.FRONTEND_ORIGIN,
-  "http://127.0.0.1:5173",
-  "http://localhost:5173",
-];
+const allowedOrigins = new Set(
+  [
+    env.FRONTEND_ORIGIN,
+    "https://franeojj.github.io",
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+  ]
+    .filter(Boolean)
+    .map((origin) => origin.replace(/\/$/, ""))
+);
+
+const corsOptions = {
+  origin(origin, callback) {
+    // Permite chamadas sem Origin (curl/server-to-server/health checks).
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.has(normalizedOrigin)) return callback(null, true);
+
+    if (env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origem CORS não permitida: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
 
 app.use(helmet());
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Permite chamadas sem Origin (scripts/server-side) e localhost em modo dev.
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`Origem CORS não permitida: ${origin}`));
-    },
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 app.use(morgan("dev"));
 
