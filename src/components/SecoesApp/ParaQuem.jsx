@@ -89,7 +89,7 @@ const ParaQuem = () => {
                 <Link to="/criar-conta" className="btn btn-primary mt-6">Explorar Oportunidades</Link>
               </div>
               <div className="tab-image">
-                <img src="/download (2).jpg" 
+                <img src="/AngoStart/download (2).jpg" 
                      alt="Investidor" className="rounded-xl"/>
               </div>
             </div>
@@ -110,7 +110,7 @@ const ParaQuem = () => {
                 <Link to="/criar-conta" className="btn btn-primary mt-6">Torne-se Mentor</Link>
               </div>
               <div className="tab-image">
-                <img src="/Professional Black Excellence Art - Diverse Business Leaders in Modern Conference Room.jpg" 
+                <img src="/AngoStart/Professional Black Excellence Art - Diverse Business Leaders in Modern Conference Room.jpg" 
                      alt="Mentor" className="rounded-xl"/>
               </div>
             </div>
