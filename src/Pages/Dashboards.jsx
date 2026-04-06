@@ -1457,6 +1457,7 @@ function MensagensAdmins() {
             </div>
 
             {/* <!-- Demo Credentials --> */}
+            {/* 
             <div className="demo-box">
               <p className="demo-title">Usuários de teste</p>
               <div className="demo-list">
@@ -1466,6 +1467,7 @@ function MensagensAdmins() {
                 <p>• admin@gmail.com / 123456</p>
               </div>
             </div>
+            */}
           </form>
         </div>
       </div>
