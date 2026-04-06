@@ -40,7 +40,7 @@ const Mentores = () => {
               </svg>
               Disponível
             </div>
-            <Link to={"/login"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
+            <Link to={"/dashboard"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
           </div>
         </div>
 
@@ -70,7 +70,7 @@ const Mentores = () => {
               </svg>
               Disponível
             </div>
-            <Link to={"/login"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
+            <Link to={"/dashboard"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
           </div>
         </div>
 
@@ -100,13 +100,13 @@ const Mentores = () => {
               </svg>
               Ocupado
             </div>
-            <Link to={"/login"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
+            <Link to={"/dashboard"} className="btn btn-outline btn-sm mt-3">Ver Perfil</Link>
           </div>
         </div>
       </div>
 
       <div className="text-center mt-8">
-        <Link to={"/login"} className="btn btn-primary btn-lg">
+        <Link to={"/dashboard"} className="btn btn-primary btn-lg">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="mr-2">
             <circle cx="11" cy="11" r="8"/>
             <path d="M21 21l-4.35-4.35"/>
