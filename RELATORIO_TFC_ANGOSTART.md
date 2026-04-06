@@ -15,7 +15,7 @@ O presente Trabalho de Fim de Curso apresenta o desenvolvimento da plataforma An
 
 O objetivo principal consiste em disponibilizar uma solução digital que permita ao empreendedor registrar ideias, obter questionários dinâmicos, realizar análise de viabilidade assistida por inteligência artificial, acompanhar requisitos legais em Angola e interagir com funcionalidades de gestão por perfil (empreendedor, mentor, investidor e administrador).
 
-Do ponto de vista tecnológico, o sistema utiliza React + Vite no frontend e Node.js + Express no backend, com MySQL como sistema de gestão de base de dados. A segurança baseia-se em autenticação JWT, controle de acesso por papéis (RBAC), validação de dados com Zod, e middleware de proteção por plano de assinatura. Também estão presentes integração de geolocalização (Google Maps por embed), módulo de relatórios e exportação PDF.
+Do ponto de vista tecnológico, o sistema utiliza React + Vite no frontend e Node.js + Express no backend, com MySQL como sistema de gestão de base de dados. A segurança baseia-se em autenticação JWT, controle de acesso por papéis (RBAC), validação de dados com Zod, middleware de proteção por plano de assinatura e política CORS em produção (GitHub Pages + Railway). Também estão presentes integração de geolocalização (Google Maps por embed), módulo de relatórios e exportação PDF.
 
 Os resultados esperados incluem: aumento da capacidade de validação de ideias em fases iniciais, melhoria da tomada de decisão para empreendedores angolanos, redução de erros de estruturação legal e fortalecimento do ecossistema nacional de inovação por meio de uma plataforma SaaS modular e escalável.
 
@@ -131,10 +131,11 @@ A pesquisa é aplicada, de abordagem mista (qualitativa-quantitativa), com natur
 - **Frontend:** React 19, Vite, CSS;
 - **Backend:** Node.js, Express;
 - **Base de dados:** MySQL;
-- **Segurança:** JWT, bcryptjs, helmet, CORS;
+- **Segurança:** JWT, bcryptjs, helmet, CORS com whitelist por origem;
 - **Validação:** Zod;
 - **Relatórios:** jsPDF, jspdf-autotable;
-- **Versionamento:** Git (repositório local).
+- **Hospedagem:** GitHub Pages (frontend) e Railway (backend/API);
+- **Versionamento:** Git + GitHub Actions (CI/CD).
 
 ## 3.3 Processo de desenvolvimento
 
@@ -260,25 +261,25 @@ O controle de acesso por feature está operacional no backend via middleware.
 No estado atual do código analisado:
 
 - Há elementos de interface relacionados à comunicação entre perfis;
-- Não há implementação backend operacional de WebSocket/Socket.IO ativa para chat em tempo real;
-- Não há módulo funcional de videochamadas em produção no estado corrente do projeto.
+- Há backend com inicialização de Socket.IO (`initSocket`) para eventos de chat e chamadas;
+- Há geração de tokens Agora na API para integração de voz/vídeo no frontend.
 
-Portanto, esta parte permanece como componente de evolução futura.
+Portanto, a comunicação em tempo real encontra-se implementada em versão funcional inicial, com espaço para evolução de escalabilidade e monitoramento.
 
 ## 4.7 Integração de APIs externas
 
 ### 4.7.1 Integrações efetivas no estado atual
 
 - Google Maps (embed e contexto geográfico);
-- Exportação PDF local (bibliotecas JS no frontend).
+- Exportação PDF local (bibliotecas JS no frontend);
+- Resend (email transacional para recuperação de senha);
+- Agora (tokens para voz e vídeo).
 
 ### 4.7.2 Integrações previstas na arquitetura, mas não concluídas operacionalmente
 
 - Stripe (pagamentos reais);
-- Resend (e-mail transacional);
 - Alibaba Cloud ID Verification (KYC automatizado);
-- Documentero (automação documental);
-- WebSockets para chat/chamadas.
+- Documentero (automação documental).
 
 ---
 
@@ -307,6 +308,17 @@ Com base no código-fonte analisado, destacam-se como implementadas:
 - Acesso a ambiente único para validação, acompanhamento e visibilidade de ideias;
 - Potencial de conexão com mentores e investidores em ambiente controlado.
 
+## 5.3 Atualizações pós-relatório (implantação e correções)
+
+Após a versão anterior do relatório, foram concluídas melhorias relevantes de operação em produção:
+
+- Pipeline de deploy no GitHub Pages ajustado para publicar a pasta `dist` (build Vite) via GitHub Actions;
+- Correção dos caminhos de assets (logo/favicon) para funcionar no subcaminho `/AngoStart/`;
+- Correção de CORS no backend para ambiente híbrido (`https://franeojj.github.io` e `http://localhost:5173`) com suporte a preflight `OPTIONS`;
+- Parametrização de origem frontend por variável de ambiente (`FRONTEND_ORIGIN`);
+- Ajuste do fluxo de recuperação de senha para links compatíveis com `HashRouter` e GitHub Pages (`/#/redefinir-senha?token=...`);
+- Validação operacional da API em produção (`/api/v1/health`) no Railway.
+
 ---
 
 # CAPÍTULO 6 - CONCLUSÃO
@@ -325,8 +337,8 @@ Do ponto de vista de engenharia de software, o projeto demonstra:
 ## 6.2 Limitações
 
 - Forte concentração de lógica de interface em um único arquivo de dashboard (alto acoplamento frontend);
-- Ausência operacional de módulos de comunicação em tempo real (chat/voz/vídeo);
-- Integrações externas estratégicas ainda em estado parcial (Stripe, Resend, KYC, Documentero);
+- Comunicação em tempo real ainda concentrada em uma única instância da API (necessita estratégia de escala horizontal);
+- Integrações externas estratégicas ainda em estado parcial (Stripe, KYC, Documentero);
 - Necessidade de maior cobertura de testes automatizados.
 
 ## 6.3 Trabalhos futuros

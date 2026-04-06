@@ -6,6 +6,7 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: Number(process.env.PORT || 4000),
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+  FRONTEND_BASE_PATH: process.env.FRONTEND_BASE_PATH || "",
   JWT_SECRET: process.env.JWT_SECRET || "dev_secret_change_me",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   GOOGLE_AI_STUDIO_API_KEY: process.env.GOOGLE_AI_STUDIO_API_KEY || "",

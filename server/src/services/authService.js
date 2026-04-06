@@ -394,7 +394,12 @@ function sha256(value) {
 
 function buildPasswordResetUrl(token) {
   const base = env.FRONTEND_ORIGIN || "http://localhost:5173";
-  return `${base.replace(/\/+$/, "")}/redefinir-senha?token=${encodeURIComponent(token)}`;
+  const basePath = String(env.FRONTEND_BASE_PATH || "")
+    .trim()
+    .replace(/^\/?/, "/")
+    .replace(/\/+$/, "");
+  const appRoot = `${base.replace(/\/+$/, "")}${basePath === "/" ? "" : basePath}`;
+  return `${appRoot}/#/redefinir-senha?token=${encodeURIComponent(token)}`;
 }
 
 export async function requestPasswordReset(input) {
