@@ -7930,3 +7930,100 @@ small {
     margin-top: 64px;
   }
 }
+
+/* ===== Home scroll effects + mobile refinements ===== */
+.scroll-reveal {
+  opacity: 0;
+  transition:
+    opacity 560ms ease,
+    transform 620ms cubic-bezier(.22, .61, .36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.scroll-reveal.reveal-up {
+  transform: translateY(26px);
+}
+
+.scroll-reveal.reveal-left {
+  transform: translateX(-24px);
+}
+
+.scroll-reveal.reveal-right {
+  transform: translateX(24px);
+}
+
+.scroll-reveal.reveal-zoom {
+  transform: translateY(16px) scale(.98);
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translate(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1;
+    transform: none !important;
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --mobile-edge-space: clamp(10px, 3.4vw, 18px);
+  }
+
+  main > section,
+  footer.footer {
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  .hero-container,
+  .section > .container,
+  .cta-section > .container,
+  .footer > .container {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding-inline: var(--mobile-edge-space);
+  }
+
+  .hero-content,
+  .section-header,
+  .tab-text,
+  .ia-features,
+  .ia-score-card,
+  .cta-container,
+  .footer-brand,
+  .footer-bottom {
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  .tab-content-grid,
+  .ia-analysis,
+  .mentors-grid,
+  .investments-grid,
+  .pricing-grid,
+  .testimonials-grid,
+  .partners-grid {
+    margin-inline: auto;
+  }
+
+  .hero-ctas,
+  .cta-buttons,
+  .cta-features,
+  .social-links {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .footer-links-group,
+  .footer-column,
+  .footer-links {
+    text-align: center;
+  }
+}
