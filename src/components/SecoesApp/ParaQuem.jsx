@@ -68,7 +68,7 @@ const ParaQuem = () => {
                 <Link to="/criar-conta" className="btn btn-primary mt-6">Começar Agora</Link>
               </div>
               <div className="tab-image">
-                <img src="/Jovem empresário africano feliz _ Foto Grátis.jpg" 
+                <img src="/AngoStart/Jovem empresário africano feliz _ Foto Grátis.jpg" 
                      alt="Empreendedor" className="rounded-xl"/>
               </div>
             </div>
