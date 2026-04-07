@@ -27,5 +27,11 @@ router.patch(
   requireRole("admin", "empreendedor"),
   ideaController.updateStatus
 );
+router.patch(
+  "/:id/approval",
+  requireAuth,
+  requireRole("admin"),
+  ideaController.updateApproval
+);
 
 export default router;

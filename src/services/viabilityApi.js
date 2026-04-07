@@ -16,3 +16,10 @@ export async function analyzeViability(payload) {
 
   return data.report;
 }
+
+export async function getLatestViabilityReport(ideaId) {
+  const data = await requestJson(`${API_BASE}/analysis/viability/${encodeURIComponent(ideaId)}/latest`, {
+    headers: { ...getAuthHeader() },
+  });
+  return data.report || null;
+}

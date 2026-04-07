@@ -30,3 +30,15 @@ export async function findViabilityReportById(id) {
   );
   return rows[0] || null;
 }
+
+export async function findLatestViabilityReportByIdeaId(ideaId) {
+  const [rows] = await pool.execute(
+    `SELECT id, idea_id, session_id, viability_status, score, strengths_json, weaknesses_json, adjustments_json, summary, created_at
+     FROM viability_reports
+     WHERE idea_id = ?
+     ORDER BY created_at DESC, id DESC
+     LIMIT 1`,
+    [ideaId]
+  );
+  return rows[0] || null;
+}

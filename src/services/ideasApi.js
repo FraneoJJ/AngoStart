@@ -60,3 +60,19 @@ export async function updateIdeaStatus(ideaId, status) {
   });
   return data.idea;
 }
+
+export async function updateIdeaApproval(ideaId, approvalStatus) {
+  const token = localStorage.getItem("angostart_token");
+  if (!token) {
+    throw new Error("Sem token. Faça login para aprovar/rejeitar ideia.");
+  }
+  const data = await requestJson(`${API_BASE}/ideas/${ideaId}/approval`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ approvalStatus }),
+  });
+  return data.idea;
+}

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, createContext, useContext, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
-import { createIdea, getIdeaById, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
+import { createIdea, getIdeaById, getMarketplaceIdeas, getMyIdeas, updateIdeaApproval, updateIdeaStatus } from "../services/ideasApi";
 import { generateQuestionnaire, saveQuestionnaireAnswers } from "../services/questionnaireApi";
-import { analyzeViability } from "../services/viabilityApi";
+import { analyzeViability, getLatestViabilityReport } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
@@ -3209,6 +3209,7 @@ function Ideias() {
   const [ideas, setIdeas] = useState([]);
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [savingIdeaDecisionId, setSavingIdeaDecisionId] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -3240,6 +3241,35 @@ function Ideias() {
       ctx?.setModal?.({ open: true, message: `Falha ao carregar detalhes da ideia: ${err.message}` });
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const scoreBand = (score) => {
+    const n = Number(score || 0);
+    if (n >= 80) return "high";
+    if (n >= 50) return "mid";
+    return "low";
+  };
+
+  const handleIdeaDecision = async (idea, decision) => {
+    const approvalStatus = decision === "approve" ? "approved" : "rejected";
+    setSavingIdeaDecisionId(Number(idea.id));
+    try {
+      const updated = await updateIdeaApproval(idea.id, approvalStatus);
+      setIdeas((prev) => prev.map((i) => (Number(i.id) === Number(idea.id) ? { ...i, ...updated } : i)));
+      if (selectedIdea && Number(selectedIdea.id) === Number(idea.id)) {
+        setSelectedIdea((prev) => ({ ...prev, ...updated }));
+      }
+      ctx?.setModal?.({
+        open: true,
+        message: decision === "approve"
+          ? "Ideia aprovada pela AngoStart. O empreendedor já pode publicar no marketplace."
+          : "Ideia rejeitada pela AngoStart.",
+      });
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar status da ideia." });
+    } finally {
+      setSavingIdeaDecisionId(0);
     }
   };
 
@@ -3275,14 +3305,36 @@ function Ideias() {
               <td><span className="badge badge-info">{idea.status || "-"}</span></td>
               <td>{formatDate(idea.created_at)}</td>
               <td>
-                <button
-                  className="btn btn-primary"
-                  style={{padding: '0.5rem 1rem', fontSize: '0.875rem', width: 'auto'}}
-                  onClick={() => openIdeaReview(idea.id)}
-                  disabled={loadingDetails}
-                >
-                  {loadingDetails ? "A carregar..." : "Revisar"}
-                </button>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{padding: '0.5rem 1rem', fontSize: '0.875rem', width: 'auto'}}
+                    onClick={() => openIdeaReview(idea.id)}
+                    disabled={loadingDetails}
+                  >
+                    {loadingDetails ? "A carregar..." : "Revisar"}
+                  </button>
+                  {(String(idea.approval_status || "pending") !== "approved") ? (
+                    <button
+                      className="btn btn-outline"
+                      style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", width: "auto", opacity: savingIdeaDecisionId === Number(idea.id) ? 0.6 : 1 }}
+                      onClick={() => handleIdeaDecision(idea, "approve")}
+                      disabled={savingIdeaDecisionId === Number(idea.id)}
+                    >
+                      Aprovar
+                    </button>
+                  ) : null}
+                  {(String(idea.approval_status || "pending") !== "rejected") ? (
+                    <button
+                      className="btn-logout"
+                      style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", width: "auto", opacity: savingIdeaDecisionId === Number(idea.id) ? 0.6 : 1 }}
+                      onClick={() => handleIdeaDecision(idea, "reject")}
+                      disabled={savingIdeaDecisionId === Number(idea.id)}
+                    >
+                      Rejeitar
+                    </button>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}
@@ -3302,6 +3354,7 @@ function Ideias() {
               <div className="dashboard-card"><strong>Empreendedor</strong><div>{selectedIdea.owner_name || "-"}</div></div>
               <div className="dashboard-card"><strong>Email</strong><div>{selectedIdea.owner_email || "-"}</div></div>
               <div className="dashboard-card"><strong>Status</strong><div>{selectedIdea.status || "-"}</div></div>
+              <div className="dashboard-card"><strong>Aprovação AngoStart</strong><div>{selectedIdea.approval_status || "pending"}</div></div>
               <div className="dashboard-card"><strong>Score IA</strong><div>{selectedIdea.viability_score ?? "-"}</div></div>
               <div className="dashboard-card"><strong>Data</strong><div>{formatDate(selectedIdea.created_at)}</div></div>
             </div>
@@ -4491,6 +4544,25 @@ function SubmeterIdeia() {
 
   const [dados, setDados] = useState(initialDados);
 
+  useEffect(() => {
+    const raw = localStorage.getItem("angostart_idea_edit_draft");
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw);
+      if (draft && typeof draft === "object") {
+        setDados((prev) => ({ ...prev, ...draft }));
+        setEtapa(1);
+        localStorage.removeItem("angostart_idea_edit_draft");
+        ctx?.setModal?.({
+          open: true,
+          message: "Rascunho da ideia carregado. Edite os dados e envie para nova análise da IA.",
+        });
+      }
+    } catch {
+      localStorage.removeItem("angostart_idea_edit_draft");
+    }
+  }, []);
+
   const proximaEtapa = () => {
     if (etapa === 1) {
       const nome = String(dados.nome || "").trim();
@@ -4756,14 +4828,29 @@ function SubmeterIdeia() {
         }
       }
 
+      let report = null;
       try {
-        await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
+        report = await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
       } catch (err) {
         if (isPlanFeatureBlocked(err)) {
           analiseIndisponivel = true;
           setEtapa(1);
         } else {
           throw err;
+        }
+      }
+
+      if (report && Number(createdIdea?.id)) {
+        const score = Number(report.score || 0);
+        if (score < 50) {
+          try {
+            await updateIdeaStatus(Number(createdIdea.id), "archived");
+            setMensagemFluxo(
+              "Ideia analisada com score baixo (0-49) e marcada como rejeitada automaticamente. Melhore os dados da ideia e submeta novamente para nova análise."
+            );
+          } catch (err) {
+            setMensagemFluxo(`Ideia analisada, mas não foi possível atualizar status automático: ${err.message}`);
+          }
         }
       }
 
@@ -4892,6 +4979,7 @@ function SubmeterIdeia() {
       pontuacaoFatores: report.factorScores || {},
       score: Number(report.score || 0),
     });
+    return report;
   };
 
   // --- RENDERS DAS FASES ---
@@ -5242,13 +5330,26 @@ function SubmeterIdeia() {
         <button className="btn btn-outline" onClick={gerarPlanoNegocioPdf} style={{ width: 'auto' }}>
           Gerar Plano de Negócio (PDF)
         </button>
+        {resultadoIA.score >= 50 ? (
+          <div className="dashboard-card" style={{ width: "100%", border: "1px solid var(--warning-500)", background: "var(--warning-100)", marginBottom: "6px" }}>
+            <p style={{ margin: 0, fontSize: "0.9rem" }}>
+              Antes de publicar no marketplace, recomenda-se registrar e proteger legalmente a ideia para reduzir riscos de cópia, sobretudo em fase inicial.
+            </p>
+          </div>
+        ) : null}
         <button
           className="btn btn-primary"
           onClick={publicarNoMarketplace}
-          disabled={!ultimaIdeiaId || publicandoMarketplace}
-          style={{ width: 'auto', opacity: !ultimaIdeiaId || publicandoMarketplace ? 0.6 : 1 }}
+          disabled={!ultimaIdeiaId || publicandoMarketplace || Number(resultadoIA.score || 0) < 80}
+          style={{ width: 'auto', opacity: !ultimaIdeiaId || publicandoMarketplace || Number(resultadoIA.score || 0) < 80 ? 0.6 : 1 }}
         >
-          {publicandoMarketplace ? "A publicar..." : "Publicar no Marketplace"}
+          {publicandoMarketplace
+            ? "A publicar..."
+            : Number(resultadoIA.score || 0) >= 80
+              ? "Publicar no Marketplace"
+              : Number(resultadoIA.score || 0) >= 50
+                ? "Aguardando aprovação da AngoStart"
+                : "Ideia rejeitada - melhore e reanalise"}
         </button>
       </div>
     </div>
@@ -5324,6 +5425,8 @@ function MinhasIdeias() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(0);
   const [ideias, setIdeias] = useState([]);
+  const [loadingReportId, setLoadingReportId] = useState(0);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   const reloadIdeas = async () => {
     setLoading(true);
@@ -5344,6 +5447,22 @@ function MinhasIdeias() {
 
   const handleToggleMarketplace = async (idea) => {
     const nextStatus = idea.status === "active" ? "archived" : "active";
+    const score = Number(idea?.viability_score || 0);
+    if (nextStatus === "active" && score < 80) {
+      ctx?.setModal?.({
+        open: true,
+        message: score >= 50
+          ? "Esta ideia precisa de aprovação da AngoStart para ser publicada (score entre 50 e 79)."
+          : "Ideias com score abaixo de 50 devem ser melhoradas e reanalisadas antes da publicação.",
+      });
+      return;
+    }
+    if (nextStatus === "active" && score >= 80) {
+      const canContinue = window.confirm(
+        "Antes de publicar, recomenda-se registrar/proteger a ideia por segurança. Deseja publicar mesmo assim?"
+      );
+      if (!canContinue) return;
+    }
     setSavingId(Number(idea.id));
     try {
       const updated = await updateIdeaStatus(idea.id, nextStatus);
@@ -5378,6 +5497,51 @@ function MinhasIdeias() {
 
   const ideiasExecucao = ideias.filter((i) => i.status === 'active');
   const formatCapital = (v) => Number(v || 0).toLocaleString("pt-PT");
+  const scoreClass = (score) => {
+    const n = Number(score || 0);
+    if (n >= 80) return "badge-success";
+    if (n >= 50) return "badge-warning";
+    return "badge-info";
+  };
+  const policyText = (idea) => {
+    const score = Number(idea?.viability_score || 0);
+    const approval = String(idea?.approval_status || "pending");
+    if (score >= 80) return "Elegível para publicação.";
+    if (approval === "approved") return "Aprovada pela AngoStart. Publicação liberada.";
+    if (score >= 50) return "Em revisão manual da AngoStart.";
+    return "Rejeitada automaticamente. Melhore e submeta novamente.";
+  };
+
+  const openIdeaReport = async (ideaId) => {
+    setLoadingReportId(Number(ideaId));
+    try {
+      const report = await getLatestViabilityReport(ideaId);
+      setSelectedReport(report);
+    } catch (err) {
+      ctx?.setModal?.({ open: true, message: err.message || "Relatório não encontrado para esta ideia." });
+    } finally {
+      setLoadingReportId(0);
+    }
+  };
+
+  const prepareIdeaForImprovement = (idea) => {
+    const draft = {
+      nome: idea.title || "",
+      descricao: idea.description || "",
+      setor: idea.sector || "",
+      cidade: idea.city || "",
+      localizacao: idea.address || "",
+      regiao: idea.region || "",
+      lat: idea.latitude != null ? String(idea.latitude) : "",
+      lng: idea.longitude != null ? String(idea.longitude) : "",
+      capital: idea.initial_capital != null ? String(idea.initial_capital) : "",
+      problema: idea.problem || "",
+      diferencial: idea.differential_text || "",
+      publico: idea.target_audience || "",
+    };
+    localStorage.setItem("angostart_idea_edit_draft", JSON.stringify(draft));
+    setCurrentPage("submeter-ideia");
+  };
 
   return (
     <div style={{ padding: '10px' }}>
@@ -5425,7 +5589,9 @@ function MinhasIdeias() {
                   <th>Projeto</th>
                   <th>Setor</th>
                   <th>Capital inicial</th>
+                  <th>Score IA</th>
                   <th>Status</th>
+                  <th>Governança</th>
                   <th>Ação</th>
                 </tr>
               </thead>
@@ -5435,20 +5601,48 @@ function MinhasIdeias() {
                     <td><strong>{ideia.title}</strong></td>
                     <td><span className="badge badge-info">{ideia.sector || "-"}</span></td>
                     <td>{formatCapital(ideia.initial_capital)} AOA</td>
+                    <td><span className={`badge ${scoreClass(ideia.viability_score)}`}>{Number(ideia.viability_score || 0)}</span></td>
                     <td>
                       <span className={`badge ${badgeClass(ideia.status)}`}>
                         {statusLabel(ideia.status)}
                       </span>
                     </td>
+                    <td style={{ fontSize: "0.82rem" }}>{policyText(ideia)}</td>
                     <td>
-                      <button
-                        className={ideia.status === "active" ? "btn-logout" : "btn btn-primary"}
-                        style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: savingId === Number(ideia.id) ? 0.6 : 1 }}
-                        onClick={() => handleToggleMarketplace(ideia)}
-                        disabled={savingId === Number(ideia.id)}
-                      >
-                        {ideia.status === "active" ? "Remover do marketplace" : "Publicar no marketplace"}
-                      </button>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: loadingReportId === Number(ideia.id) ? 0.6 : 1 }}
+                          onClick={() => openIdeaReport(ideia.id)}
+                          disabled={loadingReportId === Number(ideia.id)}
+                        >
+                          {loadingReportId === Number(ideia.id) ? "Abrindo..." : "Ver relatório"}
+                        </button>
+                        <button
+                          className={ideia.status === "active" ? "btn-logout" : "btn btn-primary"}
+                          style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: savingId === Number(ideia.id) ? 0.6 : 1 }}
+                          onClick={() => handleToggleMarketplace(ideia)}
+                          disabled={
+                            savingId === Number(ideia.id) ||
+                            (
+                              ideia.status !== "active" &&
+                              Number(ideia.viability_score || 0) < 80 &&
+                              String(ideia.approval_status || "pending") !== "approved"
+                            )
+                          }
+                        >
+                          {ideia.status === "active" ? "Remover do marketplace" : "Publicar no marketplace"}
+                        </button>
+                        {Number(ideia.viability_score || 0) < 50 ? (
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: "5px 10px", fontSize: "0.75rem", width: "auto" }}
+                            onClick={() => prepareIdeaForImprovement(ideia)}
+                          >
+                            Melhorar e reanalisar
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -5503,6 +5697,40 @@ function MinhasIdeias() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {selectedReport && (
+        <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setSelectedReport(null)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(820px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
+            <h3 style={{ marginTop: 0 }}>Relatório da ideia</h3>
+            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              <div className="dashboard-card"><strong>Status de viabilidade</strong><div>{selectedReport.viabilityStatus || "-"}</div></div>
+              <div className="dashboard-card"><strong>Score IA</strong><div>{Number(selectedReport.score || 0)}/100</div></div>
+              <div className="dashboard-card"><strong>Gerado em</strong><div>{selectedReport.createdAt ? new Date(selectedReport.createdAt).toLocaleString("pt-PT") : "-"}</div></div>
+            </div>
+            <div className="dashboard-card" style={{ marginTop: "10px" }}>
+              <strong>Resumo</strong>
+              <p style={{ marginBottom: 0 }}>{selectedReport.summary || "-"}</p>
+            </div>
+            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", marginTop: "10px" }}>
+              <div className="dashboard-card">
+                <strong>Pontos fortes</strong>
+                <ul style={{ marginBottom: 0, paddingLeft: "18px" }}>{(selectedReport.strengths || []).map((x) => <li key={x}>{x}</li>)}</ul>
+              </div>
+              <div className="dashboard-card">
+                <strong>Pontos fracos</strong>
+                <ul style={{ marginBottom: 0, paddingLeft: "18px" }}>{(selectedReport.weaknesses || []).map((x) => <li key={x}>{x}</li>)}</ul>
+              </div>
+              <div className="dashboard-card" style={{ gridColumn: "1 / -1" }}>
+                <strong>Ajustes recomendados</strong>
+                <ul style={{ marginBottom: 0, paddingLeft: "18px" }}>{(selectedReport.adjustments || []).map((x) => <li key={x}>{x}</li>)}</ul>
+              </div>
+            </div>
+            <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end" }}>
+              <button className="btn btn-primary" style={{ width: "auto" }} onClick={() => setSelectedReport(null)}>Fechar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

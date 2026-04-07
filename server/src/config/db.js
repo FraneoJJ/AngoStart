@@ -61,6 +61,21 @@ export async function initDb() {
          ADD COLUMN avatar_url LONGTEXT NULL`
       );
     }
+
+    const [ideaApprovalColRows] = await conn.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME = 'ideas'
+         AND COLUMN_NAME = 'approval_status'`,
+      [env.DB_NAME]
+    );
+    if (!Array.isArray(ideaApprovalColRows) || ideaApprovalColRows.length === 0) {
+      await conn.execute(
+        `ALTER TABLE ideas
+         ADD COLUMN approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'`
+      );
+    }
   } finally {
     conn.release();
   }

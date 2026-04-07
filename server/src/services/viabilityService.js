@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createViabilityReport } from "../models/viabilityModel.js";
+import { createViabilityReport, findLatestViabilityReportByIdeaId } from "../models/viabilityModel.js";
+import { syncIdeaApprovalByScore } from "../models/ideaModel.js";
 import { env } from "../config/env.js";
 import { generateJsonWithGemini } from "./googleAiService.js";
 
@@ -327,6 +328,14 @@ export async function analyzeViability(payload) {
       ...report,
     });
 
+    if (data.ideaId) {
+      try {
+        await syncIdeaApprovalByScore(Number(data.ideaId), Number(report.score || 0));
+      } catch {
+        // Não bloquear a análise se falhar atualização de governança.
+      }
+    }
+
     if (stored) {
       return {
         id: stored.id,
@@ -343,5 +352,34 @@ export async function analyzeViability(payload) {
     ...report,
     analysisSource,
     analysisNote,
+  };
+}
+
+export async function getLatestViabilityReportByIdeaId(ideaId) {
+  const id = Number(ideaId);
+  if (!id) throw { status: 400, message: "ID da ideia inválido." };
+  const row = await findLatestViabilityReportByIdeaId(id);
+  if (!row) throw { status: 404, message: "Relatório de viabilidade ainda não encontrado para esta ideia." };
+
+  const parseArray = (raw) => {
+    try {
+      const arr = JSON.parse(raw || "[]");
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  };
+
+  return {
+    id: row.id,
+    ideaId: row.idea_id,
+    questionnaireSessionId: row.session_id,
+    viabilityStatus: row.viability_status,
+    score: Number(row.score || 0),
+    strengths: parseArray(row.strengths_json),
+    weaknesses: parseArray(row.weaknesses_json),
+    adjustments: parseArray(row.adjustments_json),
+    summary: row.summary || "",
+    createdAt: row.created_at,
   };
 }
