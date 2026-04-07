@@ -16,6 +16,13 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [menuOpen])
+
   // Scroll suave para âncoras
   const scrollToSection = (id) => {
     const el = document.querySelector(id)
@@ -31,7 +38,7 @@ const Navbar = () => {
   return (
     <nav
       id="navbar"
-      className={`navbar ${scrolled ? 'scrolled' : ''}`}
+      className={`navbar ${(scrolled || menuOpen) ? 'scrolled' : ''} ${menuOpen ? 'navbar-menu-open' : ''}`}
     >
       <div className="container">
         <div className="navbar-content">
@@ -65,6 +72,7 @@ const Navbar = () => {
             className="mobile-menu-btn"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Menu"
+            aria-expanded={menuOpen}
           >
             {!menuOpen ? (
               <svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,8 +89,14 @@ const Navbar = () => {
           </button>
         </div>
 
+        <div
+          className={`mobile-drawer-overlay ${menuOpen ? 'active' : ''}`}
+          onClick={() => setMenuOpen(false)}
+          aria-hidden={!menuOpen}
+        />
+
         {/* Mobile Menu */}
-        {menuOpen && (
+        <aside className={`mobile-drawer ${menuOpen ? 'active' : ''}`} aria-hidden={!menuOpen}>
           <div className="mobile-menu">
             <button onClick={() => scrollToSection('#sobre')} className="mobile-link">Sobre</button>
             <button onClick={() => scrollToSection('#funcionalidades')} className="mobile-link">Funcionalidades</button>
@@ -99,7 +113,7 @@ const Navbar = () => {
               <Link to="/criar-conta" className="btn btn-primary-mobile">Criar Conta</Link>
             </div>
           </div>
-        )}
+        </aside>
       </div>
     </nav>
   )

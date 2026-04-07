@@ -2030,7 +2030,7 @@ function Analytics() {
         <div className="dashboard-card" style={{ marginBottom: '25px', display: 'flex', justifyContent: ' space-between', alignItems: 'center', gap: "10px", flexWrap: "wrap" }}>
           <div>
             <h3 style={{ margin: '0' }}>Análise de Mercado & Performance</h3>
-            <p style={{ margin: ' 5px 0 0 0', color: ' var(--dm-text-muted)', fontSize: '0.85rem' }}>Dados dinâmicos do marketplace da base de dados.</p>
+            <p style={{ margin: ' 5px 0 0 0', color: ' var(--dm-text-muted)', fontSize: '0.85rem' }}>Dados do marketplace.</p>
           </div>
           <select
             className="input-field form-input"
