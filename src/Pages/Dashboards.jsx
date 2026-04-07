@@ -2389,12 +2389,12 @@ function InvestidorPerfil() {
       <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
         <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
-        <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+        <div className="profile-header-content">
           <div
             onMouseEnter={() => setAvatarHover(true)}
             onMouseLeave={() => setAvatarHover(false)}
             onClick={handleAvatarPickClick}
-            style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)', overflow: "hidden", position: "relative", cursor: "pointer" }}
+            className="profile-avatar-shell"
             title="Alterar foto de perfil"
           >
             {user?.avatarUrl ? (
@@ -2430,10 +2430,10 @@ function InvestidorPerfil() {
       </div>
 
       {/* CONTEÚDO */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
+      <div className="profile-main-grid">
         
         {/* COLUNA ESQUERDA */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+        <div className="profile-left-column">
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
@@ -2464,7 +2464,7 @@ function InvestidorPerfil() {
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="profile-contact-grid">
             <Info label="E-mail" value={user?.email || "-"} />
             <Info label="Telefone" value={p.phone || "-"} />
             <Info
@@ -7209,12 +7209,12 @@ function Perfilmentor() {
       <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
         <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
-        <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+        <div className="profile-header-content">
           <div
             onMouseEnter={() => setAvatarHover(true)}
             onMouseLeave={() => setAvatarHover(false)}
             onClick={handleAvatarPickClick}
-            style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)', overflow: "hidden", position: "relative", cursor: "pointer" }}
+            className="profile-avatar-shell"
             title="Alterar foto de perfil"
           >
             {user?.avatarUrl ? (
@@ -7250,10 +7250,10 @@ function Perfilmentor() {
       </div>
 
       {/* CONTEÚDO */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
+      <div className="profile-main-grid">
         
         {/* COLUNA ESQUERDA */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+        <div className="profile-left-column">
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
@@ -7284,7 +7284,7 @@ function Perfilmentor() {
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="profile-contact-grid">
             <Info label="E-mail" value={user?.email || "-"} />
             <Info label="Telefone" value={p.phone || "-"} />
             <Info
