@@ -5047,6 +5047,7 @@ a {
   border: 1px solid var(--neutral-200);
   margin-bottom: 1.5rem;
   padding: 1.5rem;
+  overflow-x: auto !important;
 }
 
 .dashboard-card-header {
