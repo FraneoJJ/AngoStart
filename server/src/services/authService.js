@@ -72,6 +72,34 @@ const registerSchema = z.object({
   password: z.string().min(6).max(120),
   role: z.enum(USER_ROLES).default("empreendedor"),
   profileData: profileSchema.optional(),
+}).superRefine((data, ctx) => {
+  const reservedTokens = ["angostart"];
+  const normalizeForCheck = (value) => String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  const nameCheck = normalizeForCheck(data.name);
+  const emailCheck = normalizeForCheck(data.email);
+  const hasReservedName = reservedTokens.some((token) => nameCheck.includes(token));
+  const hasReservedEmail = reservedTokens.some((token) => emailCheck.includes(token));
+
+  if (hasReservedName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["name"],
+      message: "Este nome está reservado e não pode ser utilizado no registo.",
+    });
+  }
+
+  if (hasReservedEmail) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["email"],
+      message: "Este email contém termo reservado da plataforma e não pode ser utilizado.",
+    });
+  }
 });
 
 const loginSchema = z.object({

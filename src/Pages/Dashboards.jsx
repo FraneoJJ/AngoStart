@@ -768,6 +768,9 @@ function RenderAdminPage() {
 function MensagensAdmins() {
   const ctx = useContext(AppContext);
   const currentUserId = Number(ctx?.currentUser?.id || 0);
+  const currentUserRole = String(ctx?.currentUser?.role || "");
+  const currentUserAdminCategory = String(ctx?.currentUser?.adminCategory || "primary");
+  const isPrimaryAdmin = currentUserRole === "admin" && currentUserAdminCategory === "primary";
   const [loading, setLoading] = useState(true);
   const [admins, setAdmins] = useState([]);
 
@@ -793,7 +796,7 @@ function MensagensAdmins() {
   }, []);
 
   const contacts = useMemo(() => {
-    return (admins || []).map((a) => {
+    const base = (admins || []).map((a) => {
       const cat = a.adminCategory || "primary";
       return {
         userId: Number(a.id),
@@ -803,7 +806,18 @@ function MensagensAdmins() {
         avatarUrl: a.avatarUrl || null,
       };
     }).filter((c) => Number(c.userId) !== Number(currentUserId));
-  }, [admins]);
+
+    if (isPrimaryAdmin) {
+      base.unshift({
+        userId: -1,
+        name: "AngoStart (Comunicado Geral)",
+        role: "admin",
+        subtitle: "Enviar mensagem para todos os utilizadores",
+        avatarUrl: null,
+      });
+    }
+    return base;
+  }, [admins, currentUserId, isPrimaryAdmin]);
 
   const allowedUserIds = useMemo(() => contacts.map((c) => Number(c.userId)).filter(Boolean), [contacts]);
 
@@ -824,6 +838,8 @@ function MensagensAdmins() {
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
       emptyText="Sem admins disponíveis para conversas."
+      currentUserRole={currentUserRole}
+      currentUserAdminCategory={currentUserAdminCategory}
     />
   );
 }
@@ -2667,6 +2683,9 @@ function Usuarios() {
   const [savingUserId, setSavingUserId] = useState(null);
   const [aboutUser, setAboutUser] = useState(null);
   const [expandedDocs, setExpandedDocs] = useState({});
+  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
+  const apiOrigin = String(apiBase).replace(/\/api\/v1\/?$/i, "");
+  const isPrimaryAdmin = ctx?.currentUser?.role === "admin" && (ctx?.currentUser?.adminCategory || "primary") === "primary";
 
   const loadUsers = async () => {
     setLoading(true);
@@ -2804,9 +2823,11 @@ function Usuarios() {
     const raw = String(value || "").trim();
     if (!raw) return "";
     if (/^(https?:\/\/|data:|blob:)/i.test(raw)) return raw;
-    if (raw.startsWith("/")) return `${window.location.origin}${raw}`;
-    return raw;
+    if (raw.startsWith("/")) return `${apiOrigin}${raw}`;
+    return `${apiOrigin}/uploads/${encodeURIComponent(raw)}`;
   };
+
+  const isRenderableDocumentUrl = (url) => /^(https?:\/\/|data:|blob:)/i.test(String(url || ""));
 
   const closeAbout = () => {
     setAboutUser(null);
@@ -2816,6 +2837,20 @@ function Usuarios() {
   const openAbout = (u) => {
     setAboutUser(u);
     setExpandedDocs({});
+  };
+
+  const handleContactUser = (u) => {
+    if (!u?.id) return;
+    ctx?.openChatConversation?.({
+      userId: Number(u.id),
+      name: u.name || "Utilizador",
+      role: u.role || "utilizador",
+      subtitle: u.email || "Sem e-mail",
+    });
+    ctx?.setModal?.({
+      open: true,
+      message: `Conversa aberta com ${u.name || "utilizador"}.`,
+    });
   };
 
   return (
@@ -2863,6 +2898,15 @@ function Usuarios() {
                     >
                       Sobre
                     </button>
+                    {isPrimaryAdmin && u.role !== "admin" ? (
+                      <button
+                        className="btn btn-outline admin-users-btn"
+                        type="button"
+                        onClick={() => handleContactUser(u)}
+                      >
+                        Contactar
+                      </button>
+                    ) : null}
                     {canModerate(u) ? (
                       <>
                         <button
@@ -2930,6 +2974,7 @@ function Usuarios() {
                     const isExpanded = !!expandedDocs[docKey];
                     const rawValue = String(v);
                     const docUrl = resolveDocumentUrl(rawValue);
+                    const canRenderInline = isRenderableDocumentUrl(docUrl);
                     const clean = docUrl.toLowerCase().split("?")[0].split("#")[0];
                     const isImage = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(clean);
                     const isPdf = /\.pdf$/i.test(clean);
@@ -2950,7 +2995,14 @@ function Usuarios() {
 
                         {isExpanded && (
                           <div style={{ marginTop: "10px", border: "1px solid var(--dm-border)", borderRadius: "8px", background: "var(--dm-bg)", padding: "8px" }}>
-                            {isImage ? (
+                            {!canRenderInline ? (
+                              <div style={{ padding: "10px", fontSize: "0.9rem" }}>
+                                Não foi possível gerar pré-visualização automática para este documento.
+                                <div style={{ marginTop: "6px", color: "var(--neutral-500)" }}>
+                                  Valor recebido: <code>{rawValue}</code>
+                                </div>
+                              </div>
+                            ) : isImage ? (
                               <img
                                 src={docUrl}
                                 alt={profileFieldLabel(k)}
@@ -4419,6 +4471,8 @@ function MensagensMentorDynamic() {
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
       emptyText="Sem mentorias aceites para conversar no momento."
+      currentUserRole={String(ctx?.currentUser?.role || "")}
+      currentUserAdminCategory={String(ctx?.currentUser?.adminCategory || "")}
     />
   );
 }
@@ -4514,6 +4568,8 @@ function MensagensEmpreendedorLegacy() {
       initialContact={ctx?.pendingChatTarget}
       onInitialContactConsumed={ctx?.clearPendingChatTarget}
       emptyText="Sem contactos disponíveis para conversa no momento."
+      currentUserRole={String(ctx?.currentUser?.role || "")}
+      currentUserAdminCategory={String(ctx?.currentUser?.adminCategory || "")}
     />
   );
 }

@@ -33,6 +33,18 @@ export async function send(req, res, next) {
   }
 }
 
+export async function broadcast(req, res, next) {
+  try {
+    const result = await chatService.sendBroadcastMessage(req.user, req.body);
+    res.status(201).json({ success: true, ...result });
+  } catch (err) {
+    if (err instanceof ZodError) {
+      return next({ status: 400, message: err.issues?.[0]?.message || "Payload inválido." });
+    }
+    next(err);
+  }
+}
+
 export function online(_req, res) {
   res.status(200).json({ success: true, onlineUserIds: getOnlineUserIds() });
 }

@@ -11,6 +11,7 @@ import {
   getChatSocket,
   getOnlineUsers,
   sendChatMessageHttp,
+  sendBroadcastMessageHttp,
 } from "../../services/chatService";
 
 function formatDateTime(value) {
@@ -49,6 +50,8 @@ export default function ChatWindow({
   initialContact = null,
   onInitialContactConsumed = null,
   showCalls = true,
+  currentUserRole = "",
+  currentUserAdminCategory = "",
 }) {
   const [localContacts, setLocalContacts] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -109,6 +112,20 @@ export default function ChatWindow({
     return list.filter((c) => allowed.has(Number(c.userId)));
   }, [contactMap, allowedUserIds]);
   const selectedContact = mergedContacts.find((c) => Number(c.userId) === Number(selectedUserId)) || null;
+  const isBroadcastContact = Number(selectedContact?.userId || 0) === -1;
+
+  const displayContactMeta = useMemo(() => {
+    if (!selectedContact) return { name: "Selecione uma conversa", subtitle: "", verified: false };
+    const role = String(selectedContact.role || "").toLowerCase();
+    const viewerIsAdmin = String(currentUserRole || "").toLowerCase() === "admin";
+    if (!viewerIsAdmin && role === "admin") {
+      return { name: "AngoStart", subtitle: "Conta oficial da plataforma", verified: true };
+    }
+    if (isBroadcastContact) {
+      return { name: selectedContact.name || "Comunicado geral", subtitle: selectedContact.subtitle || "", verified: true };
+    }
+    return { name: selectedContact.name || "Utilizador", subtitle: selectedContact.role || "Utilizador", verified: false };
+  }, [selectedContact, currentUserRole, isBroadcastContact]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 768px)");
@@ -144,7 +161,9 @@ export default function ChatWindow({
         if (!mounted) return;
         setLocalContacts((serverConversations || []).map((c) => ({
           userId: Number(c.userId),
-          name: c.name || "Utilizador",
+          name: String(currentUserRole || "").toLowerCase() !== "admin" && String(c.role || "").toLowerCase() === "admin"
+            ? "AngoStart"
+            : (c.name || "Utilizador"),
           role: c.role || "",
           subtitle: c.lastMessage || "",
           lastMessageAt: c.lastMessageAt || null,
@@ -160,7 +179,7 @@ export default function ChatWindow({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [currentUserRole]);
 
   useEffect(() => {
     if (!selectedUserId && mergedContacts.length > 0 && !isMobile) {
@@ -355,6 +374,16 @@ export default function ChatWindow({
     if (!selectedContact || !text.trim()) return;
     const message = text.trim();
     setText("");
+    if (isBroadcastContact) {
+      try {
+        const total = await sendBroadcastMessageHttp(message);
+        setCallBanner(`Comunicado enviado para ${total} utilizadores.`);
+        setTimeout(() => setCallBanner(""), 3500);
+      } catch (err) {
+        setError(toFriendlyChatError(err?.message || "Falha ao enviar comunicado geral."));
+      }
+      return;
+    }
     const socket = getChatSocket();
     if (socket?.connected) {
       socket.emit("chat:send", { receiverId: selectedContact.userId, message }, (ack) => {
@@ -532,11 +561,16 @@ export default function ChatWindow({
                   </button>
                 )}
                 <div>
-                  <strong>{selectedContact?.name || "Selecione uma conversa"}</strong>
-                  {selectedContact ? <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{selectedContact.role || "Utilizador"}</div> : null}
+                  <strong style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    {displayContactMeta.name}
+                    {displayContactMeta.verified ? (
+                      <span title="Conta verificada" style={{ color: "#1d9bf0", fontSize: "0.9rem" }}>✔</span>
+                    ) : null}
+                  </strong>
+                  {selectedContact ? <div style={{ fontSize: "0.78rem", color: "var(--neutral-500)" }}>{displayContactMeta.subtitle || "Utilizador"}</div> : null}
                 </div>
               </div>
-              {showCalls ? (
+              {showCalls && !isBroadcastContact ? (
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button className="btn btn-outline" style={{ width: "auto", padding: "6px 10px" }} onClick={() => startCall("voice")} disabled={!selectedContact}>Chamada de voz</button>
                   <button className="btn btn-primary" style={{ width: "auto", padding: "6px 10px" }} onClick={() => startCall("video")} disabled={!selectedContact}>Videochamada</button>
@@ -584,7 +618,7 @@ export default function ChatWindow({
             <div style={{ borderTop: "1px solid var(--dm-border)", padding: "10px", display: "flex", gap: "8px" }}>
               <input
                 className="form-input"
-                placeholder={selectedContact ? "Escreva uma mensagem..." : "Selecione um contacto"}
+                placeholder={selectedContact ? (isBroadcastContact ? "Escreva o comunicado para todos os utilizadores..." : "Escreva uma mensagem...") : "Selecione um contacto"}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {

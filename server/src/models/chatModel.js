@@ -98,3 +98,12 @@ export async function markMessagesAsRead(receiverId, senderId) {
   );
   return result.affectedRows;
 }
+
+export async function listAllUserIdsExcept(userId) {
+  const excludeId = Number(userId || 0);
+  const [rows] = await pool.execute(
+    `SELECT id FROM users WHERE id <> ?`,
+    [excludeId]
+  );
+  return rows.map((r) => Number(r.id)).filter(Boolean);
+}

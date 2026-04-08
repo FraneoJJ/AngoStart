@@ -72,6 +72,18 @@ export async function sendChatMessageHttp(receiverId, message) {
   return data.message || null;
 }
 
+export async function sendBroadcastMessageHttp(message) {
+  const data = await requestJson(`${API_BASE}/chat/broadcast`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify({ message }),
+  });
+  return data.totalSent || 0;
+}
+
 export async function getOnlineUsers() {
   const data = await requestJson(`${API_BASE}/chat/online`, {
     headers: { Authorization: `Bearer ${getToken()}` },
