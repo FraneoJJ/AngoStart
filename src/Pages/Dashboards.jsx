@@ -837,6 +837,8 @@ function MensagensAdmins() {
       contacts={contacts}
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
+      initialContact={ctx?.pendingChatTarget}
+      onInitialContactConsumed={ctx?.clearPendingChatTarget}
       emptyText="Sem admins disponíveis para conversas."
       currentUserRole={currentUserRole}
       currentUserAdminCategory={currentUserAdminCategory}
@@ -2846,11 +2848,7 @@ function Usuarios() {
       name: u.name || "Utilizador",
       role: u.role || "utilizador",
       subtitle: u.email || "Sem e-mail",
-    });
-    ctx?.setModal?.({
-      open: true,
-      message: `Conversa aberta com ${u.name || "utilizador"}.`,
-    });
+    }, { pageId: "admin-mensagens" });
   };
 
   return (

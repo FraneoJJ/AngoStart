@@ -70,6 +70,18 @@ export default function ChatWindow({
   const initialContactAppliedRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const viewerIsAdmin = String(currentUserRole || "").toLowerCase() === "admin";
+
+  const toUiContact = useCallback((c) => ({
+    userId: Number(c.userId),
+    name: !viewerIsAdmin && String(c.role || "").toLowerCase() === "admin"
+      ? "AngoStart"
+      : (c.name || "Utilizador"),
+    role: c.role || "",
+    subtitle: c.lastMessage || c.subtitle || "",
+    lastMessageAt: c.lastMessageAt || null,
+    avatarUrl: c.avatarUrl || null,
+  }), [viewerIsAdmin]);
 
   const normalizedInitialContact = useMemo(() => {
     const id = Number(initialContact?.userId || initialContact?.id || 0);
@@ -117,7 +129,6 @@ export default function ChatWindow({
   const displayContactMeta = useMemo(() => {
     if (!selectedContact) return { name: "Selecione uma conversa", subtitle: "", verified: false };
     const role = String(selectedContact.role || "").toLowerCase();
-    const viewerIsAdmin = String(currentUserRole || "").toLowerCase() === "admin";
     if (!viewerIsAdmin && role === "admin") {
       return { name: "AngoStart", subtitle: "Conta oficial da plataforma", verified: true };
     }
@@ -125,7 +136,7 @@ export default function ChatWindow({
       return { name: selectedContact.name || "Comunicado geral", subtitle: selectedContact.subtitle || "", verified: true };
     }
     return { name: selectedContact.name || "Utilizador", subtitle: selectedContact.role || "Utilizador", verified: false };
-  }, [selectedContact, currentUserRole, isBroadcastContact]);
+  }, [selectedContact, viewerIsAdmin, isBroadcastContact]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 768px)");
@@ -159,15 +170,7 @@ export default function ChatWindow({
           getOnlineUsers().catch(() => []),
         ]);
         if (!mounted) return;
-        setLocalContacts((serverConversations || []).map((c) => ({
-          userId: Number(c.userId),
-          name: String(currentUserRole || "").toLowerCase() !== "admin" && String(c.role || "").toLowerCase() === "admin"
-            ? "AngoStart"
-            : (c.name || "Utilizador"),
-          role: c.role || "",
-          subtitle: c.lastMessage || "",
-          lastMessageAt: c.lastMessageAt || null,
-        })));
+        setLocalContacts((serverConversations || []).map(toUiContact));
         setOnlineSet(new Set((onlineUsers || []).map((n) => Number(n))));
       } catch (err) {
         if (!mounted) return;
@@ -179,7 +182,7 @@ export default function ChatWindow({
     return () => {
       mounted = false;
     };
-  }, [currentUserRole]);
+  }, [toUiContact]);
 
   useEffect(() => {
     if (!selectedUserId && mergedContacts.length > 0 && !isMobile) {
@@ -266,12 +269,14 @@ export default function ChatWindow({
     const onChat = (msg) => {
       const senderId = Number(msg?.senderId || 0);
       const receiverId = Number(msg?.receiverId || 0);
+      const mine = Number(currentUserId || 0);
+      const otherId = senderId === mine ? receiverId : senderId;
       const target = Number(selectedUserId || 0);
       if (target && (senderId === target || receiverId === target)) {
         setMessages((prev) => [...prev, msg]);
       }
       setLocalContacts((prev) => {
-        const idx = prev.findIndex((c) => Number(c.userId) === senderId || Number(c.userId) === receiverId);
+        const idx = prev.findIndex((c) => Number(c.userId) === otherId);
         if (idx >= 0) {
           const copy = [...prev];
           copy[idx] = { ...copy[idx], subtitle: msg.message || "", lastMessageAt: msg.timestamp || null };
@@ -279,6 +284,11 @@ export default function ChatWindow({
         }
         return prev;
       });
+      getChatConversations()
+        .then((serverConversations) => {
+          setLocalContacts((serverConversations || []).map(toUiContact));
+        })
+        .catch(() => {});
     };
 
     const onCallIncoming = (payload) => {
@@ -322,7 +332,7 @@ export default function ChatWindow({
       socket.off("call:rejected", onCallRejected);
       socket.off("call:ended", onCallEnded);
     };
-  }, [selectedUserId, activeCall?.channelName]);
+  }, [selectedUserId, activeCall?.channelName, currentUserId, toUiContact]);
 
   useEffect(() => {
     return () => {
@@ -525,7 +535,12 @@ export default function ChatWindow({
                                   String(c.name || "U").charAt(0).toUpperCase()
                                 )}
                               </div>
-                              <strong style={{ fontSize: "0.9rem" }}>{c.name}</strong>
+                              <strong style={{ fontSize: "0.9rem", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                {!viewerIsAdmin && String(c.role || "").toLowerCase() === "admin" ? "AngoStart" : c.name}
+                                {!viewerIsAdmin && String(c.role || "").toLowerCase() === "admin" ? (
+                                  <span title="Conta verificada" style={{ color: "#1d9bf0", fontSize: "0.85rem" }}>✔</span>
+                                ) : null}
+                              </strong>
                             </div>
                             <UserOnlineIndicator online={onlineSet.has(Number(c.userId))} />
                           </div>
