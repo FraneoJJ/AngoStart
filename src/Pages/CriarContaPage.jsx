@@ -40,6 +40,7 @@ const CriarConta = () => {
     province: '',
     
     // Empreendedor
+    hasBusiness: 'nao',
     businessName: '',
     businessSector: '',
     businessStage: '',
@@ -92,6 +93,7 @@ const CriarConta = () => {
       businessSector: '',
       businessStage: '',
       businessLocation: '',
+      hasBusiness: 'nao',
       // Limpar campos do mentor
       expertiseArea: '',
       experienceYears: '',
@@ -239,7 +241,7 @@ const CriarConta = () => {
     // Validações específicas por tipo
     switch(selectedRole) {
       case 'empreendedor':
-        if (!formData.businessName || !formData.businessSector || !formData.businessStage) {
+        if (formData.hasBusiness === 'sim' && (!formData.businessName || !formData.businessSector || !formData.businessStage)) {
           showError('Preencha todos os dados do seu negócio');
           return;
         }
@@ -397,6 +399,7 @@ const CriarConta = () => {
         role: selectedRole,
         profileData: {
           phone: formData.phone.replace(/\s/g, ''),
+          hasBusiness: formData.hasBusiness === 'sim',
           businessName: formData.businessName,
           businessSector: formData.businessSector,
           businessStage: formData.businessStage,
@@ -669,79 +672,6 @@ const CriarConta = () => {
 
   const renderEmpreendedorFields = () => (
     <>
-      <h3 className="form-section-title"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase-business-icon lucide-briefcase-business"><path d="M12 12h.01"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M22 13a18.15 18.15 0 0 1-20 0"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>Sobre o seu negócio</h3>
-      
-      <div className="form-group">
-        <label htmlFor="businessName" className="form-label">Nome do negócio *</label>
-        <input
-          type="text"
-          id="businessName"
-          className="form-input"
-          placeholder="Ex: Padaria Central, Salão Kikas, etc"
-          value={formData.businessName}
-          onChange={handleInputChange}
-          required
-        />
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="businessSector" className="form-label">Ramo de atividade *</label>
-        <select
-          id="businessSector"
-          className="form-input"
-          value={formData.businessSector}
-          onChange={handleInputChange}
-          required
-        >
-          <option value="">Selecione</option>
-          <option value="comercio">Comércio (lojas, supermercados)</option>
-          <option value="servicos">Serviços (salão, oficina, consultoria)</option>
-          <option value="alimentacao">Alimentação (restaurante, pastelaria)</option>
-          <option value="agricultura">Agricultura / Pecuária</option>
-          <option value="construcao">Construção / Imobiliário</option>
-          <option value="tecnologia">Tecnologia (apps, sites)</option>
-          <option value="transporte">Transporte / Logística</option>
-          <option value="moda">Moda / Vestuário</option>
-          <option value="outros">Outro</option>
-        </select>
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="businessStage" className="form-label">Fase do negócio *</label>
-        <select
-          id="businessStage"
-          className="form-input"
-          value={formData.businessStage}
-          onChange={handleInputChange}
-          required
-        >
-          <option value="">Selecione</option>
-          <option value="ideia">Ainda é uma ideia</option>
-          <option value="inicio">Comecei há menos de 1 ano</option>
-          <option value="funcionando">Já funciona e quero expandir</option>
-          <option value="estavel">Já está estável, preciso de investimento</option>
-        </select>
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="businessLocation" className="form-label">Província / Localização</label>
-        <select
-          id="businessLocation"
-          className="form-input"
-          value={formData.businessLocation}
-          onChange={handleInputChange}
-        >
-          <option value="">Selecione</option>
-          <option value="luanda">Luanda</option>
-          <option value="benguela">Benguela</option>
-          <option value="huila">Huíla</option>
-          <option value="huambo">Huambo</option>
-          <option value="cuanza-sul">Cuanza Sul</option>
-          <option value="uige">Uíge</option>
-          <option value="outra">Outra</option>
-        </select>
-      </div>
-
       <div className="form-group">
         <label htmlFor="phone" className="form-label">Telemóvel *</label>
         <div className="input-wrapper">
@@ -761,6 +691,110 @@ const CriarConta = () => {
         </div>
         <small className="form-hint">Número angolano (ex: 923 456 789)</small>
       </div>
+
+      <div className="form-group">
+        <label className="form-label">Já tem um negócio?</label>
+        <div className="radio-group">
+          <label className="checkbox-label">
+            <input
+              type="radio"
+              name="hasBusiness"
+              id="hasBusiness"
+              value="nao"
+              checked={formData.hasBusiness === 'nao'}
+              onChange={handleInputChange}
+            />
+            Não
+          </label>
+          <label className="checkbox-label">
+            <input
+              type="radio"
+              name="hasBusiness"
+              id="hasBusiness"
+              value="sim"
+              checked={formData.hasBusiness === 'sim'}
+              onChange={handleInputChange}
+            />
+            Sim
+          </label>
+        </div>
+      </div>
+
+      {formData.hasBusiness === 'sim' && (
+        <>
+          <h3 className="form-section-title"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase-business-icon lucide-briefcase-business"><path d="M12 12h.01"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M22 13a18.15 18.15 0 0 1-20 0"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>Sobre o seu negócio</h3>
+          <div className="form-group">
+            <label htmlFor="businessName" className="form-label">Nome do negócio *</label>
+            <input
+              type="text"
+              id="businessName"
+              className="form-input"
+              placeholder="Ex: Padaria Central, Salão Kikas, etc"
+              value={formData.businessName}
+              onChange={handleInputChange}
+              required={formData.hasBusiness === 'sim'}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="businessSector" className="form-label">Ramo de atividade *</label>
+            <select
+              id="businessSector"
+              className="form-input"
+              value={formData.businessSector}
+              onChange={handleInputChange}
+              required={formData.hasBusiness === 'sim'}
+            >
+              <option value="">Selecione</option>
+              <option value="comercio">Comércio (lojas, supermercados)</option>
+              <option value="servicos">Serviços (salão, oficina, consultoria)</option>
+              <option value="alimentacao">Alimentação (restaurante, pastelaria)</option>
+              <option value="agricultura">Agricultura / Pecuária</option>
+              <option value="construcao">Construção / Imobiliário</option>
+              <option value="tecnologia">Tecnologia (apps, sites)</option>
+              <option value="transporte">Transporte / Logística</option>
+              <option value="moda">Moda / Vestuário</option>
+              <option value="outros">Outro</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="businessStage" className="form-label">Fase do negócio *</label>
+            <select
+              id="businessStage"
+              className="form-input"
+              value={formData.businessStage}
+              onChange={handleInputChange}
+              required={formData.hasBusiness === 'sim'}
+            >
+              <option value="">Selecione</option>
+              <option value="ideia">Ainda é uma ideia</option>
+              <option value="inicio">Comecei há menos de 1 ano</option>
+              <option value="funcionando">Já funciona e quero expandir</option>
+              <option value="estavel">Já está estável, preciso de investimento</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="businessLocation" className="form-label">Província / Localização</label>
+            <select
+              id="businessLocation"
+              className="form-input"
+              value={formData.businessLocation}
+              onChange={handleInputChange}
+            >
+              <option value="">Selecione</option>
+              <option value="luanda">Luanda</option>
+              <option value="benguela">Benguela</option>
+              <option value="huila">Huíla</option>
+              <option value="huambo">Huambo</option>
+              <option value="cuanza-sul">Cuanza Sul</option>
+              <option value="uige">Uíge</option>
+              <option value="outra">Outra</option>
+            </select>
+          </div>
+        </>
+      )}
     </>
   );
 

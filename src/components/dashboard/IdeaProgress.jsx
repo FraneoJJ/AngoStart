@@ -34,7 +34,7 @@ function parseNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export default function IdeaProgress({ setModal }) {
+export default function IdeaProgress({ setModal, currentUser }) {
   const [ideas, setIdeas] = useState([]);
   const [selectedIdeaId, setSelectedIdeaId] = useState("");
   const [form, setForm] = useState(initialForm);
@@ -44,6 +44,11 @@ export default function IdeaProgress({ setModal }) {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const profit = useMemo(() => parseNumber(form.revenue) - parseNumber(form.expenses), [form.revenue, form.expenses]);
+  const profile = currentUser?.profileData || {};
+  const hasBusiness = Number(profile?.has_business ?? profile?.hasBusiness ?? 0) === 1 || profile?.hasBusiness === true;
+  const businessName = profile?.business_name || profile?.businessName || "-";
+  const businessSector = profile?.business_sector || profile?.businessSector || "-";
+  const businessStage = profile?.business_stage || profile?.businessStage || "-";
 
   useEffect(() => {
     let mounted = true;
@@ -132,6 +137,11 @@ export default function IdeaProgress({ setModal }) {
           <h3 className="dashboard-card-title">Progresso da Ideia</h3>
           <p className="dashboard-card-description">Registe a evolução semanal e gere base para relatórios mensais.</p>
         </div>
+        {hasBusiness ? (
+          <div style={{ marginBottom: "14px", padding: "12px", border: "1px solid #e5e7eb", borderRadius: "10px", background: "#f8fafc" }}>
+            <strong>Negócio em andamento:</strong> {businessName} | Setor: {businessSector} | Fase: {businessStage}
+          </div>
+        ) : null}
 
         {loading ? (
           <p>A carregar ideias...</p>

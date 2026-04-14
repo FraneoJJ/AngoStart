@@ -4,13 +4,14 @@ export async function createEmpreendedorProfile(db, input) {
   const [result] = await db.execute(
     `INSERT INTO empreendedor_profiles
       (
-        user_id, phone, business_name, business_sector, business_stage, business_location,
+        user_id, phone, has_business, business_name, business_sector, business_stage, business_location,
         accept_terms, verification_id, verification_status
       )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
     [
       input.userId,
       input.phone,
+      input.hasBusiness ? 1 : 0,
       input.businessName,
       input.businessSector,
       input.businessStage,
@@ -114,10 +115,20 @@ export async function findInvestidorProfileByUserId(userId) {
 }
 
 export async function updateEmpreendedorProfileByUserId(userId, input) {
+  const [existingRows] = await pool.execute(
+    `SELECT has_business
+     FROM empreendedor_profiles
+     WHERE user_id = ?
+     LIMIT 1`,
+    [userId]
+  );
+  const existingHasBusiness = Number(existingRows?.[0]?.has_business || 0) === 1;
+  const hasBusiness = typeof input.hasBusiness === "boolean" ? input.hasBusiness : existingHasBusiness;
   const [result] = await pool.execute(
     `UPDATE empreendedor_profiles
      SET
        phone = ?,
+       has_business = ?,
        business_name = ?,
        business_sector = ?,
        business_stage = ?,
@@ -127,9 +138,10 @@ export async function updateEmpreendedorProfileByUserId(userId, input) {
      WHERE user_id = ?`,
     [
       input.phone || null,
-      input.businessName || null,
-      input.businessSector || null,
-      input.businessStage || null,
+      hasBusiness ? 1 : 0,
+      hasBusiness ? (input.businessName || null) : null,
+      hasBusiness ? (input.businessSector || null) : null,
+      hasBusiness ? (input.businessStage || null) : null,
       input.businessLocation || null,
       userId,
     ]
@@ -245,6 +257,7 @@ export async function findProfileDataByUserRole(userId, role) {
     const [rows] = await dbQuery(
       `SELECT
         phone,
+        has_business,
         business_name,
         business_sector,
         business_stage,

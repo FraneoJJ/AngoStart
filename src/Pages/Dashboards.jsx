@@ -769,7 +769,7 @@ function RenderAdminPage() {
 }
 
 function IdeaProgressPage() {
-  return <IdeaProgress setModal={setModal} />;
+  return <IdeaProgress setModal={setModal} currentUser={user} />;
 }
 
 function MensagensAdmins() {
@@ -1045,6 +1045,12 @@ function MensagensAdmins() {
       const d = new Date(iso);
       return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-PT");
     };
+    const profile = ctx?.currentUser?.profileData || {};
+    const hasBusiness = Number(profile?.has_business ?? profile?.hasBusiness ?? 0) === 1 || profile?.hasBusiness === true;
+    const businessName = profile?.business_name || profile?.businessName || "-";
+    const businessSector = profile?.business_sector || profile?.businessSector || "-";
+    const businessStage = profile?.business_stage || profile?.businessStage || "-";
+    const businessLocation = profile?.business_location || profile?.businessLocation || "-";
 
     return (
       <>
@@ -1092,6 +1098,25 @@ function MensagensAdmins() {
               <div className="stat-icon-wrapper stat-icon-info">{icons.clock}</div>
             </div>
           </div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="dashboard-card-header">
+            <h3 className="dashboard-card-title">Meu Negócio em Andamento</h3>
+            <p className="dashboard-card-description">Dados do negócio informados no seu cadastro de empreendedor.</p>
+          </div>
+          {!hasBusiness ? (
+            <p>Ainda não indicou um negócio em andamento. Pode atualizar no seu perfil quando desejar.</p>
+          ) : (
+            <table className="data-table">
+              <tbody>
+                <tr><th>Nome</th><td>{businessName}</td></tr>
+                <tr><th>Setor</th><td>{businessSector}</td></tr>
+                <tr><th>Fase</th><td>{businessStage}</td></tr>
+                <tr><th>Localização</th><td>{businessLocation}</td></tr>
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="dashboard-card">

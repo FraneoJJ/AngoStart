@@ -46,6 +46,27 @@ export async function initDb() {
          ADD COLUMN verification_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'`
       );
     }
+    const [empreendedorColsRows] = await conn.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME = 'empreendedor_profiles'
+         AND COLUMN_NAME IN ('has_business', 'business_name', 'business_sector', 'business_stage')`,
+      [env.DB_NAME]
+    );
+    const empreendedorCols = new Set((empreendedorColsRows || []).map((r) => String(r.COLUMN_NAME || "").toLowerCase()));
+    if (!empreendedorCols.has("has_business")) {
+      await conn.execute(
+        `ALTER TABLE empreendedor_profiles
+         ADD COLUMN has_business TINYINT(1) NOT NULL DEFAULT 0 AFTER phone`
+      );
+    }
+    await conn.execute(
+      `ALTER TABLE empreendedor_profiles
+       MODIFY COLUMN business_name VARCHAR(180) NULL,
+       MODIFY COLUMN business_sector VARCHAR(120) NULL,
+       MODIFY COLUMN business_stage VARCHAR(120) NULL`
+    );
 
     const [userAvatarColRows] = await conn.execute(
       `SELECT COLUMN_NAME

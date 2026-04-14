@@ -36,6 +36,7 @@ import { sendPasswordResetEmail } from "./mailService.js";
 
 const profileSchema = z.object({
   phone: z.string().min(6).max(30).optional(),
+  hasBusiness: z.coerce.boolean().optional(),
   businessName: z.string().max(180).optional(),
   businessSector: z.string().max(120).optional(),
   businessStage: z.string().max(120).optional(),
@@ -203,7 +204,11 @@ export async function register(input) {
     }
 
     if (data.role === "empreendedor") {
-      if (!profile.phone || !profile.businessName || !profile.businessSector || !profile.businessStage) {
+      const hasBusiness = !!profile.hasBusiness;
+      if (!profile.phone) {
+        throw { status: 400, message: "Telefone é obrigatório para empreendedor." };
+      }
+      if (hasBusiness && (!profile.businessName || !profile.businessSector || !profile.businessStage)) {
         throw { status: 400, message: "Dados do negócio incompletos para empreendedor." };
       }
       const exists = await findEmpreendedorProfileByUserId(user.id);
@@ -212,9 +217,10 @@ export async function register(input) {
       await createEmpreendedorProfile(db, {
         userId: user.id,
         phone: profile.phone,
-        businessName: profile.businessName,
-        businessSector: profile.businessSector,
-        businessStage: profile.businessStage,
+        hasBusiness,
+        businessName: hasBusiness ? profile.businessName : null,
+        businessSector: hasBusiness ? profile.businessSector : null,
+        businessStage: hasBusiness ? profile.businessStage : null,
         businessLocation: profile.businessLocation || null,
         acceptTerms: !!profile.acceptTerms,
         verificationId,
@@ -365,6 +371,7 @@ export async function updateMyProfile(authUser, input) {
     if (role === "empreendedor") {
       await updateEmpreendedorProfileByUserId(userId, {
         phone: profile.phone,
+        hasBusiness: profile.hasBusiness,
         businessName: profile.businessName,
         businessSector: profile.businessSector,
         businessStage: profile.businessStage,
