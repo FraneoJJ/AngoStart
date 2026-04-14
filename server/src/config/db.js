@@ -76,6 +76,37 @@ export async function initDb() {
          ADD COLUMN approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'`
       );
     }
+
+    await conn.execute(
+      `CREATE TABLE IF NOT EXISTS idea_progress (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        user_id BIGINT UNSIGNED NOT NULL,
+        idea_id BIGINT UNSIGNED NOT NULL,
+        status ENUM('inicial', 'validacao', 'crescimento', 'escala') NOT NULL DEFAULT 'inicial',
+        progress_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0,
+        goals_completed TEXT NULL,
+        next_steps TEXT NULL,
+        revenue DECIMAL(14, 2) NOT NULL DEFAULT 0,
+        expenses DECIMAL(14, 2) NOT NULL DEFAULT 0,
+        investment DECIMAL(14, 2) NOT NULL DEFAULT 0,
+        total_clients INT NOT NULL DEFAULT 0,
+        new_clients INT NOT NULL DEFAULT 0,
+        lost_clients INT NOT NULL DEFAULT 0,
+        customer_feedback TEXT NULL,
+        marketing_campaigns TEXT NULL,
+        marketing_channels TEXT NULL,
+        marketing_results TEXT NULL,
+        weekly_summary TEXT NULL,
+        challenges TEXT NULL,
+        learnings TEXT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_idea_progress_user (user_id),
+        INDEX idx_idea_progress_idea (idea_id),
+        INDEX idx_idea_progress_created_at (created_at),
+        CONSTRAINT fk_idea_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        CONSTRAINT fk_idea_progress_idea FOREIGN KEY (idea_id) REFERENCES ideas(id) ON DELETE CASCADE
+      )`
+    );
   } finally {
     conn.release();
   }

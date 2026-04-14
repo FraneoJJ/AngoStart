@@ -18,6 +18,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import Planos from "../components/SecoesApp/Planos";
 import ChatWindow from "../components/communication/ChatWindow";
+import IdeaProgress from "../components/dashboard/IdeaProgress";
 
 const STORAGE_KEY = 'angostart_settings';
 const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
@@ -69,7 +70,7 @@ const translations = {
   pt: {
     nav: {
       section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'administradores': 'Administradores', 'admin-mensagens': 'Mensagens de Admins', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'progresso-ideia': 'Progresso da Ideia', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'administradores': 'Administradores', 'admin-mensagens': 'Mensagens de Admins', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
     },
     common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
     config: {
@@ -99,7 +100,7 @@ const translations = {
   en: {
     nav: {
       section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'administradores': 'Administrators', 'admin-mensagens': 'Admin Messages', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'progresso-ideia': 'Idea Progress', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'administradores': 'Administrators', 'admin-mensagens': 'Admin Messages', 'ideias': 'Ideas', 'relatorios': 'Reports' },
     },
     common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
     config: {
@@ -136,6 +137,7 @@ const navigationConfig = {
       { id: 'dashboard', icon: 'home' },
       { id: 'submeter-ideia', icon: 'lightbulb' },
       { id: 'minhas-ideias', icon: 'folder', badge: 3 },
+      { id: 'progresso-ideia', icon: 'bar-chart' },
     ]},
     { sectionKey: 'crescimento', items: [
       { id: 'mensagens', icon: 'message-square-text' },
@@ -728,6 +730,7 @@ function RenderEmpreendedorPage() {
     case 'dashboard': return <Empreendedor />;
     case 'submeter-ideia': return <SubmeterIdeia/>;
     case 'minhas-ideias': return <MinhasIdeias />;
+    case 'progresso-ideia': return <IdeaProgressPage />;
     case 'mensagens': return <MensagensEmpreendedorLegacy />;
     case 'mentoria': return <Mentoria />;
     case 'investidores': return <Investidores />;
@@ -763,6 +766,10 @@ function RenderAdminPage() {
     case 'configuracoes': return <Configuracoes />;
     default: return <Admin />;
   }
+}
+
+function IdeaProgressPage() {
+  return <IdeaProgress setModal={setModal} />;
 }
 
 function MensagensAdmins() {

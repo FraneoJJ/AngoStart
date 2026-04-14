@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import authRoutes from "./routes/authRoutes.js";
 import ideaRoutes from "./routes/ideaRoutes.js";
+import ideaProgressRoutes from "./routes/ideaProgressRoutes.js";
 import questionnaireRoutes from "./routes/questionnaireRoutes.js";
 import viabilityRoutes from "./routes/viabilityRoutes.js";
 import legalRoutes from "./routes/legalRoutes.js";
@@ -64,6 +65,7 @@ app.get("/api/v1", (_req, res) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/ideas", ideaRoutes);
+app.use("/api/v1/idea-progress", ideaProgressRoutes);
 app.use("/api/v1/questionnaire", questionnaireRoutes);
 app.use("/api/v1/analysis", viabilityRoutes);
 app.use("/api/v1/legal", legalRoutes);
