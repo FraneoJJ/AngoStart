@@ -4464,6 +4464,7 @@ function MensagensEmpreendedorLegacy() {
 
 function SubmeterIdeia() {
   const ctx = useContext(AppContext);
+  const tr = (pt, en) => (ctx?.idioma === "en" ? en : pt);
   const WIZARD_STORAGE_KEY = "angostart_submit_ideia_wizard";
   const initialDados = {
     nome: "", descricao: "", setor: "",
@@ -4517,34 +4518,34 @@ function SubmeterIdeia() {
       const descricao = String(dados.descricao || "").trim();
       const setor = String(dados.setor || "").trim();
       if (!nome || nome.length < 2) {
-        ctx?.setModal?.({ open: true, message: "Preencha o nome do projeto (mínimo 2 caracteres)." });
+        ctx?.setModal?.({ open: true, message: tr("Preencha o nome do projeto (mínimo 2 caracteres).", "Fill in the project name (minimum 2 characters).") });
         return;
       }
       if (!setor) {
-        ctx?.setModal?.({ open: true, message: "Selecione o setor de atuação." });
+        ctx?.setModal?.({ open: true, message: tr("Selecione o setor de atuação.", "Select the business sector.") });
         return;
       }
       if (!descricao || descricao.length < 10) {
-        ctx?.setModal?.({ open: true, message: "A descrição curta deve ter pelo menos 10 caracteres." });
+        ctx?.setModal?.({ open: true, message: tr("A descrição curta deve ter pelo menos 10 caracteres.", "Short description must have at least 10 characters.") });
         return;
       }
     }
     if (etapa === 2) {
       if (!String(dados.cidade || "").trim() || !String(dados.regiao || "").trim()) {
-        ctx?.setModal?.({ open: true, message: "Preencha cidade e região/província para continuar." });
+        ctx?.setModal?.({ open: true, message: tr("Preencha cidade e região/província para continuar.", "Fill in city and region/province to continue.") });
         return;
       }
     }
     if (etapa === 3) {
       const capital = Number(dados.capital || 0);
       if (!Number.isFinite(capital) || capital <= 0) {
-        ctx?.setModal?.({ open: true, message: "Informe o capital inicial (Kz) maior que zero." });
+        ctx?.setModal?.({ open: true, message: tr("Informe o capital inicial (Kz) maior que zero.", "Enter initial capital (Kz) greater than zero.") });
         return;
       }
     }
     if (etapa === 4) {
       if (!String(dados.problema || "").trim() || !String(dados.diferencial || "").trim() || !String(dados.publico || "").trim()) {
-        ctx?.setModal?.({ open: true, message: "Preencha problema, diferencial e público-alvo antes de avançar." });
+        ctx?.setModal?.({ open: true, message: tr("Preencha problema, diferencial e público-alvo antes de avançar.", "Fill in problem, differentiation, and target audience before continuing.") });
         return;
       }
       // Perguntas adicionais são opcionais: ao avançar daqui, vai direto para uploads.
@@ -4576,7 +4577,7 @@ function SubmeterIdeia() {
 
   const usarMinhaLocalizacao = () => {
     if (!navigator.geolocation) {
-      ctx?.setModal?.({ open: true, message: "Geolocalização não suportada neste navegador." });
+      ctx?.setModal?.({ open: true, message: tr("Geolocalização não suportada neste navegador.", "Geolocation is not supported in this browser.") });
       return;
     }
 
@@ -4592,7 +4593,7 @@ function SubmeterIdeia() {
         }));
       },
       () => {
-        ctx?.setModal?.({ open: true, message: "Não foi possível obter sua localização atual." });
+        ctx?.setModal?.({ open: true, message: tr("Não foi possível obter sua localização atual.", "Could not get your current location.") });
       }
     );
   };
@@ -4674,15 +4675,15 @@ function SubmeterIdeia() {
 
   const publicarNoMarketplace = async () => {
     if (!ultimaIdeiaId) {
-      ctx?.setModal?.({ open: true, message: "Nenhuma ideia disponível para publicar." });
+      ctx?.setModal?.({ open: true, message: tr("Nenhuma ideia disponível para publicar.", "No idea available to publish.") });
       return;
     }
     setPublicandoMarketplace(true);
     try {
       await updateIdeaStatus(ultimaIdeiaId, "active");
-      ctx?.setModal?.({ open: true, message: "Ideia publicada no marketplace com sucesso." });
+      ctx?.setModal?.({ open: true, message: tr("Ideia publicada no marketplace com sucesso.", "Idea successfully published to the marketplace.") });
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: err.message || "Falha ao publicar no marketplace." });
+      ctx?.setModal?.({ open: true, message: err.message || tr("Falha ao publicar no marketplace.", "Failed to publish on marketplace.") });
     } finally {
       setPublicandoMarketplace(false);
     }
@@ -4696,15 +4697,15 @@ function SubmeterIdeia() {
     const regiao = String(dados.regiao || "").trim();
 
     if (!nome || !descricao || !setor || !cidade || !regiao) {
-      ctx?.setModal?.({ open: true, message: "Preencha os campos obrigatórios das fases anteriores antes de submeter." });
+      ctx?.setModal?.({ open: true, message: tr("Preencha os campos obrigatórios das fases anteriores antes de submeter.", "Fill in required fields from previous phases before submitting.") });
       return;
     }
     if (nome.length < 2) {
-      ctx?.setModal?.({ open: true, message: "O nome do projeto deve ter pelo menos 2 caracteres." });
+      ctx?.setModal?.({ open: true, message: tr("O nome do projeto deve ter pelo menos 2 caracteres.", "Project name must have at least 2 characters.") });
       return;
     }
     if (descricao.length < 10) {
-      ctx?.setModal?.({ open: true, message: "A descrição curta deve ter pelo menos 10 caracteres." });
+      ctx?.setModal?.({ open: true, message: tr("A descrição curta deve ter pelo menos 10 caracteres.", "Short description must have at least 10 characters.") });
       return;
     }
 
@@ -4789,12 +4790,20 @@ function SubmeterIdeia() {
         ctx?.setModal?.({
           open: true,
           message:
-            "Ideia submetida com sucesso. A análise de viabilidade por IA não está disponível no seu plano atual.",
+            tr(
+              "Ideia submetida com sucesso. A análise de viabilidade por IA não está disponível no seu plano atual.",
+              "Idea submitted successfully. AI viability analysis is not available in your current plan."
+            ),
         });
       } else if (questionarioIndisponivel) {
-        setMensagemFluxo("Ideia enviada e analisada com sucesso. O questionário dinâmico não está disponível no seu plano atual.");
+        setMensagemFluxo(
+          tr(
+            "Ideia enviada e analisada com sucesso. O questionário dinâmico não está disponível no seu plano atual.",
+            "Idea submitted and analyzed successfully. Dynamic questionnaire is not available in your current plan."
+          )
+        );
       } else {
-        setMensagemFluxo("Ideia enviada e analisada com sucesso.");
+        setMensagemFluxo(tr("Ideia enviada e analisada com sucesso.", "Idea submitted and analyzed successfully."));
       }
     } catch (err) {
       const msg = String(err?.message || "");
@@ -4806,13 +4815,19 @@ function SubmeterIdeia() {
       if (isValidationError) {
         ctx?.setModal?.({
           open: true,
-          message: `Não foi possível submeter para a API: ${msg}. Corrija os campos obrigatórios e tente novamente.`,
+          message: tr(
+            `Não foi possível submeter para a API: ${msg}. Corrija os campos obrigatórios e tente novamente.`,
+            `Could not submit to API: ${msg}. Fix required fields and try again.`
+          ),
         });
       } else {
         salvarRascunhoLocal();
         ctx?.setModal?.({
           open: true,
-          message: `Não foi possível completar o fluxo na API (${msg}). O rascunho foi salvo localmente.`,
+          message: tr(
+            `Não foi possível completar o fluxo na API (${msg}). O rascunho foi salvo localmente.`,
+            `Could not complete API flow (${msg}). Draft was saved locally.`
+          ),
         });
       }
     } finally {
@@ -4845,12 +4860,20 @@ function SubmeterIdeia() {
         baseAnswers[q.key] = questionarioRespostas[q.key] || "";
       });
       setQuestionarioRespostas(baseAnswers);
-      setAvisoQuestionario("Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.");
+      setAvisoQuestionario(
+        tr(
+          "Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.",
+          "AI questionnaire generated successfully. You can answer the additional questions."
+        )
+      );
       if (avancarParaPerguntas) {
         setEtapa(5);
       }
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: `Falha ao gerar questionário: ${err.message}` });
+      ctx?.setModal?.({
+        open: true,
+        message: tr(`Falha ao gerar questionário: ${err.message}`, `Failed to generate questionnaire: ${err.message}`),
+      });
     } finally {
       setGerandoQuestionario(false);
     }
@@ -4860,9 +4883,12 @@ function SubmeterIdeia() {
     if (!questionarioSessionId) return;
     try {
       await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
-      setAvisoQuestionario("Respostas do questionário guardadas com sucesso.");
+      setAvisoQuestionario(tr("Respostas do questionário guardadas com sucesso.", "Questionnaire answers saved successfully."));
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: `Falha ao guardar respostas: ${err.message}` });
+      ctx?.setModal?.({
+        open: true,
+        message: tr(`Falha ao guardar respostas: ${err.message}`, `Failed to save answers: ${err.message}`),
+      });
     }
   };
 
@@ -4915,7 +4941,7 @@ function SubmeterIdeia() {
 
   const renderFase1 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 1: Identificação</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 1: Identificação", "Phase 1: Identification")}</h3>
       <div className="form-group">
         <label className="form-label">Nome do Projecto</label>
         <input className="form-input" name="nome" value={dados.nome} onChange={handleChange} placeholder="Ex: SolarPay" />
@@ -4951,7 +4977,7 @@ function SubmeterIdeia() {
 
   const renderFase2 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 2: Localização</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 2: Localização", "Phase 2: Location")}</h3>
       <div className="form-group">
         <label className="form-label">Cidade</label>
         <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
@@ -4996,7 +5022,7 @@ function SubmeterIdeia() {
 
   const renderFase3 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 3: Finanças</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 3: Finanças", "Phase 3: Finances")}</h3>
       <div className="form-group">
         <label className="form-label">Quanto você tem para investir inicialmente? (Kz)</label>
         <input className="form-input" type="number" name="capital" value={dados.capital} onChange={handleChange} placeholder="Ex: 5000" />
@@ -5006,7 +5032,7 @@ function SubmeterIdeia() {
 
   const renderFase4 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 4: Contexto para IA</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 4: Contexto para IA", "Phase 4: AI Context")}</h3>
       <div className="form-group">
         <label className="form-label">Qual problema específico o seu produto resolve?</label>
         <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
@@ -5042,7 +5068,7 @@ function SubmeterIdeia() {
 
   const renderFase5 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 5: Perguntas adicionais da IA (Opcional)</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 5: Perguntas adicionais da IA (Opcional)", "Phase 5: Additional AI Questions (Optional)")}</h3>
       <p style={{ margin: 0, color: "var(--neutral-600)", fontSize: "0.9rem" }}>
         Responda este questionário para melhorar a precisão da análise de viabilidade.
       </p>
@@ -5109,7 +5135,7 @@ function SubmeterIdeia() {
 
   const renderFase6 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 6: Uploads</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 6: Uploads", "Phase 6: Uploads")}</h3>
       <div style={{ border: '2px dashed var(--neutral-300)', padding: '40px', textAlign: 'center', borderRadius: '12px' }}>
         <p>Adicione imagens, PDF ou vídeos do produto/protótipo</p>
         <input
@@ -5134,7 +5160,7 @@ function SubmeterIdeia() {
 
   const renderFase7 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 7: Revisão Final</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 7: Revisão Final", "Phase 7: Final Review")}</h3>
       <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
         <p><strong>Projeto:</strong> {dados.nome}</p>
         <p><strong>Setor:</strong> {dados.setor}</p>
@@ -5269,10 +5295,10 @@ function SubmeterIdeia() {
 
       <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-primary" onClick={reiniciarSubmissao} style={{ width: 'auto' }}>
-          Nova Submissão
+          {tr("Nova Submissão", "New Submission")}
         </button>
         <button className="btn btn-outline" onClick={gerarPlanoNegocioPdf} style={{ width: 'auto' }}>
-          Gerar Plano de Negócio (PDF)
+          {tr("Gerar Plano de Negócio (PDF)", "Generate Business Plan (PDF)")}
         </button>
         <button
           className="btn btn-primary"
@@ -5280,7 +5306,7 @@ function SubmeterIdeia() {
           disabled={!ultimaIdeiaId || publicandoMarketplace}
           style={{ width: 'auto', opacity: !ultimaIdeiaId || publicandoMarketplace ? 0.6 : 1 }}
         >
-          {publicandoMarketplace ? "A publicar..." : "Publicar no Marketplace"}
+          {publicandoMarketplace ? tr("A publicar...", "Publishing...") : tr("Publicar no Marketplace", "Publish to Marketplace")}
         </button>
       </div>
     </div>
@@ -5308,7 +5334,7 @@ function SubmeterIdeia() {
         {analisando ? (
           <div className="loading">
             <div className="spinner"></div>
-            <p style={{ marginTop: '20px' }}>A Inteligência Artificial está analisando seu projeto...</p>
+            <p style={{ marginTop: '20px' }}>{tr("A Inteligência Artificial está analisando seu projeto...", "Artificial Intelligence is analyzing your project...")}</p>
           </div>
         ) : (
           <>
@@ -5331,16 +5357,16 @@ function SubmeterIdeia() {
                   disabled={etapa === 1}
                   style={{ width: 'auto', padding: '10px 30px', opacity: etapa === 1 ? 0.3 : 1 }}
                 >
-                  Voltar
+                  {tr("Voltar", "Back")}
                 </button>
                 
                 {etapa < 7 ? (
                   <button type="button" className="btn btn-primary" onClick={proximaEtapa} style={{ width: 'auto', padding: '10px 40px' }}>
-                    Próxima Fase
+                    {tr("Próxima Fase", "Next Phase")}
                   </button>
                 ) : (
                   <button type="button" className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
-                    Enviar para Análise IA
+                    {tr("Enviar para Análise IA", "Send for AI Analysis")}
                   </button>
                 )}
               </div>

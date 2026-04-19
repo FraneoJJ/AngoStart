@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createViabilityReport } from "../models/viabilityModel.js";
 import { env } from "../config/env.js";
-import { generateJsonWithGemini } from "./googleAiService.js";
+import { generateJsonWithAiProvider } from "./googleAiService.js";
 
 const analyzeSchema = z.object({
   ideaId: z.number().int().positive().optional(),
@@ -45,19 +45,181 @@ function formatAoa(value) {
   return new Intl.NumberFormat("pt-PT").format(Math.round(toNumber(value, 0)));
 }
 
+function normalizeFreeText(v = "") {
+  return String(v || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function forceKwanzaCurrency(text = "") {
+  return String(text || "")
+    .replace(/\$\s*/g, "Kz ")
+    .replace(/\bUSD\b/gi, "Kz")
+    .replace(/\bd[oó]lar(?:es)?\b/gi, "Kz")
+    .replace(/\bUS\$\b/gi, "Kz");
+}
+
+const essentialCostBySector = [
+  {
+    keys: ["fintech", "tecnologia", "software", "telecom"],
+    items: [
+      { name: "Desenvolvimento inicial (MVP)", cost: 350000 },
+      { name: "Infraestrutura cloud e segurança", cost: 180000 },
+      { name: "Aquisição inicial de clientes", cost: 120000 },
+    ],
+  },
+  {
+    keys: ["agro", "pescas", "aquicultura"],
+    items: [
+      { name: "Equipamentos operacionais base", cost: 420000 },
+      { name: "Insumos e logística inicial", cost: 250000 },
+      { name: "Licenças e regularização", cost: 90000 },
+    ],
+  },
+  {
+    keys: ["saude", "educacao"],
+    items: [
+      { name: "Infraestrutura e materiais", cost: 280000 },
+      { name: "Equipe técnica inicial", cost: 220000 },
+      { name: "Compliance/regulação", cost: 110000 },
+    ],
+  },
+  {
+    keys: ["comercio", "retalho", "turismo", "hotelaria", "logistica", "transportes"],
+    items: [
+      { name: "Estoque/operação inicial", cost: 300000 },
+      { name: "Ponto/estrutura e equipamentos", cost: 260000 },
+      { name: "Marketing e aquisição", cost: 100000 },
+    ],
+  },
+];
+
+function getEssentialCostBenchmark(sectorRaw = "") {
+  const sector = normalizeFreeText(sectorRaw);
+  const selected =
+    essentialCostBySector.find((group) => group.keys.some((k) => sector.includes(k))) ||
+    {
+      items: [
+        { name: "Estrutura operacional mínima", cost: 250000 },
+        { name: "Marketing inicial", cost: 90000 },
+        { name: "Reserva de caixa inicial", cost: 120000 },
+      ],
+    };
+  const requiredTotal = selected.items.reduce((acc, item) => acc + Number(item.cost || 0), 0);
+  return { items: selected.items, requiredTotal };
+}
+
+function hasFinancialMovementData(questionnaireAnswers = {}) {
+  const entries = Object.entries(questionnaireAnswers || {});
+  if (!entries.length) return false;
+  const movementSignals = [
+    "receita",
+    "fatur",
+    "venda",
+    "clientes_ativos",
+    "clientes ativos",
+    "lucro",
+    "despesa",
+    "custo mensal",
+  ];
+  return entries.some(([key, value]) => {
+    const k = normalizeFreeText(key);
+    const v = normalizeFreeText(value);
+    const numeric = toNumber(String(value || "").replace(/[^\d.,-]/g, "").replace(",", "."), 0);
+    return movementSignals.some((sig) => k.includes(sig) || v.includes(sig)) && numeric > 0;
+  });
+}
+
+function computeAudienceFit(idea) {
+  const problem = normalizeFreeText(idea.problem);
+  const audience = normalizeFreeText(idea.targetAudience);
+  if (!problem || !audience) {
+    return {
+      score: 35,
+      suggestion:
+        "Defina um público-alvo específico por perfil (idade, renda, contexto) diretamente ligado à dor principal.",
+      lowFit: true,
+    };
+  }
+
+  const buckets = [
+    { keywords: ["estudante", "escola", "universidade", "curso", "aluno"], audience: ["estudante", "pais", "professor"] },
+    { keywords: ["empresa", "negocio", "b2b", "gestao", "operacao"], audience: ["empresas", "pmes", "gestores"] },
+    { keywords: ["saude", "clinica", "hospital", "paciente"], audience: ["pacientes", "familias", "clinicas"] },
+    { keywords: ["agric", "producao rural", "fazenda"], audience: ["agricultores", "cooperativas", "distribuidores"] },
+  ];
+
+  const matchedBucket = buckets.find((b) => b.keywords.some((k) => problem.includes(k)));
+  if (!matchedBucket) {
+    return {
+      score: 55,
+      suggestion:
+        "Valide se o público descrito tem a dor principal e capacidade de pagar pela solução.",
+      lowFit: false,
+    };
+  }
+
+  const aligned = matchedBucket.audience.some((a) => audience.includes(normalizeFreeText(a)));
+  return aligned
+    ? {
+        score: 78,
+        suggestion: "",
+        lowFit: false,
+      }
+    : {
+        score: 28,
+        suggestion: `Público sugerido para este problema: ${matchedBucket.audience.join(", ")}.`,
+        lowFit: true,
+      };
+}
+
+function computeExecutionScore(questionnaireAnswers = {}) {
+  const entries = Object.entries(questionnaireAnswers || {});
+  if (!entries.length) {
+    return { score: 25, isIdeaStage: true };
+  }
+  const blob = normalizeFreeText(entries.map(([k, v]) => `${k} ${v}`).join(" "));
+  const ongoingSignals = ["clientes", "vendas", "faturamento", "receita", "operando", "equipa", "mvp em producao", "piloto ativo"];
+  const hasOngoingSignals = ongoingSignals.some((s) => blob.includes(s));
+  if (!hasOngoingSignals) {
+    return { score: 28, isIdeaStage: true };
+  }
+  return { score: 62, isIdeaStage: false };
+}
+
 function computeFinancialEstimate(idea, questionnaireAnswers) {
   const capital = Math.max(0, toNumber(idea.initialCapital, 0));
+  const benchmark = getEssentialCostBenchmark(idea.sector);
+  const coverage = benchmark.requiredTotal > 0 ? capital / benchmark.requiredTotal : 0;
+  const coverageScore = Math.max(0, Math.min(100, Math.round(coverage * 100)));
   const ticket = Math.max(0, toNumber(questionnaireAnswers?.ticket_medio, 0));
-  const pricingGuess = ticket > 0 ? ticket : Math.max(1500, Math.round(capital * 0.06));
-  const estimatedClientsMonth = Math.max(8, Math.round(8 + capital / 40000));
-  const estimatedRevenueMonth = Math.round(pricingGuess * estimatedClientsMonth);
-  const estimatedCostMonth = Math.round(Math.max(capital * 0.12, estimatedRevenueMonth * 0.58));
-  const estimatedProfitMonth = Math.round(estimatedRevenueMonth - estimatedCostMonth);
-  const breakEvenMonths =
-    estimatedProfitMonth > 0 ? Math.max(1, Math.ceil(capital / estimatedProfitMonth)) : null;
-  const projection12M = Math.round(estimatedProfitMonth * 12);
+  const hasMovement = hasFinancialMovementData(questionnaireAnswers);
+  const hasMinimumPricingData = ticket > 0;
+
+  let estimatedRevenueMonth = 0;
+  let estimatedCostMonth = 0;
+  let estimatedProfitMonth = 0;
+  let breakEvenMonths = null;
+  let projection12M = null;
+
+  if (hasMovement && hasMinimumPricingData) {
+    const estimatedClientsMonth = Math.max(8, Math.round(8 + capital / 40000));
+    estimatedRevenueMonth = Math.round(ticket * estimatedClientsMonth);
+    estimatedCostMonth = Math.round(Math.max(capital * 0.12, estimatedRevenueMonth * 0.58));
+    estimatedProfitMonth = Math.round(estimatedRevenueMonth - estimatedCostMonth);
+    breakEvenMonths =
+      estimatedProfitMonth > 0 ? Math.max(1, Math.ceil(capital / estimatedProfitMonth)) : null;
+    projection12M = Math.round(estimatedProfitMonth * 12);
+  }
 
   return {
+    benchmarkItems: benchmark.items,
+    requiredTotal: benchmark.requiredTotal,
+    coverage,
+    coverageScore,
+    hasMovement,
+    hasMinimumPricingData,
     estimatedRevenueMonth,
     estimatedCostMonth,
     estimatedProfitMonth,
@@ -144,19 +306,36 @@ function computeViabilityHeuristic(data) {
       ? "A ideia apresenta boa base de viabilidade para avançar para validação de mercado."
       : "A ideia precisa de ajustes estratégicos antes de avançar para execução.";
   const financial = computeFinancialEstimate(idea, questionnaireAnswers);
+  const audienceFit = computeAudienceFit(idea);
+  const execution = computeExecutionScore(questionnaireAnswers);
   const identifiedRisks = [];
   const factorScores = {
     problemaMercado: hasRelevantText(idea.problem, 30) ? 80 : 45,
     diferencial: hasRelevantText(idea.differentialText, 30) ? 78 : 42,
-    publicoAlvo: hasRelevantText(idea.targetAudience, 20) ? 76 : 48,
-    execucao: questionnaireAnswers && Object.keys(questionnaireAnswers).length >= 3 ? 72 : 52,
-    financeiro: financial.estimatedProfitMonth > 0 ? 70 : 40,
+    publicoAlvo: audienceFit.score,
+    execucao: execution.isIdeaStage ? Math.min(29, execution.score) : execution.score,
+    financeiro: financial.coverageScore,
   };
 
   if (!hasRelevantText(idea.problem, 30)) identifiedRisks.push("Definição insuficiente da dor do cliente.");
   if (!hasRelevantText(idea.differentialText, 30)) identifiedRisks.push("Diferencial competitivo ainda frágil.");
   if ((idea.city || "").trim().length < 2) identifiedRisks.push("Mercado geográfico inicial pouco definido.");
-  if (financial.estimatedProfitMonth <= 0) identifiedRisks.push("Margem mensal projetada negativa no cenário base.");
+  if (financial.coverage < 1) {
+    identifiedRisks.push(
+      `Capital abaixo do mínimo estimado para itens essenciais do setor (cobertura aproximada: ${Math.round(
+        financial.coverage * 100
+      )}%).`
+    );
+  }
+  if (execution.isIdeaStage) {
+    identifiedRisks.push("Negócio ainda em estágio de ideia, sem evidência de execução em andamento.");
+  }
+  if (!financial.hasMovement || !financial.hasMinimumPricingData) {
+    identifiedRisks.push("Dados financeiros insuficientes para projeção confiável.");
+  }
+  if (audienceFit.lowFit) {
+    identifiedRisks.push("Público-alvo atual pode não ser o mais aderente ao problema principal.");
+  }
   if (!identifiedRisks.length) {
     identifiedRisks.push("Sem riscos críticos imediatos, manter monitoramento de aquisição e custos.");
   }
@@ -175,17 +354,19 @@ function computeViabilityHeuristic(data) {
     adjustments,
     summary,
     identifiedRisks,
-    financialAnalysis: `Receita mensal estimada em ${formatAoa(
-      financial.estimatedRevenueMonth
-    )} AOA, custos em ${formatAoa(financial.estimatedCostMonth)} AOA e lucro em ${formatAoa(
-      financial.estimatedProfitMonth
-    )} AOA.`,
+    financialAnalysis: `Itens essenciais estimados para ${idea.sector || "o setor"}: ${financial.benchmarkItems
+      .map((i) => `${i.name} (${formatAoa(i.cost)} AOA)`)
+      .join(", ")}. Total estimado: ${formatAoa(financial.requiredTotal)} AOA. Capital informado: ${formatAoa(
+      idea.initialCapital || 0
+    )} AOA. Score financeiro baseado na cobertura: ${factorScores.financeiro}/100.`,
     financialProjection:
-      financial.breakEvenMonths != null
-        ? `Com este cenário, o break-even pode ocorrer em cerca de ${financial.breakEvenMonths} meses e a projeção de lucro em 12 meses é de ${formatAoa(
-            financial.projection12M
-          )} AOA.`
-        : "No cenário atual, a ideia não atinge break-even; é necessário rever pricing, custos e aquisição.",
+      !financial.hasMovement || !financial.hasMinimumPricingData
+        ? "Sem projeção financeira: faltam dados de movimentação financeira do negócio (receita/custos/vendas) e pricing mínimo."
+        : financial.breakEvenMonths != null
+          ? `Com os dados financeiros informados, o break-even pode ocorrer em cerca de ${financial.breakEvenMonths} meses e a projeção de lucro em 12 meses é de ${formatAoa(
+              financial.projection12M
+            )} AOA.`
+          : "No cenário atual, a ideia não atinge break-even; é necessário rever pricing, custos e aquisição.",
     recommendedActions,
     nextRecommendedStep:
       viabilityStatus === "viavel"
@@ -195,7 +376,7 @@ function computeViabilityHeuristic(data) {
   };
 }
 
-function buildGeminiPrompt(data) {
+function buildViabilityPrompt(data) {
   const payload = {
     idea: data.idea,
     questionnaireAnswers: data.questionnaireAnswers || {},
@@ -232,7 +413,12 @@ Regras:
 - "strengths", "weaknesses", "adjustments", "identifiedRisks" e "recommendedActions" devem ter entre 2 e 5 itens cada.
 - "summary" em 1 frase curta.
 - "financialAnalysis" e "financialProjection" devem ser objetivas e orientadas a números.
+- Use SEMPRE moeda local em Kz/AOA (nunca dólar/USD/$).
 - "nextRecommendedStep" com ação prática imediata (1 frase).
+- Se NÃO houver dados de movimentação financeira (receita/custos/vendas), "financialProjection" deve dizer explicitamente que não é possível projetar.
+- Em "financialAnalysis", estime custos de itens essenciais do setor e compare com capital informado, incluindo score financeiro pela diferença/cobertura.
+- Se público-alvo não parecer aderente ao problema principal, reduza score de "publicoAlvo" e inclua sugestão explícita de público-alvo melhor.
+- Se for só ideia (sem evidência de operação em andamento), "execucao" deve ficar abaixo de 30.
 - Não inclua markdown nem texto fora do JSON.
 
 Dados:
@@ -250,8 +436,8 @@ function normalizeAiReport(raw, fallback) {
   const identifiedRisks = Array.isArray(raw?.identifiedRisks)
     ? raw.identifiedRisks.filter(Boolean).slice(0, 5)
     : [];
-  const financialAnalysis = String(raw?.financialAnalysis || "").trim();
-  const financialProjection = String(raw?.financialProjection || "").trim();
+  const financialAnalysis = forceKwanzaCurrency(String(raw?.financialAnalysis || "").trim());
+  const financialProjection = forceKwanzaCurrency(String(raw?.financialProjection || "").trim());
   const recommendedActions = Array.isArray(raw?.recommendedActions)
     ? raw.recommendedActions.filter(Boolean).slice(0, 5)
     : [];
@@ -264,6 +450,9 @@ function normalizeAiReport(raw, fallback) {
     execucao: Math.max(0, Math.min(100, toNumber(factorScoresRaw.execucao, 0))),
     financeiro: Math.max(0, Math.min(100, toNumber(factorScoresRaw.financeiro, 0))),
   };
+  if (fallback?.factorScores?.execucao < 30) {
+    factorScores.execucao = Math.min(29, factorScores.execucao);
+  }
 
   if (
     !strengths.length ||
@@ -286,8 +475,10 @@ function normalizeAiReport(raw, fallback) {
     adjustments,
     summary,
     identifiedRisks: identifiedRisks.length ? identifiedRisks : fallback.identifiedRisks,
-    financialAnalysis,
-    financialProjection,
+    // Mantém os blocos financeiros ancorados no cálculo interno do sistema
+    // para evitar respostas genéricas/incoerentes da IA externa.
+    financialAnalysis: fallback.financialAnalysis || financialAnalysis,
+    financialProjection: fallback.financialProjection || financialProjection,
     recommendedActions,
     nextRecommendedStep,
     factorScores,
@@ -302,8 +493,8 @@ export async function analyzeViability(payload) {
   let analysisSource = "fallback_local";
   let analysisNote = "Análise local aplicada.";
   try {
-    const prompt = buildGeminiPrompt(data);
-    const { data: aiRaw, error: aiError } = await generateJsonWithGemini(prompt, { temperature: 0.2 });
+    const prompt = buildViabilityPrompt(data);
+    const { data: aiRaw, error: aiError } = await generateJsonWithAiProvider(prompt, { temperature: 0.2 });
     if (aiRaw) {
       report = normalizeAiReport(aiRaw, fallbackReport);
       analysisSource = "groq_cloud";
