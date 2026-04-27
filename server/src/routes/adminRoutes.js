@@ -1,0 +1,60 @@
+import { Router } from "express";
+import * as adminController from "../controllers/adminController.js";
+import { requireAuth, requireRole } from "../middlewares/auth.js";
+
+const router = Router();
+
+router.get("/users", requireAuth, requireRole("admin"), adminController.users);
+router.get("/ideas", requireAuth, requireRole("admin"), adminController.ideas);
+router.get(
+  "/reports/performance",
+  requireAuth,
+  requireRole("admin"),
+  adminController.performanceReport
+);
+router.get(
+  "/investors",
+  requireAuth,
+  requireRole("empreendedor", "admin"),
+  adminController.investors
+);
+router.get(
+  "/investors/:id",
+  requireAuth,
+  requireRole("empreendedor", "admin"),
+  adminController.investorById
+);
+router.get(
+  "/mentors",
+  requireAuth,
+  requireRole("empreendedor", "admin"),
+  adminController.mentors
+);
+router.get(
+  "/mentors/:id",
+  requireAuth,
+  requireRole("empreendedor", "admin"),
+  adminController.mentorById
+);
+router.patch(
+  "/users/:id/verification",
+  requireAuth,
+  requireRole("admin"),
+  adminController.updateVerification
+);
+
+router.post(
+  "/admins",
+  requireAuth,
+  requireRole("admin"),
+  adminController.createSecondaryAdmin
+);
+
+router.delete(
+  "/admins/:id",
+  requireAuth,
+  requireRole("admin"),
+  adminController.removeSecondaryAdmin
+);
+
+export default router;
