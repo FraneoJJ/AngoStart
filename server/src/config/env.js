@@ -9,6 +9,8 @@ export const env = {
   FRONTEND_BASE_PATH: process.env.FRONTEND_BASE_PATH || "",
   JWT_SECRET: process.env.JWT_SECRET || "dev_secret_change_me",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
+  GROQ_MODEL: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
   GOOGLE_AI_STUDIO_API_KEY: process.env.GOOGLE_AI_STUDIO_API_KEY || "",
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.0-flash",
   DB_HOST: process.env.DB_HOST || "localhost",
