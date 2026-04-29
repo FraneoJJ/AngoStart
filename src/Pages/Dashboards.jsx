@@ -1,9 +1,9 @@
 import React, { useState, useEffect, createContext, useContext, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import '../style/auth.css';
-import { createIdea, getIdeaById, getMarketplaceIdeas, getMyIdeas, updateIdeaApproval, updateIdeaStatus } from "../services/ideasApi";
+import { createIdea, getIdeaById, getMarketplaceIdeas, getMyIdeas, updateIdeaStatus } from "../services/ideasApi";
 import { generateQuestionnaire, saveQuestionnaireAnswers } from "../services/questionnaireApi";
-import { analyzeViability, getLatestViabilityReport } from "../services/viabilityApi";
+import { analyzeViability } from "../services/viabilityApi";
 import { getLegalFlow, getLegalProgress, updateLegalProgress, generateCompanyGuide, getLatestCompanyGuide } from "../services/legalApi";
 import { getStrategicChecklist, getStrategicProgress, updateStrategicProgress } from "../services/strategyApi";
 import { getSubscriptionPlans, getCurrentSubscription, changeSubscriptionPlan } from "../services/subscriptionApi";
@@ -18,10 +18,8 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import Planos from "../components/SecoesApp/Planos";
 import ChatWindow from "../components/communication/ChatWindow";
-import IdeaProgress from "../components/dashboard/IdeaProgress";
 
 const STORAGE_KEY = 'angostart_settings';
-const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
 
 function parseJsonSafe(raw, fallback) {
   if (!raw) return fallback;
@@ -70,7 +68,7 @@ const translations = {
   pt: {
     nav: {
       section: { principal: 'Principal', crescimento: 'Crescimento', analise: 'Análise', conteudo: 'Conteúdo', administracao: 'Administração', analytics: 'Analytics', sistema: 'Sistema', configuracoes: 'Configurações' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'progresso-ideia': 'Progresso da Ideia', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'administradores': 'Administradores', 'admin-mensagens': 'Mensagens de Admins', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submeter Ideia', 'minhas-ideias': 'Minhas Ideias', 'mentoria': 'Mentoria', 'investidores': 'Investidores', 'checklist-estrategico': 'Plano de Ação', 'legalizacao': 'Legalização', 'assinatura': 'Assinatura', 'perfil': 'Perfil', 'configuracoes': 'Configurações', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investimentos', 'propostas': 'Propostas', 'analytics': 'Analytics', 'sessoes': 'Sessões', 'mentorados': 'Mentorados', 'agenda': 'Agenda', 'mensagens': 'Mensagens', 'usuarios': 'Usuários', 'administradores': 'Administradores', 'admin-mensagens': 'Mensagens de Admins', 'ideias': 'Ideias', 'relatorios': 'Relatórios' },
     },
     common: { save: 'Salvar', cancel: 'Cancelar', close: 'Fechar', logout: 'Sair', restore: 'Restaurar Padrão' },
     config: {
@@ -100,7 +98,7 @@ const translations = {
   en: {
     nav: {
       section: { principal: 'Main', crescimento: 'Growth', analise: 'Analysis', conteudo: 'Content', administracao: 'Administration', analytics: 'Analytics', sistema: 'System', configuracoes: 'Settings' },
-      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'progresso-ideia': 'Idea Progress', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'administradores': 'Administrators', 'admin-mensagens': 'Admin Messages', 'ideias': 'Ideas', 'relatorios': 'Reports' },
+      item: { 'dashboard': 'Dashboard', 'submeter-ideia': 'Submit Idea', 'minhas-ideias': 'My Ideas', 'mentoria': 'Mentoring', 'investidores': 'Investors', 'checklist-estrategico': 'Action Plan', 'legalizacao': 'Legal Setup', 'assinatura': 'Subscription', 'perfil': 'Profile', 'configuracoes': 'Settings', 'marketplace': 'Marketplace', 'meus-investimentos': 'Investments', 'propostas': 'Proposals', 'analytics': 'Analytics', 'sessoes': 'Sessions', 'mentorados': 'Mentees', 'agenda': 'Agenda', 'mensagens': 'Messages', 'usuarios': 'Users', 'administradores': 'Administrators', 'admin-mensagens': 'Admin Messages', 'ideias': 'Ideas', 'relatorios': 'Reports' },
     },
     common: { save: 'Save', cancel: 'Cancel', close: 'Close', logout: 'Logout', restore: 'Restore Default' },
     config: {
@@ -137,7 +135,6 @@ const navigationConfig = {
       { id: 'dashboard', icon: 'home' },
       { id: 'submeter-ideia', icon: 'lightbulb' },
       { id: 'minhas-ideias', icon: 'folder', badge: 3 },
-      { id: 'progresso-ideia', icon: 'bar-chart' },
     ]},
     { sectionKey: 'crescimento', items: [
       { id: 'mensagens', icon: 'message-square-text' },
@@ -730,7 +727,6 @@ function RenderEmpreendedorPage() {
     case 'dashboard': return <Empreendedor />;
     case 'submeter-ideia': return <SubmeterIdeia/>;
     case 'minhas-ideias': return <MinhasIdeias />;
-    case 'progresso-ideia': return <IdeaProgressPage />;
     case 'mensagens': return <MensagensEmpreendedorLegacy />;
     case 'mentoria': return <Mentoria />;
     case 'investidores': return <Investidores />;
@@ -768,16 +764,9 @@ function RenderAdminPage() {
   }
 }
 
-function IdeaProgressPage() {
-  return <IdeaProgress setModal={setModal} currentUser={user} />;
-}
-
 function MensagensAdmins() {
   const ctx = useContext(AppContext);
   const currentUserId = Number(ctx?.currentUser?.id || 0);
-  const currentUserRole = String(ctx?.currentUser?.role || "");
-  const currentUserAdminCategory = String(ctx?.currentUser?.adminCategory || "primary");
-  const isPrimaryAdmin = currentUserRole === "admin" && currentUserAdminCategory === "primary";
   const [loading, setLoading] = useState(true);
   const [admins, setAdmins] = useState([]);
 
@@ -803,7 +792,7 @@ function MensagensAdmins() {
   }, []);
 
   const contacts = useMemo(() => {
-    const base = (admins || []).map((a) => {
+    return (admins || []).map((a) => {
       const cat = a.adminCategory || "primary";
       return {
         userId: Number(a.id),
@@ -813,18 +802,7 @@ function MensagensAdmins() {
         avatarUrl: a.avatarUrl || null,
       };
     }).filter((c) => Number(c.userId) !== Number(currentUserId));
-
-    if (isPrimaryAdmin) {
-      base.unshift({
-        userId: -1,
-        name: "AngoStart (Comunicado Geral)",
-        role: "admin",
-        subtitle: "Enviar mensagem para todos os utilizadores",
-        avatarUrl: null,
-      });
-    }
-    return base;
-  }, [admins, currentUserId, isPrimaryAdmin]);
+  }, [admins]);
 
   const allowedUserIds = useMemo(() => contacts.map((c) => Number(c.userId)).filter(Boolean), [contacts]);
 
@@ -844,11 +822,7 @@ function MensagensAdmins() {
       contacts={contacts}
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
-      initialContact={ctx?.pendingChatTarget}
-      onInitialContactConsumed={ctx?.clearPendingChatTarget}
       emptyText="Sem admins disponíveis para conversas."
-      currentUserRole={currentUserRole}
-      currentUserAdminCategory={currentUserAdminCategory}
     />
   );
 }
@@ -1045,12 +1019,6 @@ function MensagensAdmins() {
       const d = new Date(iso);
       return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-PT");
     };
-    const profile = ctx?.currentUser?.profileData || {};
-    const hasBusiness = Number(profile?.has_business ?? profile?.hasBusiness ?? 0) === 1 || profile?.hasBusiness === true;
-    const businessName = profile?.business_name || profile?.businessName || "-";
-    const businessSector = profile?.business_sector || profile?.businessSector || "-";
-    const businessStage = profile?.business_stage || profile?.businessStage || "-";
-    const businessLocation = profile?.business_location || profile?.businessLocation || "-";
 
     return (
       <>
@@ -1098,25 +1066,6 @@ function MensagensAdmins() {
               <div className="stat-icon-wrapper stat-icon-info">{icons.clock}</div>
             </div>
           </div>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="dashboard-card-header">
-            <h3 className="dashboard-card-title">Meu Negócio em Andamento</h3>
-            <p className="dashboard-card-description">Dados do negócio informados no seu cadastro de empreendedor.</p>
-          </div>
-          {!hasBusiness ? (
-            <p>Ainda não indicou um negócio em andamento. Pode atualizar no seu perfil quando desejar.</p>
-          ) : (
-            <table className="data-table">
-              <tbody>
-                <tr><th>Nome</th><td>{businessName}</td></tr>
-                <tr><th>Setor</th><td>{businessSector}</td></tr>
-                <tr><th>Fase</th><td>{businessStage}</td></tr>
-                <tr><th>Localização</th><td>{businessLocation}</td></tr>
-              </tbody>
-            </table>
-          )}
         </div>
 
         <div className="dashboard-card">
@@ -1408,7 +1357,7 @@ function MensagensAdmins() {
       {/* <!-- Header --> */}
       <div className="auth-header">
         <div className="auth-logo">
-          <img src={logoUrl} alt="AngoStart"/>
+          <img src="..//logo.png" alt="AngoStart"/>
         </div>
         <h1 className="auth-title">Bem-vindo de volta!</h1>
         <p className="auth-subtitle">Entre para continuar sua jornada empreendedora</p>
@@ -1507,7 +1456,6 @@ function MensagensAdmins() {
             </div>
 
             {/* <!-- Demo Credentials --> */}
-            {/* 
             <div className="demo-box">
               <p className="demo-title">Usuários de teste</p>
               <div className="demo-list">
@@ -1517,7 +1465,6 @@ function MensagensAdmins() {
                 <p>• admin@gmail.com / 123456</p>
               </div>
             </div>
-            */}
           </form>
         </div>
       </div>
@@ -1555,11 +1502,11 @@ return (
               )}
             </svg>
           </button>
-          <img src={logoUrl} alt="AngoStart" className="sidebar-logo" />
+          <img src="/logo.png" alt="AngoStart" className="sidebar-logo" />
         </header>
         <aside className={`sidebar ${isSidebarOpen ? "active" : ""}`}>
           <div className="sidebar-header">
-            <img src={logoUrl} alt="AngoStart" className="sidebar-logo" />
+            <img src="/logo.png" alt="AngoStart" className="sidebar-logo" />
             <button
               type="button"
               className="sidebar-close"
@@ -2080,7 +2027,7 @@ function Analytics() {
         <div className="dashboard-card" style={{ marginBottom: '25px', display: 'flex', justifyContent: ' space-between', alignItems: 'center', gap: "10px", flexWrap: "wrap" }}>
           <div>
             <h3 style={{ margin: '0' }}>Análise de Mercado & Performance</h3>
-            <p style={{ margin: ' 5px 0 0 0', color: ' var(--dm-text-muted)', fontSize: '0.85rem' }}>Dados do marketplace.</p>
+            <p style={{ margin: ' 5px 0 0 0', color: ' var(--dm-text-muted)', fontSize: '0.85rem' }}>Dados dinâmicos do marketplace da base de dados.</p>
           </div>
           <select
             className="input-field form-input"
@@ -2439,12 +2386,12 @@ function InvestidorPerfil() {
       <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
         <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
-        <div className="profile-header-content">
+        <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
           <div
             onMouseEnter={() => setAvatarHover(true)}
             onMouseLeave={() => setAvatarHover(false)}
             onClick={handleAvatarPickClick}
-            className="profile-avatar-shell"
+            style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)', overflow: "hidden", position: "relative", cursor: "pointer" }}
             title="Alterar foto de perfil"
           >
             {user?.avatarUrl ? (
@@ -2480,10 +2427,10 @@ function InvestidorPerfil() {
       </div>
 
       {/* CONTEÚDO */}
-      <div className="profile-main-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
         
         {/* COLUNA ESQUERDA */}
-        <div className="profile-left-column">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
@@ -2514,7 +2461,7 @@ function InvestidorPerfil() {
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
-          <div className="profile-contact-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <Info label="E-mail" value={user?.email || "-"} />
             <Info label="Telefone" value={p.phone || "-"} />
             <Info
@@ -2717,9 +2664,6 @@ function Usuarios() {
   const [savingUserId, setSavingUserId] = useState(null);
   const [aboutUser, setAboutUser] = useState(null);
   const [expandedDocs, setExpandedDocs] = useState({});
-  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1";
-  const apiOrigin = String(apiBase).replace(/\/api\/v1\/?$/i, "");
-  const isPrimaryAdmin = ctx?.currentUser?.role === "admin" && (ctx?.currentUser?.adminCategory || "primary") === "primary";
 
   const loadUsers = async () => {
     setLoading(true);
@@ -2857,11 +2801,9 @@ function Usuarios() {
     const raw = String(value || "").trim();
     if (!raw) return "";
     if (/^(https?:\/\/|data:|blob:)/i.test(raw)) return raw;
-    if (raw.startsWith("/")) return `${apiOrigin}${raw}`;
-    return `${apiOrigin}/uploads/${encodeURIComponent(raw)}`;
+    if (raw.startsWith("/")) return `${window.location.origin}${raw}`;
+    return raw;
   };
-
-  const isRenderableDocumentUrl = (url) => /^(https?:\/\/|data:|blob:)/i.test(String(url || ""));
 
   const closeAbout = () => {
     setAboutUser(null);
@@ -2871,16 +2813,6 @@ function Usuarios() {
   const openAbout = (u) => {
     setAboutUser(u);
     setExpandedDocs({});
-  };
-
-  const handleContactUser = (u) => {
-    if (!u?.id) return;
-    ctx?.openChatConversation?.({
-      userId: Number(u.id),
-      name: u.name || "Utilizador",
-      role: u.role || "utilizador",
-      subtitle: u.email || "Sem e-mail",
-    }, { pageId: "admin-mensagens" });
   };
 
   return (
@@ -2928,15 +2860,6 @@ function Usuarios() {
                     >
                       Sobre
                     </button>
-                    {isPrimaryAdmin && u.role !== "admin" ? (
-                      <button
-                        className="btn btn-outline admin-users-btn"
-                        type="button"
-                        onClick={() => handleContactUser(u)}
-                      >
-                        Contactar
-                      </button>
-                    ) : null}
                     {canModerate(u) ? (
                       <>
                         <button
@@ -3004,7 +2927,6 @@ function Usuarios() {
                     const isExpanded = !!expandedDocs[docKey];
                     const rawValue = String(v);
                     const docUrl = resolveDocumentUrl(rawValue);
-                    const canRenderInline = isRenderableDocumentUrl(docUrl);
                     const clean = docUrl.toLowerCase().split("?")[0].split("#")[0];
                     const isImage = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(clean);
                     const isPdf = /\.pdf$/i.test(clean);
@@ -3025,14 +2947,7 @@ function Usuarios() {
 
                         {isExpanded && (
                           <div style={{ marginTop: "10px", border: "1px solid var(--dm-border)", borderRadius: "8px", background: "var(--dm-bg)", padding: "8px" }}>
-                            {!canRenderInline ? (
-                              <div style={{ padding: "10px", fontSize: "0.9rem" }}>
-                                Não foi possível gerar pré-visualização automática para este documento.
-                                <div style={{ marginTop: "6px", color: "var(--neutral-500)" }}>
-                                  Valor recebido: <code>{rawValue}</code>
-                                </div>
-                              </div>
-                            ) : isImage ? (
+                            {isImage ? (
                               <img
                                 src={docUrl}
                                 alt={profileFieldLabel(k)}
@@ -3291,7 +3206,6 @@ function Ideias() {
   const [ideas, setIdeas] = useState([]);
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [savingIdeaDecisionId, setSavingIdeaDecisionId] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -3323,35 +3237,6 @@ function Ideias() {
       ctx?.setModal?.({ open: true, message: `Falha ao carregar detalhes da ideia: ${err.message}` });
     } finally {
       setLoadingDetails(false);
-    }
-  };
-
-  const scoreBand = (score) => {
-    const n = Number(score || 0);
-    if (n >= 80) return "high";
-    if (n >= 50) return "mid";
-    return "low";
-  };
-
-  const handleIdeaDecision = async (idea, decision) => {
-    const approvalStatus = decision === "approve" ? "approved" : "rejected";
-    setSavingIdeaDecisionId(Number(idea.id));
-    try {
-      const updated = await updateIdeaApproval(idea.id, approvalStatus);
-      setIdeas((prev) => prev.map((i) => (Number(i.id) === Number(idea.id) ? { ...i, ...updated } : i)));
-      if (selectedIdea && Number(selectedIdea.id) === Number(idea.id)) {
-        setSelectedIdea((prev) => ({ ...prev, ...updated }));
-      }
-      ctx?.setModal?.({
-        open: true,
-        message: decision === "approve"
-          ? "Ideia aprovada pela AngoStart. O empreendedor já pode publicar no marketplace."
-          : "Ideia rejeitada pela AngoStart.",
-      });
-    } catch (err) {
-      ctx?.setModal?.({ open: true, message: err.message || "Falha ao atualizar status da ideia." });
-    } finally {
-      setSavingIdeaDecisionId(0);
     }
   };
 
@@ -3387,36 +3272,14 @@ function Ideias() {
               <td><span className="badge badge-info">{idea.status || "-"}</span></td>
               <td>{formatDate(idea.created_at)}</td>
               <td>
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                  <button
-                    className="btn btn-primary"
-                    style={{padding: '0.5rem 1rem', fontSize: '0.875rem', width: 'auto'}}
-                    onClick={() => openIdeaReview(idea.id)}
-                    disabled={loadingDetails}
-                  >
-                    {loadingDetails ? "A carregar..." : "Revisar"}
-                  </button>
-                  {(String(idea.approval_status || "pending") !== "approved") ? (
-                    <button
-                      className="btn btn-outline"
-                      style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", width: "auto", opacity: savingIdeaDecisionId === Number(idea.id) ? 0.6 : 1 }}
-                      onClick={() => handleIdeaDecision(idea, "approve")}
-                      disabled={savingIdeaDecisionId === Number(idea.id)}
-                    >
-                      Aprovar
-                    </button>
-                  ) : null}
-                  {(String(idea.approval_status || "pending") !== "rejected") ? (
-                    <button
-                      className="btn-logout"
-                      style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", width: "auto", opacity: savingIdeaDecisionId === Number(idea.id) ? 0.6 : 1 }}
-                      onClick={() => handleIdeaDecision(idea, "reject")}
-                      disabled={savingIdeaDecisionId === Number(idea.id)}
-                    >
-                      Rejeitar
-                    </button>
-                  ) : null}
-                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{padding: '0.5rem 1rem', fontSize: '0.875rem', width: 'auto'}}
+                  onClick={() => openIdeaReview(idea.id)}
+                  disabled={loadingDetails}
+                >
+                  {loadingDetails ? "A carregar..." : "Revisar"}
+                </button>
               </td>
             </tr>
           ))}
@@ -3436,7 +3299,6 @@ function Ideias() {
               <div className="dashboard-card"><strong>Empreendedor</strong><div>{selectedIdea.owner_name || "-"}</div></div>
               <div className="dashboard-card"><strong>Email</strong><div>{selectedIdea.owner_email || "-"}</div></div>
               <div className="dashboard-card"><strong>Status</strong><div>{selectedIdea.status || "-"}</div></div>
-              <div className="dashboard-card"><strong>Aprovação AngoStart</strong><div>{selectedIdea.approval_status || "pending"}</div></div>
               <div className="dashboard-card"><strong>Score IA</strong><div>{selectedIdea.viability_score ?? "-"}</div></div>
               <div className="dashboard-card"><strong>Data</strong><div>{formatDate(selectedIdea.created_at)}</div></div>
             </div>
@@ -4501,8 +4363,6 @@ function MensagensMentorDynamic() {
       currentUserId={currentUserId}
       allowedUserIds={allowedUserIds}
       emptyText="Sem mentorias aceites para conversar no momento."
-      currentUserRole={String(ctx?.currentUser?.role || "")}
-      currentUserAdminCategory={String(ctx?.currentUser?.adminCategory || "")}
     />
   );
 }
@@ -4598,14 +4458,13 @@ function MensagensEmpreendedorLegacy() {
       initialContact={ctx?.pendingChatTarget}
       onInitialContactConsumed={ctx?.clearPendingChatTarget}
       emptyText="Sem contactos disponíveis para conversa no momento."
-      currentUserRole={String(ctx?.currentUser?.role || "")}
-      currentUserAdminCategory={String(ctx?.currentUser?.adminCategory || "")}
     />
   );
 }
 
 function SubmeterIdeia() {
   const ctx = useContext(AppContext);
+  const tr = (pt, en) => (ctx?.idioma === "en" ? en : pt);
   const WIZARD_STORAGE_KEY = "angostart_submit_ideia_wizard";
   const initialDados = {
     nome: "", descricao: "", setor: "",
@@ -4653,59 +4512,40 @@ function SubmeterIdeia() {
     }
   }, [etapa, resultadoIA]);
 
-  useEffect(() => {
-    const raw = localStorage.getItem("angostart_idea_edit_draft");
-    if (!raw) return;
-    try {
-      const draft = JSON.parse(raw);
-      if (draft && typeof draft === "object") {
-        setDados((prev) => ({ ...prev, ...draft }));
-        setEtapa(1);
-        localStorage.removeItem("angostart_idea_edit_draft");
-        ctx?.setModal?.({
-          open: true,
-          message: "Rascunho da ideia carregado. Edite os dados e envie para nova análise da IA.",
-        });
-      }
-    } catch {
-      localStorage.removeItem("angostart_idea_edit_draft");
-    }
-  }, []);
-
   const proximaEtapa = () => {
     if (etapa === 1) {
       const nome = String(dados.nome || "").trim();
       const descricao = String(dados.descricao || "").trim();
       const setor = String(dados.setor || "").trim();
       if (!nome || nome.length < 2) {
-        ctx?.setModal?.({ open: true, message: "Preencha o nome do projeto (mínimo 2 caracteres)." });
+        ctx?.setModal?.({ open: true, message: tr("Preencha o nome do projeto (mínimo 2 caracteres).", "Fill in the project name (minimum 2 characters).") });
         return;
       }
       if (!setor) {
-        ctx?.setModal?.({ open: true, message: "Selecione o setor de atuação." });
+        ctx?.setModal?.({ open: true, message: tr("Selecione o setor de atuação.", "Select the business sector.") });
         return;
       }
       if (!descricao || descricao.length < 10) {
-        ctx?.setModal?.({ open: true, message: "A descrição curta deve ter pelo menos 10 caracteres." });
+        ctx?.setModal?.({ open: true, message: tr("A descrição curta deve ter pelo menos 10 caracteres.", "Short description must have at least 10 characters.") });
         return;
       }
     }
     if (etapa === 2) {
       if (!String(dados.cidade || "").trim() || !String(dados.regiao || "").trim()) {
-        ctx?.setModal?.({ open: true, message: "Preencha cidade e região/província para continuar." });
+        ctx?.setModal?.({ open: true, message: tr("Preencha cidade e região/província para continuar.", "Fill in city and region/province to continue.") });
         return;
       }
     }
     if (etapa === 3) {
       const capital = Number(dados.capital || 0);
       if (!Number.isFinite(capital) || capital <= 0) {
-        ctx?.setModal?.({ open: true, message: "Informe o capital inicial (Kz) maior que zero." });
+        ctx?.setModal?.({ open: true, message: tr("Informe o capital inicial (Kz) maior que zero.", "Enter initial capital (Kz) greater than zero.") });
         return;
       }
     }
     if (etapa === 4) {
       if (!String(dados.problema || "").trim() || !String(dados.diferencial || "").trim() || !String(dados.publico || "").trim()) {
-        ctx?.setModal?.({ open: true, message: "Preencha problema, diferencial e público-alvo antes de avançar." });
+        ctx?.setModal?.({ open: true, message: tr("Preencha problema, diferencial e público-alvo antes de avançar.", "Fill in problem, differentiation, and target audience before continuing.") });
         return;
       }
       // Perguntas adicionais são opcionais: ao avançar daqui, vai direto para uploads.
@@ -4737,7 +4577,7 @@ function SubmeterIdeia() {
 
   const usarMinhaLocalizacao = () => {
     if (!navigator.geolocation) {
-      ctx?.setModal?.({ open: true, message: "Geolocalização não suportada neste navegador." });
+      ctx?.setModal?.({ open: true, message: tr("Geolocalização não suportada neste navegador.", "Geolocation is not supported in this browser.") });
       return;
     }
 
@@ -4753,7 +4593,7 @@ function SubmeterIdeia() {
         }));
       },
       () => {
-        ctx?.setModal?.({ open: true, message: "Não foi possível obter sua localização atual." });
+        ctx?.setModal?.({ open: true, message: tr("Não foi possível obter sua localização atual.", "Could not get your current location.") });
       }
     );
   };
@@ -4835,15 +4675,15 @@ function SubmeterIdeia() {
 
   const publicarNoMarketplace = async () => {
     if (!ultimaIdeiaId) {
-      ctx?.setModal?.({ open: true, message: "Nenhuma ideia disponível para publicar." });
+      ctx?.setModal?.({ open: true, message: tr("Nenhuma ideia disponível para publicar.", "No idea available to publish.") });
       return;
     }
     setPublicandoMarketplace(true);
     try {
       await updateIdeaStatus(ultimaIdeiaId, "active");
-      ctx?.setModal?.({ open: true, message: "Ideia publicada no marketplace com sucesso." });
+      ctx?.setModal?.({ open: true, message: tr("Ideia publicada no marketplace com sucesso.", "Idea successfully published to the marketplace.") });
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: err.message || "Falha ao publicar no marketplace." });
+      ctx?.setModal?.({ open: true, message: err.message || tr("Falha ao publicar no marketplace.", "Failed to publish on marketplace.") });
     } finally {
       setPublicandoMarketplace(false);
     }
@@ -4857,15 +4697,15 @@ function SubmeterIdeia() {
     const regiao = String(dados.regiao || "").trim();
 
     if (!nome || !descricao || !setor || !cidade || !regiao) {
-      ctx?.setModal?.({ open: true, message: "Preencha os campos obrigatórios das fases anteriores antes de submeter." });
+      ctx?.setModal?.({ open: true, message: tr("Preencha os campos obrigatórios das fases anteriores antes de submeter.", "Fill in required fields from previous phases before submitting.") });
       return;
     }
     if (nome.length < 2) {
-      ctx?.setModal?.({ open: true, message: "O nome do projeto deve ter pelo menos 2 caracteres." });
+      ctx?.setModal?.({ open: true, message: tr("O nome do projeto deve ter pelo menos 2 caracteres.", "Project name must have at least 2 characters.") });
       return;
     }
     if (descricao.length < 10) {
-      ctx?.setModal?.({ open: true, message: "A descrição curta deve ter pelo menos 10 caracteres." });
+      ctx?.setModal?.({ open: true, message: tr("A descrição curta deve ter pelo menos 10 caracteres.", "Short description must have at least 10 characters.") });
       return;
     }
 
@@ -4932,29 +4772,14 @@ function SubmeterIdeia() {
         }
       }
 
-      let report = null;
       try {
-        report = await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
+        await executarAnaliseViabilidade(Number(createdIdea?.id) || undefined, activeSessionId || undefined);
       } catch (err) {
         if (isPlanFeatureBlocked(err)) {
           analiseIndisponivel = true;
           setEtapa(1);
         } else {
           throw err;
-        }
-      }
-
-      if (report && Number(createdIdea?.id)) {
-        const score = Number(report.score || 0);
-        if (score < 50) {
-          try {
-            await updateIdeaStatus(Number(createdIdea.id), "archived");
-            setMensagemFluxo(
-              "Ideia analisada com score baixo (0-49) e marcada como rejeitada automaticamente. Melhore os dados da ideia e submeta novamente para nova análise."
-            );
-          } catch (err) {
-            setMensagemFluxo(`Ideia analisada, mas não foi possível atualizar status automático: ${err.message}`);
-          }
         }
       }
 
@@ -4965,12 +4790,20 @@ function SubmeterIdeia() {
         ctx?.setModal?.({
           open: true,
           message:
-            "Ideia submetida com sucesso. A análise de viabilidade por IA não está disponível no seu plano atual.",
+            tr(
+              "Ideia submetida com sucesso. A análise de viabilidade por IA não está disponível no seu plano atual.",
+              "Idea submitted successfully. AI viability analysis is not available in your current plan."
+            ),
         });
       } else if (questionarioIndisponivel) {
-        setMensagemFluxo("Ideia enviada e analisada com sucesso. O questionário dinâmico não está disponível no seu plano atual.");
+        setMensagemFluxo(
+          tr(
+            "Ideia enviada e analisada com sucesso. O questionário dinâmico não está disponível no seu plano atual.",
+            "Idea submitted and analyzed successfully. Dynamic questionnaire is not available in your current plan."
+          )
+        );
       } else {
-        setMensagemFluxo("Ideia enviada e analisada com sucesso.");
+        setMensagemFluxo(tr("Ideia enviada e analisada com sucesso.", "Idea submitted and analyzed successfully."));
       }
     } catch (err) {
       const msg = String(err?.message || "");
@@ -4982,13 +4815,19 @@ function SubmeterIdeia() {
       if (isValidationError) {
         ctx?.setModal?.({
           open: true,
-          message: `Não foi possível submeter para a API: ${msg}. Corrija os campos obrigatórios e tente novamente.`,
+          message: tr(
+            `Não foi possível submeter para a API: ${msg}. Corrija os campos obrigatórios e tente novamente.`,
+            `Could not submit to API: ${msg}. Fix required fields and try again.`
+          ),
         });
       } else {
         salvarRascunhoLocal();
         ctx?.setModal?.({
           open: true,
-          message: `Não foi possível completar o fluxo na API (${msg}). O rascunho foi salvo localmente.`,
+          message: tr(
+            `Não foi possível completar o fluxo na API (${msg}). O rascunho foi salvo localmente.`,
+            `Could not complete API flow (${msg}). Draft was saved locally.`
+          ),
         });
       }
     } finally {
@@ -5021,12 +4860,20 @@ function SubmeterIdeia() {
         baseAnswers[q.key] = questionarioRespostas[q.key] || "";
       });
       setQuestionarioRespostas(baseAnswers);
-      setAvisoQuestionario("Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.");
+      setAvisoQuestionario(
+        tr(
+          "Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.",
+          "AI questionnaire generated successfully. You can answer the additional questions."
+        )
+      );
       if (avancarParaPerguntas) {
         setEtapa(5);
       }
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: `Falha ao gerar questionário: ${err.message}` });
+      ctx?.setModal?.({
+        open: true,
+        message: tr(`Falha ao gerar questionário: ${err.message}`, `Failed to generate questionnaire: ${err.message}`),
+      });
     } finally {
       setGerandoQuestionario(false);
     }
@@ -5036,9 +4883,12 @@ function SubmeterIdeia() {
     if (!questionarioSessionId) return;
     try {
       await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
-      setAvisoQuestionario("Respostas do questionário guardadas com sucesso.");
+      setAvisoQuestionario(tr("Respostas do questionário guardadas com sucesso.", "Questionnaire answers saved successfully."));
     } catch (err) {
-      ctx?.setModal?.({ open: true, message: `Falha ao guardar respostas: ${err.message}` });
+      ctx?.setModal?.({
+        open: true,
+        message: tr(`Falha ao guardar respostas: ${err.message}`, `Failed to save answers: ${err.message}`),
+      });
     }
   };
 
@@ -5085,14 +4935,13 @@ function SubmeterIdeia() {
       pontuacaoFatores: report.factorScores || {},
       score: Number(report.score || 0),
     });
-    return report;
   };
 
   // --- RENDERS DAS FASES ---
 
   const renderFase1 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 1: Identificação</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 1: Identificação", "Phase 1: Identification")}</h3>
       <div className="form-group">
         <label className="form-label">Nome do Projecto</label>
         <input className="form-input" name="nome" value={dados.nome} onChange={handleChange} placeholder="Ex: SolarPay" />
@@ -5128,7 +4977,7 @@ function SubmeterIdeia() {
 
   const renderFase2 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 2: Localização</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 2: Localização", "Phase 2: Location")}</h3>
       <div className="form-group">
         <label className="form-label">Cidade</label>
         <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
@@ -5173,7 +5022,7 @@ function SubmeterIdeia() {
 
   const renderFase3 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 3: Finanças</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 3: Finanças", "Phase 3: Finances")}</h3>
       <div className="form-group">
         <label className="form-label">Quanto você tem para investir inicialmente? (Kz)</label>
         <input className="form-input" type="number" name="capital" value={dados.capital} onChange={handleChange} placeholder="Ex: 5000" />
@@ -5183,7 +5032,7 @@ function SubmeterIdeia() {
 
   const renderFase4 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 4: Contexto para IA</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 4: Contexto para IA", "Phase 4: AI Context")}</h3>
       <div className="form-group">
         <label className="form-label">Qual problema específico o seu produto resolve?</label>
         <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
@@ -5219,7 +5068,7 @@ function SubmeterIdeia() {
 
   const renderFase5 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 5: Perguntas adicionais da IA (Opcional)</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 5: Perguntas adicionais da IA (Opcional)", "Phase 5: Additional AI Questions (Optional)")}</h3>
       <p style={{ margin: 0, color: "var(--neutral-600)", fontSize: "0.9rem" }}>
         Responda este questionário para melhorar a precisão da análise de viabilidade.
       </p>
@@ -5286,7 +5135,7 @@ function SubmeterIdeia() {
 
   const renderFase6 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 6: Uploads</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 6: Uploads", "Phase 6: Uploads")}</h3>
       <div style={{ border: '2px dashed var(--neutral-300)', padding: '40px', textAlign: 'center', borderRadius: '12px' }}>
         <p>Adicione imagens, PDF ou vídeos do produto/protótipo</p>
         <input
@@ -5311,7 +5160,7 @@ function SubmeterIdeia() {
 
   const renderFase7 = () => (
     <div className="auth-form">
-      <h3 className="dashboard-card-title">Fase 7: Revisão Final</h3>
+      <h3 className="dashboard-card-title">{tr("Fase 7: Revisão Final", "Phase 7: Final Review")}</h3>
       <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
         <p><strong>Projeto:</strong> {dados.nome}</p>
         <p><strong>Setor:</strong> {dados.setor}</p>
@@ -5446,31 +5295,18 @@ function SubmeterIdeia() {
 
       <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-primary" onClick={reiniciarSubmissao} style={{ width: 'auto' }}>
-          Nova Submissão
+          {tr("Nova Submissão", "New Submission")}
         </button>
         <button className="btn btn-outline" onClick={gerarPlanoNegocioPdf} style={{ width: 'auto' }}>
-          Gerar Plano de Negócio (PDF)
+          {tr("Gerar Plano de Negócio (PDF)", "Generate Business Plan (PDF)")}
         </button>
-        {resultadoIA.score >= 50 ? (
-          <div className="dashboard-card" style={{ width: "100%", border: "1px solid var(--warning-500)", background: "var(--warning-100)", marginBottom: "6px" }}>
-            <p style={{ margin: 0, fontSize: "0.9rem" }}>
-              Antes de publicar no marketplace, recomenda-se registrar e proteger legalmente a ideia para reduzir riscos de cópia, sobretudo em fase inicial.
-            </p>
-          </div>
-        ) : null}
         <button
           className="btn btn-primary"
           onClick={publicarNoMarketplace}
-          disabled={!ultimaIdeiaId || publicandoMarketplace || Number(resultadoIA.score || 0) < 80}
-          style={{ width: 'auto', opacity: !ultimaIdeiaId || publicandoMarketplace || Number(resultadoIA.score || 0) < 80 ? 0.6 : 1 }}
+          disabled={!ultimaIdeiaId || publicandoMarketplace}
+          style={{ width: 'auto', opacity: !ultimaIdeiaId || publicandoMarketplace ? 0.6 : 1 }}
         >
-          {publicandoMarketplace
-            ? "A publicar..."
-            : Number(resultadoIA.score || 0) >= 80
-              ? "Publicar no Marketplace"
-              : Number(resultadoIA.score || 0) >= 50
-                ? "Aguardando aprovação da AngoStart"
-                : "Ideia rejeitada - melhore e reanalise"}
+          {publicandoMarketplace ? tr("A publicar...", "Publishing...") : tr("Publicar no Marketplace", "Publish to Marketplace")}
         </button>
       </div>
     </div>
@@ -5498,7 +5334,7 @@ function SubmeterIdeia() {
         {analisando ? (
           <div className="loading">
             <div className="spinner"></div>
-            <p style={{ marginTop: '20px' }}>A Inteligência Artificial está analisando seu projeto...</p>
+            <p style={{ marginTop: '20px' }}>{tr("A Inteligência Artificial está analisando seu projeto...", "Artificial Intelligence is analyzing your project...")}</p>
           </div>
         ) : (
           <>
@@ -5521,16 +5357,16 @@ function SubmeterIdeia() {
                   disabled={etapa === 1}
                   style={{ width: 'auto', padding: '10px 30px', opacity: etapa === 1 ? 0.3 : 1 }}
                 >
-                  Voltar
+                  {tr("Voltar", "Back")}
                 </button>
                 
                 {etapa < 7 ? (
                   <button type="button" className="btn btn-primary" onClick={proximaEtapa} style={{ width: 'auto', padding: '10px 40px' }}>
-                    Próxima Fase
+                    {tr("Próxima Fase", "Next Phase")}
                   </button>
                 ) : (
                   <button type="button" className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
-                    Enviar para Análise IA
+                    {tr("Enviar para Análise IA", "Send for AI Analysis")}
                   </button>
                 )}
               </div>
@@ -5547,8 +5383,6 @@ function MinhasIdeias() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(0);
   const [ideias, setIdeias] = useState([]);
-  const [loadingReportId, setLoadingReportId] = useState(0);
-  const [selectedReport, setSelectedReport] = useState(null);
 
   const reloadIdeas = async () => {
     setLoading(true);
@@ -5569,22 +5403,6 @@ function MinhasIdeias() {
 
   const handleToggleMarketplace = async (idea) => {
     const nextStatus = idea.status === "active" ? "archived" : "active";
-    const score = Number(idea?.viability_score || 0);
-    if (nextStatus === "active" && score < 80) {
-      ctx?.setModal?.({
-        open: true,
-        message: score >= 50
-          ? "Esta ideia precisa de aprovação da AngoStart para ser publicada (score entre 50 e 79)."
-          : "Ideias com score abaixo de 50 devem ser melhoradas e reanalisadas antes da publicação.",
-      });
-      return;
-    }
-    if (nextStatus === "active" && score >= 80) {
-      const canContinue = window.confirm(
-        "Antes de publicar, recomenda-se registrar/proteger a ideia por segurança. Deseja publicar mesmo assim?"
-      );
-      if (!canContinue) return;
-    }
     setSavingId(Number(idea.id));
     try {
       const updated = await updateIdeaStatus(idea.id, nextStatus);
@@ -5619,51 +5437,6 @@ function MinhasIdeias() {
 
   const ideiasExecucao = ideias.filter((i) => i.status === 'active');
   const formatCapital = (v) => Number(v || 0).toLocaleString("pt-PT");
-  const scoreClass = (score) => {
-    const n = Number(score || 0);
-    if (n >= 80) return "badge-success";
-    if (n >= 50) return "badge-warning";
-    return "badge-info";
-  };
-  const policyText = (idea) => {
-    const score = Number(idea?.viability_score || 0);
-    const approval = String(idea?.approval_status || "pending");
-    if (score >= 80) return "Elegível para publicação.";
-    if (approval === "approved") return "Aprovada pela AngoStart. Publicação liberada.";
-    if (score >= 50) return "Em revisão manual da AngoStart.";
-    return "Rejeitada automaticamente. Melhore e submeta novamente.";
-  };
-
-  const openIdeaReport = async (ideaId) => {
-    setLoadingReportId(Number(ideaId));
-    try {
-      const report = await getLatestViabilityReport(ideaId);
-      setSelectedReport(report);
-    } catch (err) {
-      ctx?.setModal?.({ open: true, message: err.message || "Relatório não encontrado para esta ideia." });
-    } finally {
-      setLoadingReportId(0);
-    }
-  };
-
-  const prepareIdeaForImprovement = (idea) => {
-    const draft = {
-      nome: idea.title || "",
-      descricao: idea.description || "",
-      setor: idea.sector || "",
-      cidade: idea.city || "",
-      localizacao: idea.address || "",
-      regiao: idea.region || "",
-      lat: idea.latitude != null ? String(idea.latitude) : "",
-      lng: idea.longitude != null ? String(idea.longitude) : "",
-      capital: idea.initial_capital != null ? String(idea.initial_capital) : "",
-      problema: idea.problem || "",
-      diferencial: idea.differential_text || "",
-      publico: idea.target_audience || "",
-    };
-    localStorage.setItem("angostart_idea_edit_draft", JSON.stringify(draft));
-    setCurrentPage("submeter-ideia");
-  };
 
   return (
     <div style={{ padding: '10px' }}>
@@ -5711,9 +5484,7 @@ function MinhasIdeias() {
                   <th>Projeto</th>
                   <th>Setor</th>
                   <th>Capital inicial</th>
-                  <th>Score IA</th>
                   <th>Status</th>
-                  <th>Governança</th>
                   <th>Ação</th>
                 </tr>
               </thead>
@@ -5723,48 +5494,20 @@ function MinhasIdeias() {
                     <td><strong>{ideia.title}</strong></td>
                     <td><span className="badge badge-info">{ideia.sector || "-"}</span></td>
                     <td>{formatCapital(ideia.initial_capital)} AOA</td>
-                    <td><span className={`badge ${scoreClass(ideia.viability_score)}`}>{Number(ideia.viability_score || 0)}</span></td>
                     <td>
                       <span className={`badge ${badgeClass(ideia.status)}`}>
                         {statusLabel(ideia.status)}
                       </span>
                     </td>
-                    <td style={{ fontSize: "0.82rem" }}>{policyText(ideia)}</td>
                     <td>
-                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                        <button
-                          className="btn btn-outline"
-                          style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: loadingReportId === Number(ideia.id) ? 0.6 : 1 }}
-                          onClick={() => openIdeaReport(ideia.id)}
-                          disabled={loadingReportId === Number(ideia.id)}
-                        >
-                          {loadingReportId === Number(ideia.id) ? "Abrindo..." : "Ver relatório"}
-                        </button>
-                        <button
-                          className={ideia.status === "active" ? "btn-logout" : "btn btn-primary"}
-                          style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: savingId === Number(ideia.id) ? 0.6 : 1 }}
-                          onClick={() => handleToggleMarketplace(ideia)}
-                          disabled={
-                            savingId === Number(ideia.id) ||
-                            (
-                              ideia.status !== "active" &&
-                              Number(ideia.viability_score || 0) < 80 &&
-                              String(ideia.approval_status || "pending") !== "approved"
-                            )
-                          }
-                        >
-                          {ideia.status === "active" ? "Remover do marketplace" : "Publicar no marketplace"}
-                        </button>
-                        {Number(ideia.viability_score || 0) < 50 ? (
-                          <button
-                            className="btn btn-outline"
-                            style={{ padding: "5px 10px", fontSize: "0.75rem", width: "auto" }}
-                            onClick={() => prepareIdeaForImprovement(ideia)}
-                          >
-                            Melhorar e reanalisar
-                          </button>
-                        ) : null}
-                      </div>
+                      <button
+                        className={ideia.status === "active" ? "btn-logout" : "btn btn-primary"}
+                        style={{ padding: '5px 10px', fontSize: '0.75rem', width: 'auto', opacity: savingId === Number(ideia.id) ? 0.6 : 1 }}
+                        onClick={() => handleToggleMarketplace(ideia)}
+                        disabled={savingId === Number(ideia.id)}
+                      >
+                        {ideia.status === "active" ? "Remover do marketplace" : "Publicar no marketplace"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -5819,40 +5562,6 @@ function MinhasIdeias() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {selectedReport && (
-        <div className="modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", padding: "12px" }} onClick={() => setSelectedReport(null)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ width: "min(820px, 96vw)", maxHeight: "calc(100vh - 24px)", overflowY: "auto", background: "var(--dm-surface)", border: "1px solid var(--dm-border)", borderRadius: "12px", padding: "20px" }}>
-            <h3 style={{ marginTop: 0 }}>Relatório da ideia</h3>
-            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div className="dashboard-card"><strong>Status de viabilidade</strong><div>{selectedReport.viabilityStatus || "-"}</div></div>
-              <div className="dashboard-card"><strong>Score IA</strong><div>{Number(selectedReport.score || 0)}/100</div></div>
-              <div className="dashboard-card"><strong>Gerado em</strong><div>{selectedReport.createdAt ? new Date(selectedReport.createdAt).toLocaleString("pt-PT") : "-"}</div></div>
-            </div>
-            <div className="dashboard-card" style={{ marginTop: "10px" }}>
-              <strong>Resumo</strong>
-              <p style={{ marginBottom: 0 }}>{selectedReport.summary || "-"}</p>
-            </div>
-            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", marginTop: "10px" }}>
-              <div className="dashboard-card">
-                <strong>Pontos fortes</strong>
-                <ul style={{ marginBottom: 0, paddingLeft: "18px" }}>{(selectedReport.strengths || []).map((x) => <li key={x}>{x}</li>)}</ul>
-              </div>
-              <div className="dashboard-card">
-                <strong>Pontos fracos</strong>
-                <ul style={{ marginBottom: 0, paddingLeft: "18px" }}>{(selectedReport.weaknesses || []).map((x) => <li key={x}>{x}</li>)}</ul>
-              </div>
-              <div className="dashboard-card" style={{ gridColumn: "1 / -1" }}>
-                <strong>Ajustes recomendados</strong>
-                <ul style={{ marginBottom: 0, paddingLeft: "18px" }}>{(selectedReport.adjustments || []).map((x) => <li key={x}>{x}</li>)}</ul>
-              </div>
-            </div>
-            <div style={{ marginTop: "14px", display: "flex", justifyContent: "flex-end" }}>
-              <button className="btn btn-primary" style={{ width: "auto" }} onClick={() => setSelectedReport(null)}>Fechar</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
@@ -7331,12 +7040,12 @@ function Perfilmentor() {
       <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '25px' }}>
         <div style={{ height: '88px', background: 'var(--primary-800)' }} />
         
-        <div className="profile-header-content">
+        <div style={{ padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
           <div
             onMouseEnter={() => setAvatarHover(true)}
             onMouseLeave={() => setAvatarHover(false)}
             onClick={handleAvatarPickClick}
-            className="profile-avatar-shell"
+            style={{ width: 120, height: 120, borderRadius: '50%', border: '5px solid var(--dm-surface)', background: 'var(--primary-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 700, color: 'var(--primary-700)', overflow: "hidden", position: "relative", cursor: "pointer" }}
             title="Alterar foto de perfil"
           >
             {user?.avatarUrl ? (
@@ -7372,10 +7081,10 @@ function Perfilmentor() {
       </div>
 
       {/* CONTEÚDO */}
-      <div className="profile-main-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
         
         {/* COLUNA ESQUERDA */}
-        <div className="profile-left-column">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
           
           <div className="dashboard-card">
             <h4>Status de Verificação</h4>
@@ -7406,7 +7115,7 @@ function Perfilmentor() {
 
           <h3 className="dashboard-card-title">Informações de Contato</h3>
 
-          <div className="profile-contact-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <Info label="E-mail" value={user?.email || "-"} />
             <Info label="Telefone" value={p.phone || "-"} />
             <Info

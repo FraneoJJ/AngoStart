@@ -5,7 +5,7 @@ import {
   listAnswersBySessionId,
   upsertAnswers,
 } from "../models/questionnaireModel.js";
-import { generateJsonWithGemini } from "./googleAiService.js";
+import { generateJsonWithAiProvider } from "./googleAiService.js";
 
 function safeJsonDecode(value, fallback) {
   if (value == null) return fallback;
@@ -186,7 +186,7 @@ function sanitizeQuestions(aiQuestions, fallback) {
 async function buildDynamicQuestions(context) {
   const fallback = buildDynamicQuestionsFallback(context);
   const prompt = buildQuestionsPrompt(context);
-  const { data, error } = await generateJsonWithGemini(prompt, { temperature: 0.2 });
+  const { data, error } = await generateJsonWithAiProvider(prompt, { temperature: 0.2 });
   if (!data?.questions || error) {
     return fallback;
   }

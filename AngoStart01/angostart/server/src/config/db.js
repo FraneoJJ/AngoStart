@@ -61,6 +61,21 @@ export async function initDb() {
          ADD COLUMN avatar_url LONGTEXT NULL`
       );
     }
+
+    const [userAdminCategoryRows] = await conn.execute(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ?
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'admin_category'`,
+      [env.DB_NAME]
+    );
+    if (!Array.isArray(userAdminCategoryRows) || userAdminCategoryRows.length === 0) {
+      await conn.execute(
+        `ALTER TABLE users
+         ADD COLUMN admin_category ENUM('primary', 'secondary') NULL DEFAULT NULL`
+      );
+    }
   } finally {
     conn.release();
   }

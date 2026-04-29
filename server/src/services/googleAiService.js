@@ -17,7 +17,7 @@ function safeParseJson(text) {
   }
 }
 
-export async function generateJsonWithGemini(prompt, options = {}) {
+export async function generateJsonWithAiProvider(prompt, options = {}) {
   const apiKey = String(env.GROQ_API_KEY || "").trim();
   if (!apiKey) {
     return { data: null, error: "GROQ_API_KEY não configurada." };
