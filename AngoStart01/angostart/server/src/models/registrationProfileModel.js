@@ -7,7 +7,7 @@ export async function createEmpreendedorProfile(db, input) {
         user_id, phone, business_name, business_sector, business_stage, business_location,
         accept_terms, verification_id, verification_status
       )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
     [
       input.userId,
       input.phone,
@@ -79,7 +79,7 @@ export async function createInvestidorProfile(db, input) {
         bi_front_doc, company_certificate_doc, declare_truth, accept_terms,
         verification_id, verification_status
       )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
     [
       input.userId,
       input.phone,
@@ -122,7 +122,6 @@ export async function updateEmpreendedorProfileByUserId(userId, input) {
        business_sector = ?,
        business_stage = ?,
        business_location = ?,
-      verification_status = 'pending',
        updated_at = CURRENT_TIMESTAMP
      WHERE user_id = ?`,
     [
@@ -181,7 +180,6 @@ export async function updateInvestidorProfileByUserId(userId, input) {
        has_investment_experience = ?,
        investment_experience_area = ?,
        linkedin_or_website = ?,
-       verification_status = 'pending',
        updated_at = CURRENT_TIMESTAMP
      WHERE user_id = ?`,
     [

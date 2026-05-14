@@ -56,6 +56,7 @@ const profileSchema = z.object({
   companyNif: z.string().max(40).optional(),
   companyRole: z.string().max(180).optional(),
   hasInvestmentExperience: z.enum(["sim", "nao"]).optional().or(z.literal("")),
+  hasExistingBusiness: z.enum(["sim", "nao"]).optional().or(z.literal("")),
   investmentExperienceArea: z.string().max(180).optional(),
   linkedinOrWebsite: z.string().max(255).optional().or(z.literal("")),
   biFrontDoc: z.string().max(255).optional(),
@@ -129,7 +130,12 @@ async function enrichUserWithVerification(user, activeRole = null) {
   const verification = await findVerificationByUserRole(Number(user.id), selectedRole);
   const profileData = await findProfileDataByUserRole(Number(user.id), selectedRole);
   const availableRoles = await listAvailableRoles(user);
-  const fallbackVerification = selectedRole === "admin" ? "approved" : "pending";
+  const fallbackVerification =
+    selectedRole === "admin" ||
+    selectedRole === "empreendedor" ||
+    selectedRole === "investidor"
+      ? "approved"
+      : "pending";
   return {
     ...user,
     primaryRole: user.role,
@@ -175,23 +181,34 @@ export async function register(input) {
     }
 
     if (data.role === "empreendedor") {
-      if (!profile.phone || !profile.businessName || !profile.businessSector || !profile.businessStage) {
-        throw { status: 400, message: "Dados do negócio incompletos para empreendedor." };
+      if (!profile.phone) {
+        throw { status: 400, message: "Telemóvel é obrigatório para empreendedor." };
       }
       const exists = await findEmpreendedorProfileByUserId(user.id);
       if (exists) throw { status: 409, message: "Este utilizador já possui perfil de empreendedor." };
       const verificationId = `VER-E-${Date.now().toString(36).toUpperCase()}`;
+      const rawStage = String(profile.businessStage || "").trim().toLowerCase();
+      const hasBiz =
+        rawStage === "sim" ||
+        rawStage === "funcionando" ||
+        rawStage === "negocio_sim" ||
+        profile.hasExistingBusiness === "sim";
+      const businessName =
+        String(profile.businessName || "").trim() || "A completar no perfil";
+      const businessSector =
+        String(profile.businessSector || "").trim() || "outros";
+      const businessStage = hasBiz ? "funcionando" : "ideia";
       await createEmpreendedorProfile(db, {
         userId: user.id,
         phone: profile.phone,
-        businessName: profile.businessName,
-        businessSector: profile.businessSector,
-        businessStage: profile.businessStage,
+        businessName,
+        businessSector,
+        businessStage,
         businessLocation: profile.businessLocation || null,
         acceptTerms: !!profile.acceptTerms,
         verificationId,
       });
-      verification = { id: verificationId, status: "pending" };
+      verification = { id: verificationId, status: "approved" };
     }
 
     if (data.role === "mentor") {
@@ -256,7 +273,7 @@ export async function register(input) {
         acceptTerms: !!profile.acceptTerms,
         verificationId,
       });
-      verification = { id: verificationId, status: "pending" };
+      verification = { id: verificationId, status: "approved" };
     }
 
     await db.commit();
