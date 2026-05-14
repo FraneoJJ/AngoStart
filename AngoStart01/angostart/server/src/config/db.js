@@ -76,6 +76,22 @@ export async function initDb() {
          ADD COLUMN admin_category ENUM('primary', 'secondary') NULL DEFAULT NULL`
       );
     }
+
+    // Empreendedor e investidor: sem bloqueio por aprovação manual (perfis pendentes legados)
+    try {
+      await conn.execute(
+        `UPDATE empreendedor_profiles SET verification_status = 'approved' WHERE verification_status = 'pending'`
+      );
+    } catch {
+      /* ignore if table missing */
+    }
+    try {
+      await conn.execute(
+        `UPDATE investidor_profiles SET verification_status = 'approved' WHERE verification_status = 'pending'`
+      );
+    } catch {
+      /* ignore if table missing */
+    }
   } finally {
     conn.release();
   }

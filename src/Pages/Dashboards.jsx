@@ -407,7 +407,11 @@ export default function Dashboard() {
     primaryRole: apiUser.primaryRole || apiUser.role,
     adminCategory: apiUser.adminCategory || apiUser.admin_category || null,
     availableRoles: apiUser.availableRoles || [apiUser.role],
-    verificationStatus: apiUser.verificationStatus || (apiUser.role === "admin" ? "approved" : "pending"),
+    verificationStatus:
+      apiUser.verificationStatus ||
+      (apiUser.role === "admin" || apiUser.role === "empreendedor" || apiUser.role === "investidor"
+        ? "approved"
+        : "pending"),
     verificationId: apiUser.verificationId || null,
     avatarUrl: apiUser.avatarUrl || null,
     profileData: apiUser.profileData || {},
@@ -646,7 +650,6 @@ export default function Dashboard() {
     }
   }
 
-  const canShowVerificationNotice = user?.role === "mentor" || user?.role === "investidor" || user?.role === "empreendedor";
   const verificationMeta = {
     pending: {
       title: "Conta pendente de verificação",
@@ -674,10 +677,17 @@ export default function Dashboard() {
     },
   };
   const currentVerificationStatus = user?.verificationStatus || "pending";
+  const canShowVerificationNotice =
+    user?.role === "mentor" ||
+    ((user?.role === "investidor" || user?.role === "empreendedor") && currentVerificationStatus === "rejected");
   const currentVerificationMeta = verificationMeta[currentVerificationStatus] || verificationMeta.pending;
   const verificationNoticeDismissKey = user ? `angostart_verif_notice_${user.id}_${user.role}_${currentVerificationStatus}` : "";
   const isRejectedRestricted = user?.role !== "admin" && currentVerificationStatus === "rejected";
-  const isPendingRestricted = user?.role !== "admin" && currentVerificationStatus === "pending";
+  const isPendingRestricted =
+    user?.role !== "admin" &&
+    currentVerificationStatus === "pending" &&
+    user?.role !== "empreendedor" &&
+    user?.role !== "investidor";
   const isVerificationRestricted = isRejectedRestricted || isPendingRestricted;
   const isPageAllowedByVerification = (page) => {
     if (isRejectedRestricted) return page === "perfil";
@@ -2354,7 +2364,7 @@ function InvestidorPerfil() {
       } else {
         ctx?.applyAuthenticatedUser?.({
           ...(user || {}),
-          verificationStatus: "pending",
+          verificationStatus: "approved",
           profileData: {
             ...(user?.profileData || {}),
             ...editForm,
@@ -2366,7 +2376,7 @@ function InvestidorPerfil() {
       ctx?.setModal?.({
         open: true,
         title: "Perfil atualizado",
-        message: "Os seus dados foram atualizados. A sua conta será verificada novamente pela nossa equipa.",
+        message: "Os seus dados foram atualizados com sucesso.",
       });
     } catch (err) {
       ctx?.setModal?.({
@@ -4466,6 +4476,7 @@ function SubmeterIdeia() {
   const ctx = useContext(AppContext);
   const tr = (pt, en) => (ctx?.idioma === "en" ? en : pt);
   const WIZARD_STORAGE_KEY = "angostart_submit_ideia_wizard";
+  const CHATBOT_FLOW_VERSION = 3;
   const initialDados = {
     nome: "", descricao: "", setor: "",
     cidade: "", localizacao: "",
@@ -4476,17 +4487,78 @@ function SubmeterIdeia() {
     problema: "", diferencial: "", publico: "",
     arquivos: [],
   };
+
+  const STEP_IDS = [
+    "nome",
+    "setor",
+    "descricao",
+    "cidade",
+    "regiao",
+    "localizacao",
+    "capital",
+    "problema",
+    "diferencial",
+    "publico",
+    "quiz_offer",
+    "files",
+    "confirm",
+  ];
+
   const savedWizardState = parseJsonSafe(localStorage.getItem(WIZARD_STORAGE_KEY), null);
-  const initialEtapa = Number(savedWizardState?.etapa || 1);
-  const [etapa, setEtapa] = useState(Number.isFinite(initialEtapa) && initialEtapa >= 1 && initialEtapa <= 8 ? initialEtapa : 1);
+  const restoredFlow = savedWizardState?.flowVersion === CHATBOT_FLOW_VERSION ? savedWizardState : null;
+
+  const isValidActiveStep = (id) =>
+    typeof id === "string" && (STEP_IDS.includes(id) || id === "quiz_item");
+
+  const defaultChatMessages = () => [
+    {
+      id: "m-intro",
+      role: "bot",
+      text: tr(
+        "Olá! Sou o assistente da AngoStart. Vou guiar-te passo a passo — responde em cada etapa com os campos abaixo e carrega em **Enviar** para a próxima pergunta.",
+        "Hi! I’m the AngoStart assistant. I’ll guide you step by step — fill in the fields below each question and press **Send** to continue."
+      ),
+    },
+    {
+      id: "m-nome",
+      role: "bot",
+      text: tr(
+        "**1.** Como se chama o teu projeto ou ideia de negócio?",
+        "**1.** What is your project or business idea called?"
+      ),
+    },
+  ];
+
+  const [view, setView] = useState(() => {
+    if (restoredFlow) return restoredFlow.resultadoIA ? "result" : "collect";
+    if (savedWizardState?.resultadoIA && Number(savedWizardState?.etapa) === 8) return "result";
+    return "collect";
+  });
+  const [activeStepId, setActiveStepId] = useState(() =>
+    isValidActiveStep(restoredFlow?.activeStepId) ? restoredFlow.activeStepId : "nome"
+  );
+  const [quizItemIndex, setQuizItemIndex] = useState(() =>
+    restoredFlow && Number.isFinite(Number(restoredFlow.quizItemIndex)) ? Number(restoredFlow.quizItemIndex) : 0
+  );
+  const [chatMessages, setChatMessages] = useState(() =>
+    restoredFlow?.chatMessages?.length ? restoredFlow.chatMessages : defaultChatMessages()
+  );
+  const messagesEndRef = useRef(null);
+
   const [analisando, setAnalisando] = useState(false);
-  const [resultadoIA, setResultadoIA] = useState(savedWizardState?.resultadoIA || null);
+  const [resultadoIA, setResultadoIA] = useState(() => restoredFlow?.resultadoIA || savedWizardState?.resultadoIA || null);
   const [mensagemFluxo, setMensagemFluxo] = useState("");
   const [ultimaIdeiaId, setUltimaIdeiaId] = useState(null);
   const [publicandoMarketplace, setPublicandoMarketplace] = useState(false);
-  const [questionarioSessionId, setQuestionarioSessionId] = useState(null);
-  const [questionarioPerguntas, setQuestionarioPerguntas] = useState([]);
-  const [questionarioRespostas, setQuestionarioRespostas] = useState({});
+  const [questionarioSessionId, setQuestionarioSessionId] = useState(() => restoredFlow?.questionarioSessionId ?? null);
+  const [questionarioPerguntas, setQuestionarioPerguntas] = useState(() =>
+    Array.isArray(restoredFlow?.questionarioPerguntas) ? restoredFlow.questionarioPerguntas : []
+  );
+  const [questionarioRespostas, setQuestionarioRespostas] = useState(() =>
+    restoredFlow?.questionarioRespostas && typeof restoredFlow.questionarioRespostas === "object"
+      ? restoredFlow.questionarioRespostas
+      : {}
+  );
   const [gerandoQuestionario, setGerandoQuestionario] = useState(false);
   const [avisoQuestionario, setAvisoQuestionario] = useState("");
 
@@ -4499,72 +4571,44 @@ function SubmeterIdeia() {
     localStorage.setItem(
       WIZARD_STORAGE_KEY,
       JSON.stringify({
-        etapa,
+        flowVersion: CHATBOT_FLOW_VERSION,
+        view,
+        activeStepId,
+        quizItemIndex,
+        chatMessages,
         dados,
         resultadoIA,
+        questionarioSessionId,
+        questionarioPerguntas,
+        questionarioRespostas,
       })
     );
-  }, [etapa, dados, resultadoIA]);
+  }, [
+    view,
+    activeStepId,
+    quizItemIndex,
+    chatMessages,
+    dados,
+    resultadoIA,
+    questionarioSessionId,
+    questionarioPerguntas,
+    questionarioRespostas,
+  ]);
 
   useEffect(() => {
-    if (etapa === 8 && !resultadoIA) {
-      setEtapa(7);
+    if (view === "result" && !resultadoIA) {
+      setView("collect");
+      setActiveStepId("confirm");
     }
-  }, [etapa, resultadoIA]);
+  }, [view, resultadoIA]);
 
-  const proximaEtapa = () => {
-    if (etapa === 1) {
-      const nome = String(dados.nome || "").trim();
-      const descricao = String(dados.descricao || "").trim();
-      const setor = String(dados.setor || "").trim();
-      if (!nome || nome.length < 2) {
-        ctx?.setModal?.({ open: true, message: tr("Preencha o nome do projeto (mínimo 2 caracteres).", "Fill in the project name (minimum 2 characters).") });
-        return;
-      }
-      if (!setor) {
-        ctx?.setModal?.({ open: true, message: tr("Selecione o setor de atuação.", "Select the business sector.") });
-        return;
-      }
-      if (!descricao || descricao.length < 10) {
-        ctx?.setModal?.({ open: true, message: tr("A descrição curta deve ter pelo menos 10 caracteres.", "Short description must have at least 10 characters.") });
-        return;
-      }
-    }
-    if (etapa === 2) {
-      if (!String(dados.cidade || "").trim() || !String(dados.regiao || "").trim()) {
-        ctx?.setModal?.({ open: true, message: tr("Preencha cidade e região/província para continuar.", "Fill in city and region/province to continue.") });
-        return;
-      }
-    }
-    if (etapa === 3) {
-      const capital = Number(dados.capital || 0);
-      if (!Number.isFinite(capital) || capital <= 0) {
-        ctx?.setModal?.({ open: true, message: tr("Informe o capital inicial (Kz) maior que zero.", "Enter initial capital (Kz) greater than zero.") });
-        return;
-      }
-    }
-    if (etapa === 4) {
-      if (!String(dados.problema || "").trim() || !String(dados.diferencial || "").trim() || !String(dados.publico || "").trim()) {
-        ctx?.setModal?.({ open: true, message: tr("Preencha problema, diferencial e público-alvo antes de avançar.", "Fill in problem, differentiation, and target audience before continuing.") });
-        return;
-      }
-      // Perguntas adicionais são opcionais: ao avançar daqui, vai direto para uploads.
-      setEtapa(6);
-      return;
-    }
-    setEtapa(etapa + 1);
-  };
-  const etapaAnterior = () => {
-    if (etapa === 6 && questionarioPerguntas.length === 0) {
-      setEtapa(4);
-      return;
-    }
-    setEtapa(etapa - 1);
-  };
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, activeStepId, view]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setDados({ ...dados, [name]: value });
+    setDados((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleArquivosChange = (e) => {
@@ -4572,7 +4616,7 @@ function SubmeterIdeia() {
     setDados((prev) => ({ ...prev, arquivos: files }));
   };
 
-  const mapQuery = `${dados.localizacao || ''} ${dados.cidade || ''} ${dados.regiao || ''}`.trim() || "Luanda Angola";
+  const mapQuery = `${dados.localizacao || ""} ${dados.cidade || ""} ${dados.regiao || ""}`.trim() || "Luanda Angola";
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
 
   const usarMinhaLocalizacao = () => {
@@ -4595,6 +4639,236 @@ function SubmeterIdeia() {
       () => {
         ctx?.setModal?.({ open: true, message: tr("Não foi possível obter sua localização atual.", "Could not get your current location.") });
       }
+    );
+  };
+
+  const nextMessageId = () => `m-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  const appendBot = (text) => {
+    setChatMessages((prev) => [...prev, { id: nextMessageId(), role: "bot", text }]);
+  };
+
+  const appendUser = (text) => {
+    setChatMessages((prev) => [...prev, { id: nextMessageId(), role: "user", text }]);
+  };
+
+  const botPromptFor = (step) => {
+    const prompts = {
+      setor: tr("**2.** Qual é o **setor de atuação** da tua ideia?", "**2.** What is the **business sector** of your idea?"),
+      descricao: tr("**3.** Escreve uma **descrição curta** do projeto (mínimo 10 caracteres).", "**3.** Write a **short description** of the project (at least 10 characters)."),
+      cidade: tr("**4.** Em que **cidade** vais operar (ou focar) primeiro?", "**4.** In which **city** will you operate (or focus) first?"),
+      regiao: tr("**5.** Qual é a **região ou província**?", "**5.** What is the **region or province**?"),
+      localizacao: tr(
+        "**6.** **Morada / referência**, coordenadas e mapa — podes usar «Usar a minha localização atual».",
+        "**6.** **Address / reference**, coordinates and map — you can use “Use my current location”."
+      ),
+      capital: tr("**7.** Qual o **capital inicial disponível (Kz)**?", "**7.** What is the **initial capital available (Kz)**?"),
+      problema: tr("**8.** Que **problema específico** o teu produto resolve?", "**8.** What **specific problem** does your product solve?"),
+      diferencial: tr("**9.** Como a tua solução é **diferente** das existentes?", "**9.** How is your solution **different** from existing ones?"),
+      publico: tr("**10.** Quem é o **público-alvo** principal?", "**10.** Who is your **main target audience**?"),
+      quiz_offer: tr(
+        "**11.** Queres **perguntas extras** geradas por IA para afinar a análise? (opcional)",
+        "**11.** Do you want **extra AI-generated questions** to refine the analysis? (optional)"
+      ),
+      files: tr(
+        "**12.** Queres anexar **ficheiros** (PDF, imagens, vídeo)? Opcional.",
+        "**12.** Do you want to attach **files** (PDF, images, video)? Optional."
+      ),
+      confirm: tr(
+        "**13.** **Revisa** o resumo abaixo. Quando estiveres pronto, envia para a **análise de viabilidade por IA**.",
+        "**13.** **Review** the summary below. When ready, send for **AI viability analysis**."
+      ),
+    };
+    return prompts[step] || "";
+  };
+
+  const goToFilesStep = () => {
+    setQuizItemIndex(0);
+    setActiveStepId("files");
+    appendBot(botPromptFor("files"));
+  };
+
+  const submitQuizItemStep = () => {
+    const q = questionarioPerguntas[quizItemIndex];
+    if (!q) {
+      goToFilesStep();
+      return;
+    }
+    const val = String(questionarioRespostas[q.key] ?? "").trim();
+    if (q.required && !val) {
+      ctx?.setModal?.({
+        open: true,
+        message: tr("Responde a esta pergunta obrigatória antes de continuar.", "Answer this required question before continuing."),
+      });
+      return;
+    }
+    appendUser(`${q.label}: ${val || "—"}`);
+    const nextIdx = quizItemIndex + 1;
+    if (nextIdx < questionarioPerguntas.length) {
+      setQuizItemIndex(nextIdx);
+      const nq = questionarioPerguntas[nextIdx];
+      appendBot(
+        tr(
+          `**Pergunta extra ${nextIdx + 1}/${questionarioPerguntas.length}:** ${nq.label}`,
+          `**Extra question ${nextIdx + 1}/${questionarioPerguntas.length}:** ${nq.label}`
+        )
+      );
+    } else {
+      setQuizItemIndex(0);
+      goToFilesStep();
+    }
+  };
+
+  const submitChatStep = () => {
+    if (activeStepId === "quiz_item") {
+      submitQuizItemStep();
+      return;
+    }
+
+    if (activeStepId === "nome") {
+      const nome = String(dados.nome || "").trim();
+      if (nome.length < 2) {
+        ctx?.setModal?.({
+          open: true,
+          message: tr("Preencha o nome do projeto (mínimo 2 caracteres).", "Fill in the project name (minimum 2 characters)."),
+        });
+        return;
+      }
+      appendUser(nome);
+      setActiveStepId("setor");
+      appendBot(botPromptFor("setor"));
+      return;
+    }
+
+    if (activeStepId === "setor") {
+      if (!String(dados.setor || "").trim()) {
+        ctx?.setModal?.({ open: true, message: tr("Selecione o setor de atuação.", "Select the business sector.") });
+        return;
+      }
+      appendUser(dados.setor);
+      setActiveStepId("descricao");
+      appendBot(botPromptFor("descricao"));
+      return;
+    }
+
+    if (activeStepId === "descricao") {
+      const descricao = String(dados.descricao || "").trim();
+      if (descricao.length < 10) {
+        ctx?.setModal?.({
+          open: true,
+          message: tr("A descrição curta deve ter pelo menos 10 caracteres.", "Short description must have at least 10 characters."),
+        });
+        return;
+      }
+      appendUser(descricao);
+      setActiveStepId("cidade");
+      appendBot(botPromptFor("cidade"));
+      return;
+    }
+
+    if (activeStepId === "cidade") {
+      if (!String(dados.cidade || "").trim()) {
+        ctx?.setModal?.({ open: true, message: tr("Preencha a cidade.", "Fill in the city.") });
+        return;
+      }
+      appendUser(dados.cidade.trim());
+      setActiveStepId("regiao");
+      appendBot(botPromptFor("regiao"));
+      return;
+    }
+
+    if (activeStepId === "regiao") {
+      if (!String(dados.regiao || "").trim()) {
+        ctx?.setModal?.({ open: true, message: tr("Preencha a região ou província.", "Fill in the region or province.") });
+        return;
+      }
+      appendUser(dados.regiao.trim());
+      setActiveStepId("localizacao");
+      appendBot(botPromptFor("localizacao"));
+      return;
+    }
+
+    if (activeStepId === "localizacao") {
+      appendUser(
+        tr(
+          `Morada: ${String(dados.localizacao || "").trim() || "—"} · lat: ${String(dados.lat || "").trim() || "—"} · lng: ${String(dados.lng || "").trim() || "—"}`,
+          `Address: ${String(dados.localizacao || "").trim() || "—"} · lat: ${String(dados.lat || "").trim() || "—"} · lng: ${String(dados.lng || "").trim() || "—"}`
+        )
+      );
+      setActiveStepId("capital");
+      appendBot(botPromptFor("capital"));
+      return;
+    }
+
+    if (activeStepId === "capital") {
+      const capital = Number(dados.capital || 0);
+      if (!Number.isFinite(capital) || capital <= 0) {
+        ctx?.setModal?.({
+          open: true,
+          message: tr("Informe o capital inicial (Kz) maior que zero.", "Enter initial capital (Kz) greater than zero."),
+        });
+        return;
+      }
+      appendUser(`Kz ${capital}`);
+      setActiveStepId("problema");
+      appendBot(botPromptFor("problema"));
+      return;
+    }
+
+    if (activeStepId === "problema") {
+      if (!String(dados.problema || "").trim()) {
+        ctx?.setModal?.({ open: true, message: tr("Descreve o problema que resolves.", "Describe the problem you solve.") });
+        return;
+      }
+      appendUser(String(dados.problema).trim());
+      setActiveStepId("diferencial");
+      appendBot(botPromptFor("diferencial"));
+      return;
+    }
+
+    if (activeStepId === "diferencial") {
+      if (!String(dados.diferencial || "").trim()) {
+        ctx?.setModal?.({ open: true, message: tr("Explica o diferencial da tua solução.", "Explain your solution’s differentiation.") });
+        return;
+      }
+      appendUser(String(dados.diferencial).trim());
+      setActiveStepId("publico");
+      appendBot(botPromptFor("publico"));
+      return;
+    }
+
+    if (activeStepId === "publico") {
+      if (!String(dados.publico || "").trim()) {
+        ctx?.setModal?.({ open: true, message: tr("Define o público-alvo principal.", "Define the main target audience.") });
+        return;
+      }
+      appendUser(String(dados.publico).trim());
+      setActiveStepId("quiz_offer");
+      appendBot(botPromptFor("quiz_offer"));
+      return;
+    }
+
+    if (activeStepId === "files") {
+      const n = Array.isArray(dados.arquivos) ? dados.arquivos.length : 0;
+      appendUser(
+        n
+          ? tr(`${n} ficheiro(s) anexado(s).`, `${n} file(s) attached.`)
+          : tr("Sem anexos.", "No attachments.")
+      );
+      setActiveStepId("confirm");
+      appendBot(botPromptFor("confirm"));
+    }
+  };
+
+  const ChatBubbleText = ({ text, isBot }) => {
+    if (!isBot) {
+      return <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.45 }}>{text}</p>;
+    }
+    const parts = String(text).split(/\*\*(.+?)\*\*/g);
+    return (
+      <p style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
+        {parts.map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : <span key={i}>{part}</span>))}
+      </p>
     );
   };
 
@@ -4621,7 +4895,10 @@ function SubmeterIdeia() {
     setQuestionarioPerguntas([]);
     setQuestionarioRespostas({});
     setAvisoQuestionario("");
-    setEtapa(1);
+    setView("collect");
+    setActiveStepId("nome");
+    setQuizItemIndex(0);
+    setChatMessages(defaultChatMessages());
     localStorage.removeItem(WIZARD_STORAGE_KEY);
   };
 
@@ -4777,14 +5054,15 @@ function SubmeterIdeia() {
       } catch (err) {
         if (isPlanFeatureBlocked(err)) {
           analiseIndisponivel = true;
-          setEtapa(1);
+          setView("collect");
+          setActiveStepId("confirm");
         } else {
           throw err;
         }
       }
 
       if (!analiseIndisponivel) {
-        setEtapa(8);
+        setView("result");
       }
       if (analiseIndisponivel) {
         ctx?.setModal?.({
@@ -4835,63 +5113,6 @@ function SubmeterIdeia() {
     }
   };
 
-  const gerarQuestionarioIA = async (avancarParaPerguntas = false) => {
-    if (questionarioSessionId && questionarioPerguntas.length > 0) {
-      if (avancarParaPerguntas) setEtapa(5);
-      return;
-    }
-    setGerandoQuestionario(true);
-    try {
-      const session = await generateQuestionnaire({
-        context: {
-          sector: dados.setor,
-          city: dados.cidade,
-          region: dados.regiao,
-          initialCapital: Number(dados.capital || 0),
-          problem: dados.problema,
-          differentialText: dados.diferencial,
-          targetAudience: dados.publico,
-        },
-      });
-      setQuestionarioSessionId(session.id);
-      setQuestionarioPerguntas(session.questions || []);
-      const baseAnswers = {};
-      (session.questions || []).forEach((q) => {
-        baseAnswers[q.key] = questionarioRespostas[q.key] || "";
-      });
-      setQuestionarioRespostas(baseAnswers);
-      setAvisoQuestionario(
-        tr(
-          "Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.",
-          "AI questionnaire generated successfully. You can answer the additional questions."
-        )
-      );
-      if (avancarParaPerguntas) {
-        setEtapa(5);
-      }
-    } catch (err) {
-      ctx?.setModal?.({
-        open: true,
-        message: tr(`Falha ao gerar questionário: ${err.message}`, `Failed to generate questionnaire: ${err.message}`),
-      });
-    } finally {
-      setGerandoQuestionario(false);
-    }
-  };
-
-  const salvarQuestionarioIA = async () => {
-    if (!questionarioSessionId) return;
-    try {
-      await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
-      setAvisoQuestionario(tr("Respostas do questionário guardadas com sucesso.", "Questionnaire answers saved successfully."));
-    } catch (err) {
-      ctx?.setModal?.({
-        open: true,
-        message: tr(`Falha ao guardar respostas: ${err.message}`, `Failed to save answers: ${err.message}`),
-      });
-    }
-  };
-
   const executarAnaliseViabilidade = async (ideaId, sessionId) => {
     const report = await analyzeViability({
       ideaId: ideaId || undefined,
@@ -4937,253 +5158,521 @@ function SubmeterIdeia() {
     });
   };
 
-  // --- RENDERS DAS FASES ---
+  const gerarQuestionarioIA = async (avancarParaPerguntas = false) => {
+    if (questionarioSessionId && questionarioPerguntas.length > 0) {
+      if (avancarParaPerguntas) {
+        const first = questionarioPerguntas[0];
+        setQuizItemIndex(0);
+        setActiveStepId("quiz_item");
+        appendBot(
+          tr(
+            `**Pergunta extra 1/${questionarioPerguntas.length}:** ${first.label}`,
+            `**Extra question 1/${questionarioPerguntas.length}:** ${first.label}`
+          )
+        );
+      }
+      return;
+    }
+    setGerandoQuestionario(true);
+    try {
+      const session = await generateQuestionnaire({
+        context: {
+          sector: dados.setor,
+          city: dados.cidade,
+          region: dados.regiao,
+          initialCapital: Number(dados.capital || 0),
+          problem: dados.problema,
+          differentialText: dados.diferencial,
+          targetAudience: dados.publico,
+        },
+      });
+      setQuestionarioSessionId(session.id);
+      const qs = session.questions || [];
+      setQuestionarioPerguntas(qs);
+      const baseAnswers = {};
+      qs.forEach((q) => {
+        baseAnswers[q.key] = questionarioRespostas[q.key] || "";
+      });
+      setQuestionarioRespostas(baseAnswers);
+      setAvisoQuestionario(
+        tr(
+          "Questionário IA gerado com sucesso. Pode responder as perguntas adicionais.",
+          "AI questionnaire generated successfully. You can answer the additional questions."
+        )
+      );
+      if (avancarParaPerguntas) {
+        if (qs.length > 0) {
+          setQuizItemIndex(0);
+          setActiveStepId("quiz_item");
+          appendBot(
+            tr(
+              `**Pergunta extra 1/${qs.length}:** ${qs[0].label}`,
+              `**Extra question 1/${qs.length}:** ${qs[0].label}`
+            )
+          );
+        } else {
+          appendBot(
+            tr(
+              "Não recebemos perguntas adicionais do serviço. Seguimos para anexos.",
+              "We did not receive additional questions from the service. Continuing to attachments."
+            )
+          );
+          goToFilesStep();
+        }
+      }
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        message: tr(`Falha ao gerar questionário: ${err.message}`, `Failed to generate questionnaire: ${err.message}`),
+      });
+    } finally {
+      setGerandoQuestionario(false);
+    }
+  };
 
-  const renderFase1 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 1: Identificação", "Phase 1: Identification")}</h3>
-      <div className="form-group">
-        <label className="form-label">Nome do Projecto</label>
-        <input className="form-input" name="nome" value={dados.nome} onChange={handleChange} placeholder="Ex: SolarPay" />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Setor de Atuação</label>
-        <select className="form-input" name="setor" value={dados.setor} onChange={handleChange}>
-          <option value="">Selecione...</option>
-          <option value="Fintech">Fintech</option>
-          <option value="Agrotech">Agrotech</option>
-          <option value="Educação">Educação</option>
-          <option value="Saúde">Saúde</option>
-          <option value="Comércio e Retalho">Comércio e Retalho</option>
-          <option value="Logística e Transportes">Logística e Transportes</option>
-          <option value="Energia e Águas">Energia e Águas</option>
-          <option value="Construção e Imobiliário">Construção e Imobiliário</option>
-          <option value="Pescas e Aquicultura">Pescas e Aquicultura</option>
-          <option value="Indústria e Transformação">Indústria e Transformação</option>
-          <option value="Petróleo e Gás">Petróleo e Gás</option>
-          <option value="Mineração">Mineração</option>
-          <option value="Turismo e Hotelaria">Turismo e Hotelaria</option>
-          <option value="Tecnologia e Software">Tecnologia e Software</option>
-          <option value="Telecomunicações">Telecomunicações</option>
-          <option value="Serviços Profissionais">Serviços Profissionais</option>
-        </select>
-      </div>
-      <div className="form-group">
-        <label className="form-label">Descrição Curta</label>
-        <textarea className="form-input" name="descricao" value={dados.descricao} onChange={handleChange} style={{height: '100px'}} />
-      </div>
-    </div>
-  );
+  const aceitarQuestionarioExtra = async () => {
+    appendUser(tr("Sim, quero perguntas adicionais.", "Yes, I want additional questions."));
+    await gerarQuestionarioIA(true);
+  };
 
-  const renderFase2 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 2: Localização", "Phase 2: Location")}</h3>
-      <div className="form-group">
-        <label className="form-label">Cidade</label>
-        <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Região/Província</label>
-        <input className="form-input" name="regiao" value={dados.regiao} onChange={handleChange} placeholder="Ex: Luanda" />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Endereço / Referência</label>
-        <input className="form-input" name="localizacao" value={dados.localizacao} onChange={handleChange} placeholder="Rua, bairro ou coordenadas" />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        <div className="form-group">
-          <label className="form-label">Latitude</label>
-          <input className="form-input" name="lat" value={dados.lat} onChange={handleChange} placeholder="-8.8383" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Longitude</label>
-          <input className="form-input" name="lng" value={dados.lng} onChange={handleChange} placeholder="13.2344" />
-        </div>
-      </div>
-      <button className="btn btn-outline" type="button" onClick={usarMinhaLocalizacao} style={{ width: 'fit-content' }}>
-        Usar minha localização atual
-      </button>
-      <div className="form-group">
-        <label className="form-label">Pré-visualização no mapa (Google Maps)</label>
-        <div style={{ height: '240px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--dm-border)' }}>
-          <iframe
-            title="Mapa da localizacao da ideia"
-            src={mapSrc}
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
-      </div>
-    </div>
-  );
+  const recusarQuestionarioExtra = () => {
+    appendUser(tr("Não, seguir sem questionário extra.", "No, continue without an extra questionnaire."));
+    goToFilesStep();
+  };
 
-  const renderFase3 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 3: Finanças", "Phase 3: Finances")}</h3>
-      <div className="form-group">
-        <label className="form-label">Quanto você tem para investir inicialmente? (Kz)</label>
-        <input className="form-input" type="number" name="capital" value={dados.capital} onChange={handleChange} placeholder="Ex: 5000" />
-      </div>
-    </div>
-  );
+  const continuarSemAnexosChat = () => {
+    setDados((p) => ({ ...p, arquivos: [] }));
+    appendUser(tr("Sem anexos.", "No attachments."));
+    setActiveStepId("confirm");
+    appendBot(botPromptFor("confirm"));
+  };
 
-  const renderFase4 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 4: Contexto para IA", "Phase 4: AI Context")}</h3>
-      <div className="form-group">
-        <label className="form-label">Qual problema específico o seu produto resolve?</label>
-        <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Como sua solução é diferente das existentes?</label>
-        <textarea className="form-input" name="diferencial" value={dados.diferencial} onChange={handleChange} />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Quem é o seu público-alvo principal?</label>
-        <textarea className="form-input" name="publico" value={dados.publico} onChange={handleChange} />
-      </div>
+  const salvarQuestionarioIA = async () => {
+    if (!questionarioSessionId) return;
+    try {
+      await saveQuestionnaireAnswers(questionarioSessionId, questionarioRespostas);
+      setAvisoQuestionario(tr("Respostas do questionário guardadas com sucesso.", "Questionnaire answers saved successfully."));
+    } catch (err) {
+      ctx?.setModal?.({
+        open: true,
+        message: tr(`Falha ao guardar respostas: ${err.message}`, `Failed to save answers: ${err.message}`),
+      });
+    }
+  };
+
+  const renderConfirmacaoResumo = () => (
+    <div className="auth-form" style={{ marginTop: 0 }}>
+      <h4 className="dashboard-card-title" style={{ fontSize: "1rem" }}>
+        {tr("Revisão final", "Final review")}
+      </h4>
       <div className="dashboard-card" style={{ background: "var(--neutral-50)", fontSize: "0.9rem" }}>
-        <p style={{ margin: 0 }}>
-          Com estes dados, a IA vai identificar pontos pouco claros e criar perguntas adicionais para melhorar a análise de viabilidade.
+        <p>
+          <strong>{tr("Projeto", "Project")}:</strong> {dados.nome}
+        </p>
+        <p>
+          <strong>{tr("Setor", "Sector")}:</strong> {dados.setor}
+        </p>
+        <p>
+          <strong>{tr("Localização", "Location")}:</strong> {dados.cidade} — {dados.regiao} ({dados.localizacao || tr("Sem referência", "No reference")})
+        </p>
+        <p>
+          <strong>{tr("Investimento", "Investment")}:</strong> Kz {dados.capital}
+        </p>
+        <p>
+          <strong>{tr("Problema", "Problem")}:</strong> {(dados.problema || "").slice(0, 120)}
+          {(dados.problema || "").length > 120 ? "…" : ""}
+        </p>
+        <p>
+          <strong>{tr("Respostas ao questionário", "Questionnaire answers")}:</strong>{" "}
+          {Object.values(questionarioRespostas).filter((v) => String(v || "").trim()).length}
+        </p>
+        <p>
+          <strong>{tr("Ficheiros", "Files")}:</strong> {Array.isArray(dados.arquivos) ? dados.arquivos.length : 0}
         </p>
       </div>
-      {avisoQuestionario ? (
-        <div className="dashboard-card" style={{ background: "var(--success-100)", border: "1px solid var(--success-500)" }}>
-          <p style={{ margin: 0, color: "var(--success-500)" }}>{avisoQuestionario}</p>
-        </div>
-      ) : null}
-      <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-        <button type="button" className="btn btn-primary" onClick={() => gerarQuestionarioIA(true)} disabled={gerandoQuestionario}>
-          {gerandoQuestionario ? "Gerando..." : "Perguntas adicionais (opcional)"}
-        </button>
-        <button type="button" className="btn btn-outline" onClick={() => setEtapa(5)} disabled={!questionarioSessionId}>
-          Ver perguntas geradas
-        </button>
-      </div>
+      <p style={{ fontSize: "0.8rem", color: "var(--neutral-500)" }}>
+        {tr(
+          "Ao enviar, a plataforma regista a ideia e corre a análise de viabilidade (IA remota quando disponível).",
+          "On submit, the idea is saved and viability analysis runs (remote AI when available)."
+        )}
+      </p>
     </div>
   );
 
-  const renderFase5 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 5: Perguntas adicionais da IA (Opcional)", "Phase 5: Additional AI Questions (Optional)")}</h3>
-      <p style={{ margin: 0, color: "var(--neutral-600)", fontSize: "0.9rem" }}>
-        Responda este questionário para melhorar a precisão da análise de viabilidade.
-      </p>
-      {avisoQuestionario ? (
-        <div className="dashboard-card" style={{ background: "var(--success-100)", border: "1px solid var(--success-500)" }}>
-          <p style={{ margin: 0, color: "var(--success-500)" }}>{avisoQuestionario}</p>
-        </div>
-      ) : null}
-      {questionarioPerguntas.length > 0 ? (
-        <div className="dashboard-card" style={{ marginTop: "8px", background: "var(--neutral-50)" }}>
-          <h4 style={{ marginBottom: "12px" }}>Questionário Gerado</h4>
-          {questionarioPerguntas.map((q, idx) => (
-            <div key={q.key} className="form-group" style={{ marginBottom: "12px" }}>
-              <label className="form-label">
-                {idx + 1}. {q.label} {q.required ? <span style={{ color: "var(--error-500)" }}>*</span> : null}
-              </label>
-              {q.type === "select" ? (
-                <select
-                  className="form-input"
-                  value={questionarioRespostas[q.key] || ""}
-                  onChange={(e) =>
-                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
-                  }
-                >
-                  <option value="">Selecione...</option>
-                  {(q.options || []).map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              ) : q.type === "number" ? (
-                <input
-                  type="number"
-                  className="form-input"
-                  value={questionarioRespostas[q.key] || ""}
-                  onChange={(e) =>
-                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
-                  }
-                />
-              ) : (
-                <textarea
-                  className="form-input"
-                  style={{ minHeight: "90px" }}
-                  value={questionarioRespostas[q.key] || ""}
-                  onChange={(e) =>
-                    setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))
-                  }
-                />
-              )}
+  const computeProgressPercent = () => {
+    if (view === "result") return 100;
+    const order = ["nome", "setor", "descricao", "cidade", "regiao", "localizacao", "capital", "problema", "diferencial", "publico", "quiz_offer"];
+    const nQuiz = questionarioPerguntas.length;
+    const total = order.length + (nQuiz > 0 ? nQuiz : 0) + 2;
+    let step = 0;
+    if (order.includes(activeStepId)) step = order.indexOf(activeStepId);
+    else if (activeStepId === "quiz_item") step = order.length + quizItemIndex;
+    else if (activeStepId === "files") step = order.length + Math.max(nQuiz, 0);
+    else if (activeStepId === "confirm") step = order.length + Math.max(nQuiz, 0) + 1;
+    return Math.min(100, Math.round(((step + 1) / Math.max(1, total)) * 100));
+  };
+
+  const composerWrap = (children) => (
+    <div className="auth-form" style={{ marginTop: 14, borderTop: "1px solid var(--neutral-100)", paddingTop: 14 }}>
+      {children}
+    </div>
+  );
+
+  const setorSelectField = (
+    <div className="form-group">
+      <label className="form-label">{tr("Setor de atuação", "Business sector")}</label>
+      <select className="form-input" name="setor" value={dados.setor} onChange={handleChange}>
+        <option value="">{tr("Selecione…", "Select…")}</option>
+        <option value="Fintech">Fintech</option>
+        <option value="Agrotech">Agrotech</option>
+        <option value="Educação">Educação</option>
+        <option value="Saúde">Saúde</option>
+        <option value="Comércio e Retalho">Comércio e Retalho</option>
+        <option value="Logística e Transportes">Logística e Transportes</option>
+        <option value="Energia e Águas">Energia e Águas</option>
+        <option value="Construção e Imobiliário">Construção e Imobiliário</option>
+        <option value="Pescas e Aquicultura">Pescas e Aquicultura</option>
+        <option value="Indústria e Transformação">Indústria e Transformação</option>
+        <option value="Petróleo e Gás">Petróleo e Gás</option>
+        <option value="Mineração">Mineração</option>
+        <option value="Turismo e Hotelaria">Turismo e Hotelaria</option>
+        <option value="Tecnologia e Software">Tecnologia e Software</option>
+        <option value="Telecomunicações">Telecomunicações</option>
+        <option value="Serviços Profissionais">Serviços Profissionais</option>
+      </select>
+    </div>
+  );
+
+  const renderComposer = () => {
+    if (view !== "collect") return null;
+
+    if (activeStepId === "quiz_offer") {
+      return composerWrap(
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {avisoQuestionario ? (
+            <div className="dashboard-card" style={{ background: "var(--success-100)", border: "1px solid var(--success-500)" }}>
+              <p style={{ margin: 0, color: "var(--success-500)" }}>{avisoQuestionario}</p>
             </div>
-          ))}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
-            <button type="button" className="btn btn-outline" onClick={salvarQuestionarioIA} disabled={!questionarioSessionId}>
-              Guardar Respostas
+          ) : null}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" className="btn btn-primary" onClick={() => void aceitarQuestionarioExtra()} disabled={gerandoQuestionario}>
+              {gerandoQuestionario ? tr("A gerar…", "Generating…") : tr("Sim, quero perguntas extra", "Yes, extra questions")}
+            </button>
+            <button type="button" className="btn btn-outline" onClick={recusarQuestionarioExtra} disabled={gerandoQuestionario}>
+              {tr("Não, continuar", "No, continue")}
             </button>
           </div>
         </div>
-      ) : (
-        <div className="dashboard-card" style={{ marginTop: "8px" }}>
-          <p style={{ margin: 0 }}>Ainda não há perguntas geradas. Esta etapa é opcional. Se quiser, volte à fase anterior e clique em "Perguntas adicionais (opcional)".</p>
-        </div>
-      )}
-    </div>
-  );
+      );
+    }
 
-  const renderFase6 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 6: Uploads", "Phase 6: Uploads")}</h3>
-      <div style={{ border: '2px dashed var(--neutral-300)', padding: '40px', textAlign: 'center', borderRadius: '12px' }}>
-        <p>Adicione imagens, PDF ou vídeos do produto/protótipo</p>
-        <input
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.mp4,.mov,.avi"
-          onChange={handleArquivosChange}
-          style={{ marginTop: "10px" }}
-        />
-        {Array.isArray(dados.arquivos) && dados.arquivos.length > 0 ? (
-          <div style={{ marginTop: "12px", textAlign: "left", display: "grid", gap: "4px" }}>
-            {dados.arquivos.map((f) => (
-              <div key={`${f.name}-${f.size}`} style={{ fontSize: "0.85rem", color: "var(--neutral-700)" }}>
-                • {f.name}
-              </div>
-            ))}
+    if (activeStepId === "quiz_item") {
+      const q = questionarioPerguntas[quizItemIndex];
+      if (!q) return null;
+      return composerWrap(
+        <>
+          {avisoQuestionario ? (
+            <div className="dashboard-card" style={{ background: "var(--success-100)", border: "1px solid var(--success-500)", marginBottom: 10 }}>
+              <p style={{ margin: 0, color: "var(--success-500)" }}>{avisoQuestionario}</p>
+            </div>
+          ) : null}
+          <div className="form-group">
+            <label className="form-label">
+              {quizItemIndex + 1}. {q.label} {q.required ? <span style={{ color: "var(--error-500)" }}>*</span> : null}
+            </label>
+            {q.type === "select" ? (
+              <select
+                className="form-input"
+                value={questionarioRespostas[q.key] || ""}
+                onChange={(e) => setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))}
+              >
+                <option value="">{tr("Selecione…", "Select…")}</option>
+                {(q.options || []).map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            ) : q.type === "number" ? (
+              <input
+                type="number"
+                className="form-input"
+                value={questionarioRespostas[q.key] || ""}
+                onChange={(e) => setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))}
+              />
+            ) : (
+              <textarea
+                className="form-input"
+                style={{ minHeight: "90px" }}
+                value={questionarioRespostas[q.key] || ""}
+                onChange={(e) => setQuestionarioRespostas((prev) => ({ ...prev, [q.key]: e.target.value }))}
+              />
+            )}
           </div>
-        ) : null}
-      </div>
-    </div>
-  );
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="btn btn-outline" onClick={() => void salvarQuestionarioIA()} disabled={!questionarioSessionId}>
+              {tr("Guardar respostas", "Save answers")}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+              {tr("Enviar", "Send")}
+            </button>
+          </div>
+        </>
+      );
+    }
 
-  const renderFase7 = () => (
-    <div className="auth-form">
-      <h3 className="dashboard-card-title">{tr("Fase 7: Revisão Final", "Phase 7: Final Review")}</h3>
-      <div className="dashboard-card" style={{ background: 'var(--neutral-50)', fontSize: '0.9rem' }}>
-        <p><strong>Projeto:</strong> {dados.nome}</p>
-        <p><strong>Setor:</strong> {dados.setor}</p>
-        <p><strong>Localização:</strong> {dados.cidade} - {dados.regiao} ({dados.localizacao || "Sem referência"})</p>
-        <p><strong>Investimento:</strong> Kz{dados.capital}</p>
-        <p><strong>Problema:</strong> {(dados.problema || "").substring(0, 50)}...</p>
-        <p><strong>Perguntas IA respondidas:</strong> {Object.values(questionarioRespostas).filter((v) => String(v || "").trim()).length}</p>
-        <p><strong>Arquivos anexados:</strong> {Array.isArray(dados.arquivos) ? dados.arquivos.length : 0}</p>
-      </div>
-      <p style={{fontSize: '0.8rem', color: 'var(--neutral-500)'}}>Ao clicar em submeter, nossa IA analisará a viabilidade do seu negócio.</p>
-    </div>
-  );
+    if (activeStepId === "confirm") {
+      return composerWrap(
+        <>
+          {renderConfirmacaoResumo()}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => void enviarParaAnalise()}
+            disabled={analisando}
+            style={{ marginTop: 12, background: "var(--success-500)" }}
+          >
+            {tr("Enviar para análise IA", "Send for AI analysis")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "nome") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Nome do projecto", "Project name")}</label>
+            <input className="form-input" name="nome" value={dados.nome} onChange={handleChange} placeholder="Ex: SolarPay" />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "setor") {
+      return composerWrap(
+        <>
+          {setorSelectField}
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "descricao") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Descrição curta", "Short description")}</label>
+            <textarea className="form-input" name="descricao" value={dados.descricao} onChange={handleChange} style={{ height: "100px" }} />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "cidade") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Cidade", "City")}</label>
+            <input className="form-input" name="cidade" value={dados.cidade} onChange={handleChange} />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "regiao") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Região / província", "Region / province")}</label>
+            <input className="form-input" name="regiao" value={dados.regiao} onChange={handleChange} placeholder="Ex: Luanda" />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "localizacao") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Endereço / referência", "Address / reference")}</label>
+            <input
+              className="form-input"
+              name="localizacao"
+              value={dados.localizacao}
+              onChange={handleChange}
+              placeholder={tr("Rua, bairro ou coordenadas", "Street, neighborhood or coordinates")}
+            />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div className="form-group">
+              <label className="form-label">{tr("Latitude", "Latitude")}</label>
+              <input className="form-input" name="lat" value={dados.lat} onChange={handleChange} placeholder="-8.8383" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{tr("Longitude", "Longitude")}</label>
+              <input className="form-input" name="lng" value={dados.lng} onChange={handleChange} placeholder="13.2344" />
+            </div>
+          </div>
+          <button className="btn btn-outline" type="button" onClick={usarMinhaLocalizacao} style={{ width: "fit-content", marginBottom: 12 }}>
+            {tr("Usar a minha localização atual", "Use my current location")}
+          </button>
+          <div className="form-group">
+            <label className="form-label">{tr("Pré-visualização no mapa (Google Maps)", "Map preview (Google Maps)")}</label>
+            <div style={{ height: "240px", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--dm-border)" }}>
+              <iframe
+                title="Mapa da localização da ideia"
+                src={mapSrc}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "capital") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Capital inicial disponível (Kz)", "Initial capital available (Kz)")}</label>
+            <input className="form-input" type="number" name="capital" value={dados.capital} onChange={handleChange} placeholder="Ex: 500000" />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "problema") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Que problema específico o teu produto resolve?", "What specific problem does your product solve?")}</label>
+            <textarea className="form-input" name="problema" value={dados.problema} onChange={handleChange} />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "diferencial") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Como a tua solução é diferente das existentes?", "How is your solution different from existing ones?")}</label>
+            <textarea className="form-input" name="diferencial" value={dados.diferencial} onChange={handleChange} />
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "publico") {
+      return composerWrap(
+        <>
+          <div className="form-group">
+            <label className="form-label">{tr("Quem é o público-alvo principal?", "Who is your main target audience?")}</label>
+            <textarea className="form-input" name="publico" value={dados.publico} onChange={handleChange} />
+          </div>
+          <div className="dashboard-card" style={{ background: "var(--neutral-50)", fontSize: "0.9rem", marginBottom: 12 }}>
+            <p style={{ margin: 0 }}>
+              {tr(
+                "Com estes dados, a IA identifica lacunas e pode sugerir perguntas adicionais no passo seguinte.",
+                "With this data, the AI can spot gaps and may suggest additional questions in the next step."
+              )}
+            </p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+            {tr("Enviar", "Send")}
+          </button>
+        </>
+      );
+    }
+
+    if (activeStepId === "files") {
+      return composerWrap(
+        <>
+          <div style={{ border: "2px dashed var(--neutral-300)", padding: "28px", textAlign: "center", borderRadius: "12px" }}>
+            <p style={{ margin: 0 }}>{tr("Imagens, PDF ou vídeos do produto ou protótipo (opcional).", "Images, PDF or videos of the product or prototype (optional).")}</p>
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.mp4,.mov,.avi"
+              onChange={handleArquivosChange}
+              style={{ marginTop: "10px" }}
+            />
+            {Array.isArray(dados.arquivos) && dados.arquivos.length > 0 ? (
+              <div style={{ marginTop: "12px", textAlign: "left", display: "grid", gap: "4px" }}>
+                {dados.arquivos.map((f) => (
+                  <div key={`${f.name}-${f.size}`} style={{ fontSize: "0.85rem", color: "var(--neutral-700)" }}>
+                    • {f.name}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+            <button type="button" className="btn btn-primary" onClick={submitChatStep}>
+              {tr("Continuar com estes anexos", "Continue with these attachments")}
+            </button>
+            <button type="button" className="btn btn-outline" onClick={continuarSemAnexosChat}>
+              {tr("Continuar sem anexos", "Continue without attachments")}
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    return null;
+  };
 
   const renderResultado = () => {
     if (!resultadoIA) {
       return (
         <div className="dashboard-card" style={{ textAlign: "center" }}>
-          <h3 style={{ marginTop: 0 }}>Resultado indisponível</h3>
+          <h3 style={{ marginTop: 0 }}>{tr("Resultado indisponível", "Result unavailable")}</h3>
           <p style={{ color: "var(--neutral-600)" }}>
-            O resultado da análise não está disponível no momento. Volte para revisão e envie novamente.
+            {tr(
+              "O resultado da análise não está disponível. Volta à revisão e envia novamente.",
+              "The analysis result is not available. Go back to review and submit again."
+            )}
           </p>
-          <button className="btn btn-primary" onClick={() => setEtapa(7)} style={{ width: "auto" }}>
-            Voltar para Revisão
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setView("collect");
+              setActiveStepId("confirm");
+            }}
+            style={{ width: "auto" }}
+          >
+            {tr("Voltar para revisão", "Back to review")}
           </button>
         </div>
       );
@@ -5314,63 +5803,68 @@ function SubmeterIdeia() {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      
-      {/* INDICADOR DE ETAPAS */}
-      {etapa < 8 && (
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-          {[1, 2, 3, 4, 5, 6, 7].map(i => (
-            <div key={i} style={{ 
-              flex: 1, height: '8px', borderRadius: '4px',
-              background: i <= etapa ? 'var(--primary-600)' : 'var(--neutral-200)',
-              transition: '0.3s'
-            }} />
-          ))}
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: 20 }}>
+      {view === "collect" ? (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ height: 8, borderRadius: 4, background: "var(--neutral-200)", overflow: "hidden" }}>
+            <div
+              style={{
+                width: `${computeProgressPercent()}%`,
+                height: "100%",
+                background: "var(--primary-600)",
+                transition: "width 0.25s ease",
+              }}
+            />
+          </div>
+          <p style={{ margin: "8px 0 0", fontSize: "0.8rem", color: "var(--neutral-500)" }}>
+            {tr("Progresso do preenchimento", "Filling progress")} · {computeProgressPercent()}%
+          </p>
         </div>
-      )}
+      ) : null}
 
-      {/* CONTEÚDO DINÂMICO */}
-      <div className="dashboard-card" style={{ padding: '30px' }}>
+      <div className="dashboard-card" style={{ padding: 24, display: "flex", flexDirection: "column", minHeight: 420 }}>
         {analisando ? (
           <div className="loading">
-            <div className="spinner"></div>
-            <p style={{ marginTop: '20px' }}>{tr("A Inteligência Artificial está analisando seu projeto...", "Artificial Intelligence is analyzing your project...")}</p>
+            <div className="spinner" />
+            <p style={{ marginTop: 20 }}>
+              {tr("A enviar a ideia e a analisar com a IA…", "Submitting your idea and running AI analysis…")}
+            </p>
           </div>
+        ) : view === "result" ? (
+          renderResultado()
         ) : (
           <>
-            {etapa === 1 && renderFase1()}
-            {etapa === 2 && renderFase2()}
-            {etapa === 3 && renderFase3()}
-            {etapa === 4 && renderFase4()}
-            {etapa === 5 && renderFase5()}
-            {etapa === 6 && renderFase6()}
-            {etapa === 7 && renderFase7()}
-            {etapa === 8 && renderResultado()}
-
-            {/* BOTÕES DE NAVEGAÇÃO */}
-            {etapa < 8 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--neutral-100)' }}>
-                <button 
-                  type="button"
-                  className="btn-logout" 
-                  onClick={etapaAnterior} 
-                  disabled={etapa === 1}
-                  style={{ width: 'auto', padding: '10px 30px', opacity: etapa === 1 ? 0.3 : 1 }}
+            <div style={{ flex: 1, overflowY: "auto", maxHeight: 520, paddingRight: 6, marginBottom: 12 }}>
+              {chatMessages.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: m.role === "user" ? "flex-end" : "flex-start",
+                    marginBottom: 12,
+                  }}
                 >
-                  {tr("Voltar", "Back")}
-                </button>
-                
-                {etapa < 7 ? (
-                  <button type="button" className="btn btn-primary" onClick={proximaEtapa} style={{ width: 'auto', padding: '10px 40px' }}>
-                    {tr("Próxima Fase", "Next Phase")}
-                  </button>
-                ) : (
-                  <button type="button" className="btn btn-primary" onClick={enviarParaAnalise} style={{ width: 'auto', padding: '10px 40px', background: 'var(--success-500)' }}>
-                    {tr("Enviar para Análise IA", "Send for AI Analysis")}
-                  </button>
-                )}
-              </div>
-            )}
+                  <div
+                    style={{
+                      maxWidth: "88%",
+                      borderRadius: 12,
+                      padding: "10px 14px",
+                      background: m.role === "user" ? "var(--primary-100)" : "var(--neutral-50)",
+                      border: "1px solid var(--dm-border)",
+                    }}
+                  >
+                    <ChatBubbleText text={m.text} isBot={m.role === "bot"} />
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+            {renderComposer()}
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+              <button type="button" className="btn-logout" onClick={reiniciarSubmissao} style={{ width: "auto", padding: "8px 16px" }}>
+                {tr("Recomeçar", "Start over")}
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -6992,7 +7486,9 @@ function Perfilmentor() {
       ctx?.setModal?.({
         open: true,
         title: "Perfil atualizado",
-        message: "Os seus dados foram atualizados. A sua conta será verificada novamente pela nossa equipa.",
+        message: isMentor
+          ? "Os seus dados foram atualizados. A sua conta será verificada novamente pela nossa equipa."
+          : "Os seus dados foram atualizados com sucesso.",
       });
     } catch (err) {
       ctx?.setModal?.({

@@ -36,7 +36,6 @@ import { sendPasswordResetEmail } from "./mailService.js";
 
 const profileSchema = z.object({
   phone: z.string().min(6).max(30).optional(),
-  hasBusiness: z.coerce.boolean().optional(),
   businessName: z.string().max(180).optional(),
   businessSector: z.string().max(120).optional(),
   businessStage: z.string().max(120).optional(),
@@ -57,6 +56,7 @@ const profileSchema = z.object({
   companyNif: z.string().max(40).optional(),
   companyRole: z.string().max(180).optional(),
   hasInvestmentExperience: z.enum(["sim", "nao"]).optional().or(z.literal("")),
+  hasExistingBusiness: z.enum(["sim", "nao"]).optional().or(z.literal("")),
   investmentExperienceArea: z.string().max(180).optional(),
   linkedinOrWebsite: z.string().max(255).optional().or(z.literal("")),
   biFrontDoc: z.string().max(255).optional(),
@@ -73,34 +73,6 @@ const registerSchema = z.object({
   password: z.string().min(6).max(120),
   role: z.enum(USER_ROLES).default("empreendedor"),
   profileData: profileSchema.optional(),
-}).superRefine((data, ctx) => {
-  const reservedTokens = ["angostart"];
-  const normalizeForCheck = (value) => String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-
-  const nameCheck = normalizeForCheck(data.name);
-  const emailCheck = normalizeForCheck(data.email);
-  const hasReservedName = reservedTokens.some((token) => nameCheck.includes(token));
-  const hasReservedEmail = reservedTokens.some((token) => emailCheck.includes(token));
-
-  if (hasReservedName) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["name"],
-      message: "Este nome está reservado e não pode ser utilizado no registo.",
-    });
-  }
-
-  if (hasReservedEmail) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["email"],
-      message: "Este email contém termo reservado da plataforma e não pode ser utilizado.",
-    });
-  }
 });
 
 const loginSchema = z.object({
@@ -158,7 +130,12 @@ async function enrichUserWithVerification(user, activeRole = null) {
   const verification = await findVerificationByUserRole(Number(user.id), selectedRole);
   const profileData = await findProfileDataByUserRole(Number(user.id), selectedRole);
   const availableRoles = await listAvailableRoles(user);
-  const fallbackVerification = selectedRole === "admin" ? "approved" : "pending";
+  const fallbackVerification =
+    selectedRole === "admin" ||
+    selectedRole === "empreendedor" ||
+    selectedRole === "investidor"
+      ? "approved"
+      : "pending";
   return {
     ...user,
     primaryRole: user.role,
@@ -204,28 +181,34 @@ export async function register(input) {
     }
 
     if (data.role === "empreendedor") {
-      const hasBusiness = !!profile.hasBusiness;
       if (!profile.phone) {
-        throw { status: 400, message: "Telefone é obrigatório para empreendedor." };
-      }
-      if (hasBusiness && (!profile.businessName || !profile.businessSector || !profile.businessStage)) {
-        throw { status: 400, message: "Dados do negócio incompletos para empreendedor." };
+        throw { status: 400, message: "Telemóvel é obrigatório para empreendedor." };
       }
       const exists = await findEmpreendedorProfileByUserId(user.id);
       if (exists) throw { status: 409, message: "Este utilizador já possui perfil de empreendedor." };
       const verificationId = `VER-E-${Date.now().toString(36).toUpperCase()}`;
+      const rawStage = String(profile.businessStage || "").trim().toLowerCase();
+      const hasBiz =
+        rawStage === "sim" ||
+        rawStage === "funcionando" ||
+        rawStage === "negocio_sim" ||
+        profile.hasExistingBusiness === "sim";
+      const businessName =
+        String(profile.businessName || "").trim() || "A completar no perfil";
+      const businessSector =
+        String(profile.businessSector || "").trim() || "outros";
+      const businessStage = hasBiz ? "funcionando" : "ideia";
       await createEmpreendedorProfile(db, {
         userId: user.id,
         phone: profile.phone,
-        hasBusiness,
-        businessName: hasBusiness ? profile.businessName : null,
-        businessSector: hasBusiness ? profile.businessSector : null,
-        businessStage: hasBusiness ? profile.businessStage : null,
+        businessName,
+        businessSector,
+        businessStage,
         businessLocation: profile.businessLocation || null,
         acceptTerms: !!profile.acceptTerms,
         verificationId,
       });
-      verification = { id: verificationId, status: "pending" };
+      verification = { id: verificationId, status: "approved" };
     }
 
     if (data.role === "mentor") {
@@ -290,7 +273,7 @@ export async function register(input) {
         acceptTerms: !!profile.acceptTerms,
         verificationId,
       });
-      verification = { id: verificationId, status: "pending" };
+      verification = { id: verificationId, status: "approved" };
     }
 
     await db.commit();
@@ -371,7 +354,6 @@ export async function updateMyProfile(authUser, input) {
     if (role === "empreendedor") {
       await updateEmpreendedorProfileByUserId(userId, {
         phone: profile.phone,
-        hasBusiness: profile.hasBusiness,
         businessName: profile.businessName,
         businessSector: profile.businessSector,
         businessStage: profile.businessStage,
@@ -429,12 +411,7 @@ function sha256(value) {
 
 function buildPasswordResetUrl(token) {
   const base = env.FRONTEND_ORIGIN || "http://localhost:5173";
-  const basePath = String(env.FRONTEND_BASE_PATH || "")
-    .trim()
-    .replace(/^\/?/, "/")
-    .replace(/\/+$/, "");
-  const appRoot = `${base.replace(/\/+$/, "")}${basePath === "/" ? "" : basePath}`;
-  return `${appRoot}/#/redefinir-senha?token=${encodeURIComponent(token)}`;
+  return `${base.replace(/\/+$/, "")}/redefinir-senha?token=${encodeURIComponent(token)}`;
 }
 
 export async function requestPasswordReset(input) {

@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../style/auth.css';
 import { registerUser } from '../services/authApi';
 
-const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
-
 const CriarConta = () => {
   const navigate = useNavigate();
   
@@ -39,12 +37,12 @@ const CriarConta = () => {
     birthDate: '',
     province: '',
     
-    // Empreendedor
-    hasBusiness: 'nao',
+    // Empreendedor (nome/setor detalhados completam-se depois no perfil)
     businessName: '',
     businessSector: '',
     businessStage: '',
     businessLocation: '',
+    hasExistingBusiness: '',
     
     // Mentor
     expertiseArea: '',
@@ -93,7 +91,7 @@ const CriarConta = () => {
       businessSector: '',
       businessStage: '',
       businessLocation: '',
-      hasBusiness: 'nao',
+      hasExistingBusiness: '',
       // Limpar campos do mentor
       expertiseArea: '',
       experienceYears: '',
@@ -241,12 +239,8 @@ const CriarConta = () => {
     // Validações específicas por tipo
     switch(selectedRole) {
       case 'empreendedor':
-        if (formData.hasBusiness === 'sim' && (!formData.businessName || !formData.businessSector || !formData.businessStage)) {
-          showError('Preencha todos os dados do seu negócio');
-          return;
-        }
-        if (!formData.acceptTerms) {
-          showError('Aceite os termos e condições para continuar');
+        if (!formData.hasExistingBusiness) {
+          showError('Indique se já tem um negócio');
           return;
         }
         break;
@@ -399,10 +393,10 @@ const CriarConta = () => {
         role: selectedRole,
         profileData: {
           phone: formData.phone.replace(/\s/g, ''),
-          hasBusiness: formData.hasBusiness === 'sim',
           businessName: formData.businessName,
           businessSector: formData.businessSector,
-          businessStage: formData.businessStage,
+          businessStage: formData.hasExistingBusiness === 'sim' ? 'sim' : 'nao',
+          hasExistingBusiness: formData.hasExistingBusiness,
           businessLocation: formData.businessLocation,
           identityNumber: formData.identityNumber,
           birthDate: formData.birthDate,
@@ -667,134 +661,69 @@ const CriarConta = () => {
           </button>
         </div>
       </div>
+
+      {selectedRole === 'empreendedor' && (
+        <div className="form-group">
+          <label htmlFor="phone" className="form-label">Telemóvel *</label>
+          <div className="input-wrapper">
+            <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+            <input
+              type="tel"
+              id="phone"
+              className="form-input"
+              placeholder="923 456 789"
+              value={formData.phone}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          <small className="form-hint">Número angolano (ex: 923 456 789)</small>
+        </div>
+      )}
     </>
   );
 
   const renderEmpreendedorFields = () => (
     <>
-      <div className="form-group">
-        <label htmlFor="phone" className="form-label">Telemóvel *</label>
-        <div className="input-wrapper">
-          <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-            <line x1="12" y1="18" x2="12.01" y2="18"/>
-          </svg>
-          <input
-            type="tel"
-            id="phone"
-            className="form-input"
-            placeholder="923 456 789"
-            value={formData.phone}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        <small className="form-hint">Número angolano (ex: 923 456 789)</small>
-      </div>
+      <h3 className="form-section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 12h.01"/>
+          <path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          <path d="M22 13a18.15 18.15 0 0 1-20 0"/>
+          <rect width="20" height="14" x="2" y="6" rx="2"/>
+        </svg>
+        Sobre o seu negócio
+      </h3>
 
       <div className="form-group">
-        <label className="form-label">Já tem um negócio?</label>
-        <div className="radio-group">
-          <label className="checkbox-label">
+        <span className="form-label">Já tens um negócio? *</span>
+        <div className="radio-group" style={{ marginTop: '8px' }}>
+          <label className="radio-label">
             <input
               type="radio"
-              name="hasBusiness"
-              id="hasBusiness"
-              value="nao"
-              checked={formData.hasBusiness === 'nao'}
-              onChange={handleInputChange}
-            />
-            Não
-          </label>
-          <label className="checkbox-label">
-            <input
-              type="radio"
-              name="hasBusiness"
-              id="hasBusiness"
+              name="hasExistingBusiness"
               value="sim"
-              checked={formData.hasBusiness === 'sim'}
-              onChange={handleInputChange}
+              checked={formData.hasExistingBusiness === 'sim'}
+              onChange={() => setFormData((prev) => ({ ...prev, hasExistingBusiness: 'sim' }))}
             />
             Sim
           </label>
-        </div>
-      </div>
-
-      {formData.hasBusiness === 'sim' && (
-        <>
-          <h3 className="form-section-title"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase-business-icon lucide-briefcase-business"><path d="M12 12h.01"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M22 13a18.15 18.15 0 0 1-20 0"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>Sobre o seu negócio</h3>
-          <div className="form-group">
-            <label htmlFor="businessName" className="form-label">Nome do negócio *</label>
+          <label className="radio-label">
             <input
-              type="text"
-              id="businessName"
-              className="form-input"
-              placeholder="Ex: Padaria Central, Salão Kikas, etc"
-              value={formData.businessName}
-              onChange={handleInputChange}
-              required={formData.hasBusiness === 'sim'}
+              type="radio"
+              name="hasExistingBusiness"
+              value="nao"
+              checked={formData.hasExistingBusiness === 'nao'}
+              onChange={() => setFormData((prev) => ({ ...prev, hasExistingBusiness: 'nao' }))}
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="businessSector" className="form-label">Ramo de atividade *</label>
-            <select
-              id="businessSector"
-              className="form-input"
-              value={formData.businessSector}
-              onChange={handleInputChange}
-              required={formData.hasBusiness === 'sim'}
-            >
-              <option value="">Selecione</option>
-              <option value="comercio">Comércio (lojas, supermercados)</option>
-              <option value="servicos">Serviços (salão, oficina, consultoria)</option>
-              <option value="alimentacao">Alimentação (restaurante, pastelaria)</option>
-              <option value="agricultura">Agricultura / Pecuária</option>
-              <option value="construcao">Construção / Imobiliário</option>
-              <option value="tecnologia">Tecnologia (apps, sites)</option>
-              <option value="transporte">Transporte / Logística</option>
-              <option value="moda">Moda / Vestuário</option>
-              <option value="outros">Outro</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="businessStage" className="form-label">Fase do negócio *</label>
-            <select
-              id="businessStage"
-              className="form-input"
-              value={formData.businessStage}
-              onChange={handleInputChange}
-              required={formData.hasBusiness === 'sim'}
-            >
-              <option value="">Selecione</option>
-              <option value="ideia">Ainda é uma ideia</option>
-              <option value="inicio">Comecei há menos de 1 ano</option>
-              <option value="funcionando">Já funciona e quero expandir</option>
-              <option value="estavel">Já está estável, preciso de investimento</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="businessLocation" className="form-label">Província / Localização</label>
-            <select
-              id="businessLocation"
-              className="form-input"
-              value={formData.businessLocation}
-              onChange={handleInputChange}
-            >
-              <option value="">Selecione</option>
-              <option value="luanda">Luanda</option>
-              <option value="benguela">Benguela</option>
-              <option value="huila">Huíla</option>
-              <option value="huambo">Huambo</option>
-              <option value="cuanza-sul">Cuanza Sul</option>
-              <option value="uige">Uíge</option>
-              <option value="outra">Outra</option>
-            </select>
-          </div>
-        </>
-      )}
+            Não
+          </label>
+        </div>
+        <small className="form-hint">Pode completar nome, setor e local do negócio mais tarde no seu perfil.</small>
+      </div>
     </>
   );
 
@@ -1322,7 +1251,7 @@ const CriarConta = () => {
       <div className="card-header">
         <h2>Complete o seu cadastro</h2>
         <p className="card-description">
-          {selectedRole === 'empreendedor' && 'Conte-nos sobre o seu negócio'}
+          {selectedRole === 'empreendedor' && 'Indique se já tem um negócio e aceite os termos da plataforma'}
           {selectedRole === 'mentor' && 'Preencha os dados para verificação de Mentor'}
           {selectedRole === 'investidor' && 'Preencha os dados para verificação de Investidor'}
         </p>
@@ -1409,7 +1338,7 @@ const CriarConta = () => {
         <div className="auth-content auth-content-wide">
           <div className="auth-header">
             <div className="auth-logo">
-              <img src={logoUrl} alt="AngoStart" />
+              <img src="/logo.png" alt="AngoStart" />
             </div>
             <h1 className="auth-title">Criar conta AngoStart</h1>
             <p className="auth-subtitle">Junte-se à comunidade AngoStart</p>
